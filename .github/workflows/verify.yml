@@ -5,11 +5,14 @@ on:
   workflow_call:
   pull_request:
     branches: [main]
-  push:
-    branches: [main]
 
 permissions:
   contents: read
+
+# Literal prefix: under workflow_call, github.workflow is the caller's name and would collide with its group.
+concurrency:
+  group: verify-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   biome:

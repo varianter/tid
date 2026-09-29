@@ -1,18 +1,24 @@
 name: build
 
+# PRs only; on main, deploy.yml builds the image and smoke-tests the real deployment.
 on:
-  push:
-    branches: [main]
   pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v6
       - run: docker build -f apps/web/Dockerfile -t tid-web .
       - name: Smoke test
         run: |
           docker run -d -p 3000:3000 tid-web
-          sleep 2
-          curl -fsS localhost:3000
+          curl -fsS --retry 10 --retry-connrefused --retry-delay 1 localhost:3000
