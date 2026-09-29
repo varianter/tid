@@ -2,8 +2,8 @@
   "name": "@tid/web",
   "type": "module",
   "scripts": {
-    "dev": "bun --watch src/server.ts",
-    "build": "bun build src/server.ts --outfile dist/server.js --target bun",
+    "dev": "bun --watch src/server.tsx",
+    "build": "bun build src/server.tsx --outfile dist/server.js --target bun",
     "start": "bun dist/server.js",
     "test": "bun test",
     "typecheck": "tsc --noEmit",

@@ -8,4 +8,4 @@ RUN bun install --frozen-lockfile --production
 WORKDIR /repo/apps/web
 ENV NODE_ENV=production
 USER bun
-CMD ["bun", "src/server.ts"]
+CMD ["bun", "src/server.tsx"]
