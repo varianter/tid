@@ -1,0 +1,30 @@
+{
+  "name": "tid",
+  "type": "module",
+  "workspaces": {
+    "packages": [
+      "apps/*",
+      "packages/*"
+    ],
+    "catalog": {
+      "drizzle-orm": "0.45.3",
+      "zod": "4.6.5"
+    }
+  },
+  "scripts": {
+    "dev": "bun --filter @tid/web dev",
+    "db:generate": "bun --filter @tid/db generate",
+    "db:migrate": "bun --filter @tid/db migrate",
+    "db:seed": "bun --filter @tid/db seed",
+    "db:studio": "bun --filter @tid/db studio",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check .",
+    "check": "bun run typecheck && bun run lint && bun run test"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.14",
+    "@types/bun": "1.4.2",
+    "typescript": "7.0.2"
+  }
+}

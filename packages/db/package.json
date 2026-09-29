@@ -1,0 +1,21 @@
+{
+  "name": "@tid/db",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./client": "./src/client.ts"
+  },
+  "scripts": {
+    "generate": "drizzle-kit generate",
+    "custom": "drizzle-kit generate --custom --name",
+    "migrate": "bun scripts/migrate.ts",
+    "seed": "bun scripts/seed.ts",
+    "studio": "drizzle-kit studio"
+  },
+  "dependencies": {
+    "drizzle-orm": "catalog:"
+  },
+  "devDependencies": {
+    "drizzle-kit": "0.31.11"
+  }
+}
