@@ -9,6 +9,7 @@ clients ||--o{ projects : "orders"
 projects ||--o{ tasks : has
 projects ||--o{ project_organizations : "shared with"
 projects ||--o{ project_assignments : staffs
+project_organizations ||--o{ project_assignments : "through"
 users ||--o{ project_assignments : "assigned to"
 project_assignments ||--o{ assignment_rates : "priced by"
 users ||--o{ time_entries : logs
@@ -24,7 +25,7 @@ tasks ||--o{ time_entries : "logged on"
     users {
         bigint id PK
         text name
-        text email
+        text email UK "case-insensitive"
         bigint org_id FK
         date ends_on
         timestamptz created_at
@@ -74,7 +75,8 @@ tasks ||--o{ time_entries : "logged on"
     }
     project_assignments {
         bigint project_id PK, FK
-        bigint user_id PK, FK "from a participating organization"
+        bigint user_id PK, FK
+        bigint org_id FK "the user's, and one of the project's"
         date starts_on
         date ends_on
     }

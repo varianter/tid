@@ -2,3 +2,27 @@ services:
   web:
     build: { context: ., dockerfile: apps/web/Dockerfile }
     ports: ["3000:3000"]
+
+  postgres:
+    image: postgres:17-alpine
+    # Password-less for local use only, so the port is bound to this machine.
+    environment:
+      POSTGRES_HOST_AUTH_METHOD: trust
+      POSTGRES_DB: tid
+    ports: ["127.0.0.1:5433:5432"]
+    volumes: [postgres:/var/lib/postgresql/data]
+    healthcheck:
+      # Over TCP, because the temporary server that runs during first-time setup only listens on a socket.
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "postgres", "-d", "tid"]
+      interval: 1s
+      retries: 30
+    configs:
+      - source: create-test-database
+        target: /docker-entrypoint-initdb.d/create-test-database.sql
+
+configs:
+  create-test-database:
+    content: create database tid_test;
+
+volumes:
+  postgres:

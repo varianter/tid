@@ -1,6 +1,3 @@
--- IDs are bigint so rows imported from Harvest can keep their Harvest IDs,
--- which the reporting database downstream already uses.
-
 create table organizations (
   id               bigint generated always as identity primary key,
   slug             text not null unique,
@@ -15,8 +12,14 @@ create table users (
   email      text not null,
   org_id     bigint not null references organizations (id),
   ends_on    date,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  -- Lets assignments check that the user belongs to the organization they're assigned through.
+  unique (id, org_id)
 );
+
+-- The reporting database identifies people by email, so it must be unique regardless of case.
+create unique index users_email_unique on users (lower(email));
+create index users_org_id on users (org_id);
 
 create type user_role as enum ('manager');
 
@@ -43,6 +46,8 @@ create table sessions (
   created_at timestamptz not null default now()
 );
 
+create index sessions_user_id on sessions (user_id);
+
 -- Clients and projects are shared across organizations. A client found in several
 -- Harvest accounts becomes one row; downstream reporting matches on project code.
 create table clients (
@@ -65,7 +70,6 @@ create table projects (
   check (ends_on >= starts_on)
 );
 
--- Only users from a participating organization may be assigned to the project.
 create table project_organizations (
   project_id bigint not null references projects (id),
   org_id     bigint not null references organizations (id),
@@ -84,14 +88,21 @@ create table tasks (
   unique (project_id, name)
 );
 
+-- Only users from a participating organization may be assigned to the project: org_id must
+-- be both the user's organization and one of the project's.
 create table project_assignments (
-  project_id bigint not null references projects (id),
-  user_id    bigint not null references users (id),
+  project_id bigint not null,
+  user_id    bigint not null,
+  org_id     bigint not null,
   starts_on  date,
   ends_on    date,
   primary key (project_id, user_id),
+  foreign key (user_id, org_id) references users (id, org_id),
+  foreign key (project_id, org_id) references project_organizations (project_id, org_id),
   check (ends_on >= starts_on)
 );
+
+create index project_assignments_user_id on project_assignments (user_id);
 
 -- The rate for an entry is the latest one with valid_from <= spent_on.
 create table assignment_rates (
@@ -104,6 +115,8 @@ create table assignment_rates (
 );
 
 -- One row per user, task and day, with one note for the day.
+-- Users must be assigned to the project unless it's open to everyone. The app enforces
+-- this rather than the database, so it can tell the user why an entry was rejected.
 create table time_entries (
   id        bigint generated always as identity primary key,
   user_id   bigint not null references users (id),
@@ -114,23 +127,20 @@ create table time_entries (
   unique (user_id, task_id, spent_on)
 );
 
+create index time_entries_task_id on time_entries (task_id);
+
 -- Shaped like dbo.time_entries in the reporting database.
 create view time_entries_export as
 select
-  organizations.id                                   as account_id,
   organizations.name                                 as account_name,
-  entry.id                                           as entry_id,
   entry.spent_on                                     as spent_date,
   extract(year from entry.spent_on)::int             as spent_year,
   extract(month from entry.spent_on)::int            as spent_month,
-  users.id                                           as user_id,
+  users.email                                        as user_email,
   users.name                                         as user_name,
-  clients.id                                         as client_id,
   clients.name                                       as client_name,
-  projects.id                                        as project_id,
   projects.code                                      as project_code,
   projects.name                                      as project_name,
-  tasks.id                                           as task_id,
   tasks.name                                         as task_name,
   projects.billable,
   hours.hours,
