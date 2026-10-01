@@ -6,14 +6,18 @@ You need [Bun](https://bun.sh) (the version in `.bun-version`) and Docker.
 
 ```sh
 bun install
-bun run db:up
 bun run dev
 ```
 
 The app runs on http://localhost:3000.
 
-Before pushing, run `bun run check`. It type-checks, lints and runs the tests, which need Postgres running.
+Before pushing, run `bun run check`. It type-checks, lints and runs the tests.
 
 ## Database
 
-`bun run db:up` starts Postgres, waits until it's ready and applies any new migrations. Postgres runs on port 5433. Tests use a separate `tid_test` database and rebuild it on every run.
+Postgres runs in Docker through [Testcontainers](https://testcontainers.com), on whatever port is free. `bun run dev` starts it, applies new migrations, seeds a small fixture if it's empty, and stops it again when you quit. The container is kept between runs, so your data stays.
+
+- `bun run db:reset` rebuilds the dev database from the fixture. The fixture's dates are relative to today.
+- `bun run db:studio` opens Drizzle Studio against the dev database.
+
+Tests get a fresh container each run, which is removed afterwards.

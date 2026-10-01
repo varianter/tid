@@ -2,7 +2,7 @@
   "name": "@tid/web",
   "type": "module",
   "scripts": {
-    "dev": "bun --watch src/server.tsx",
+    "dev": "bun src/dev.ts",
     "build": "bun build src/server.tsx --outfile dist/server.js --target bun",
     "start": "bun dist/server.js",
     "test": "bun test",
@@ -12,6 +12,8 @@
   },
   "dependencies": {
     "@tid/db": "workspace:*",
+    "@tid/ui": "workspace:*",
+    "drizzle-orm": "catalog:",
     "hono": "4.13.9",
     "openid-client": "6.8.8",
     "zod": "4.6.5"

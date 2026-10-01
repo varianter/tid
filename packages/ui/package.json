@@ -1,0 +1,11 @@
+{
+  "name": "@tid/ui",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.tsx"
+  },
+  "dependencies": {
+    "hono": "4.13.9"
+  }
+}

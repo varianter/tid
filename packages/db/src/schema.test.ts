@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, expect, test } from "bun:test";
 import { sql } from "drizzle-orm";
-import { createDatabase, migrateDatabase } from "./client";
+import { createDatabase, rebuildDatabase } from "./client";
 import {
   assignmentRates,
   clients,
@@ -14,18 +14,11 @@ import {
   users,
 } from "./schema";
 
-const url = process.env.DATABASE_URL ?? "";
-// The tests empty every table, so never point them at a database that matters.
-if (!url.endsWith("_test")) throw new Error(`Refusing to run tests against ${url}`);
-
-const database = createDatabase(url);
+// The test preload points DATABASE_URL at a throwaway container.
+const database = createDatabase(process.env.DATABASE_URL ?? "");
 
 // Start empty so every run applies the full chain of migrations.
-beforeAll(async () => {
-  await database.execute(sql`drop schema if exists public, drizzle cascade`);
-  await database.execute(sql`create schema public`);
-  await migrateDatabase(database);
-});
+beforeAll(() => rebuildDatabase(database));
 afterAll(() => database.$client.close());
 beforeEach(async () => {
   await database.execute(sql`truncate organizations, clients restart identity cascade`);

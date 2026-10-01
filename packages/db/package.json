@@ -4,19 +4,22 @@
   "type": "module",
   "exports": {
     "./client": "./src/client.ts",
+    "./container": "./src/container.ts",
+    "./fixture": "./src/fixture.ts",
     "./schema": "./src/schema.ts"
   },
   "scripts": {
     "generate": "drizzle-kit generate",
     "custom": "drizzle-kit generate --custom --name",
     "migrate": "bun scripts/migrate.ts",
-    "seed": "bun scripts/seed.ts",
-    "studio": "drizzle-kit studio"
+    "reset": "bun scripts/reset.ts",
+    "studio": "bun scripts/studio.ts"
   },
   "dependencies": {
     "drizzle-orm": "catalog:"
   },
   "devDependencies": {
+    "@testcontainers/postgresql": "12.2.0",
     "drizzle-kit": "0.31.11"
   }
 }

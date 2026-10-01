@@ -13,10 +13,9 @@
   },
   "scripts": {
     "dev": "bun --filter @tid/web dev",
-    "db:up": "docker compose up -d --wait postgres && bun run db:migrate",
     "db:generate": "bun --filter @tid/db generate",
     "db:migrate": "bun --filter @tid/db migrate",
-    "db:seed": "bun --filter @tid/db seed",
+    "db:reset": "bun --filter @tid/db reset",
     "db:studio": "bun --filter @tid/db studio",
     "test": "bun test",
     "typecheck": "tsc --noEmit",

@@ -4,7 +4,7 @@
 //   bunx drizzle-kit generate --name init
 //   bunx drizzle-kit generate --custom --name time_entries_export
 // then copy time_entries_export.sql over the generated, empty 0001_time_entries_export.sql.
-// Local databases have to be reset afterwards: docker compose down -v postgres.
+// Local databases have to be reset afterwards: bun run db:reset.
 //
 // Live: never edit or delete a migration, since the live database has already run it.
 // Add new ones with drizzle-kit generate. Delete this comment and time_entries_export.sql.

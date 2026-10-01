@@ -22,6 +22,14 @@ Open questions: should their assignments end or move with them? Which currency a
 
 **Currently:** the database rejects the change.
 
+## Billable tasks on a billable project
+
+Harvest sets billing per project (time and materials, fixed fee or non-billable), but each task on a project can also be marked non-billable. We only have `projects.billable`. In August 2026, STI1001 had a billable task (Forberedelser) and a non-billable one (Kundeoppfølging).
+
+Moving `billable` to tasks would record this faithfully, but the rule that open projects can't be billable would then span two tables.
+
+**Currently:** the project's billing type decides, so every task on a billable project exports as billable.
+
 ## Importing from Harvest (on hold)
 
-The database enforces some rules that Harvest may not have: users can only be assigned through one of the project's organizations, and emails must be unique regardless of case. Imported history that breaks these rules will be rejected, so it needs cleaning or a decision before import.
+The database enforces some rules that Harvest may not have: users can only be assigned through one of the project's organizations, and emails must be unique regardless of case. Imported history that breaks these rules will be rejected, so it needs cleaning or a decision before import. Settled rules are in `decisions-for-import-rules.md`.
