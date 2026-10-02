@@ -29,7 +29,7 @@
     "packages/db": {
       "name": "@tid/db",
       "dependencies": {
-        "@azure/identity": "^4.13.3",
+        "@azure/identity": "4.13.3",
         "drizzle-orm": "catalog:",
       },
       "devDependencies": {

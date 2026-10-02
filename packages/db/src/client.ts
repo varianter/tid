@@ -5,14 +5,13 @@ import { drizzle } from "drizzle-orm/bun-sql";
 import { migrate } from "drizzle-orm/bun-sql/migrator";
 import * as schema from "./schema";
 
-const POSTGRES_AAD_SCOPE = "https://ossrdbms-aad.database.windows.net/.default";
+const POSTGRES_ENTRA_SCOPE = "https://ossrdbms-aad.database.windows.net/.default";
 
-// AZURE_CLIENT_ID = workload identity, url has no password then, get an Entra
-// token instead. Fetch fresh token per connect, token only lives ~1h, no
-// caching here (the azure SDK already caches under the hood).
+// With workload identity the URL carries no password. Entra tokens expire after
+// about an hour, so each new connection asks for one; the SDK caches it until then.
 async function fetchPostgresToken(credential: WorkloadIdentityCredential) {
-  const token = await credential.getToken(POSTGRES_AAD_SCOPE);
-  if (!token) throw new Error("no azure AD token for postgres, workload identity broken?");
+  const token = await credential.getToken(POSTGRES_ENTRA_SCOPE);
+  if (!token) throw new Error("Workload identity returned no Entra token for Postgres");
   return token.token;
 }
 
