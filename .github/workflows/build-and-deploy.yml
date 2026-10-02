@@ -1,0 +1,36 @@
+name: Build and Deploy (Time Management)
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment to deploy'
+        required: true
+        default: dev
+        type: choice
+        options:
+          - lab
+          - dev
+          - prod
+jobs:
+  build-container-and-deploy-to-argocd:
+    name: Build Container Image and Deploy with GitOps/ArgoCD
+    uses: varianter/infrastructure-as-code/.github/workflows/build-and-deploy-shared.yaml@main
+    secrets: inherit
+    with:
+      environment: ${{ inputs.environment || 'dev' }}
+      acr-url: variantplatformacr.azurecr.io
+      image-name: time-management
+      docker-context: ./apps/web/
+      dockerfile: ./apps/web/Dockerfile
+      build-args: ''
+      gitops-repository: infrastructure-as-code
+      gitops-directory-path: deployments/${{ inputs.environment || 'dev' }}/workloads/time-management
+      gitops-workload-name: time-management
+      gitops-file-to-update: values.yaml
+      gitops-yq-path: .image.tag
+      gitops-continue-on-error: 'true'
+      enable-gitops: 'true'
