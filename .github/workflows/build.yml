@@ -21,7 +21,7 @@ jobs:
       - name: Smoke test
         run: |
           docker run -d --name tid-web-smoke -p 3000:3000 -e DATABASE_URL=postgres://smoketest@localhost/smoketest tid-web
-          curl -fsS --retry 10 --retry-connrefused --retry-delay 1 localhost:3000
+          curl -fsS --retry 10 --retry-all-errors --retry-delay 1 localhost:3000
       - name: Smoke test logs
         if: failure()
         run: docker logs tid-web-smoke
