@@ -18,8 +18,11 @@ async function startDatabase(container: LocalOnlyPostgreSqlContainer) {
   try {
     return await container.start();
   } catch (error) {
-    if (!(error instanceof Error) || !error.message.includes("container runtime strategy")) throw error;
-    throw new Error("Testcontainers can't find Docker. See README → Troubleshooting.", { cause: error });
+    if (!(error instanceof Error) || !error.message.includes("container runtime strategy"))
+      throw error;
+    throw new Error("Testcontainers can't find Docker. See README → Troubleshooting.", {
+      cause: error,
+    });
   }
 }
 
