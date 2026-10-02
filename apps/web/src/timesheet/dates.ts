@@ -40,23 +40,52 @@ export function formatHours(minutes: number) {
   return minutes === 0 ? "" : hoursFormat.format(minutes / 60);
 }
 
-const weekdayFormat = new Intl.DateTimeFormat("en-GB", { weekday: "short", timeZone: "UTC" });
-const dayMonthFormat = new Intl.DateTimeFormat("en-GB", {
-  day: "numeric",
-  month: "short",
-  timeZone: "UTC",
-});
-const rangeFormat = new Intl.DateTimeFormat("en-GB", {
-  day: "numeric",
-  month: "short",
-  year: "numeric",
-  timeZone: "UTC",
-});
+// English short names are fixed here because September differs by ICU version ("Sep" before CLDR 42, "Sept" after).
+const shortWeekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const shortMonths = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
 
-export const formatWeekday = (isoDate: string) => weekdayFormat.format(parseIsoDate(isoDate));
-export const formatDayMonth = (isoDate: string) => dayMonthFormat.format(parseIsoDate(isoDate));
-export const formatDateRange = (start: string, end: string) =>
-  rangeFormat.formatRange(parseIsoDate(start), parseIsoDate(end));
+export const formatWeekday = (isoDate: string) => shortWeekdays[parseIsoDate(isoDate).getUTCDay()];
+
+export const formatDayMonth = (isoDate: string) => {
+  const date = parseIsoDate(isoDate);
+  return `${date.getUTCDate()} ${shortMonths[date.getUTCMonth()]}`;
+};
+
+export const formatDateRange = (start: string, end: string) => {
+  const startDate = parseIsoDate(start);
+  const endDate = parseIsoDate(end);
+
+  const startDay = startDate.getUTCDate();
+  const endDay = endDate.getUTCDate();
+  const startMonth = shortMonths[startDate.getUTCMonth()];
+  const endMonth = shortMonths[endDate.getUTCMonth()];
+  const startYear = startDate.getUTCFullYear();
+  const endYear = endDate.getUTCFullYear();
+
+  if (startYear !== endYear) {
+    return `${startDay} ${startMonth} ${startYear} – ${endDay} ${endMonth} ${endYear}`;
+  }
+  if (startMonth !== endMonth) {
+    return `${startDay} ${startMonth} – ${endDay} ${endMonth} ${endYear}`;
+  }
+  if (startDay !== endDay) {
+    return `${startDay}–${endDay} ${endMonth} ${endYear}`;
+  }
+  return `${startDay} ${startMonth} ${startYear}`;
+};
 
 export function isIsoMonth(value: string) {
   return /^\d{4}-\d{2}$/.test(value) && isIsoDate(`${value}-01`);
