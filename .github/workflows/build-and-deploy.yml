@@ -18,7 +18,7 @@ on:
 jobs:
   build-container-and-deploy-to-argocd:
     name: Build Container Image and Deploy with GitOps/ArgoCD
-    uses: varianter/infrastructure-as-code/.github/workflows/build-and-deploy-shared.yaml@main
+    uses: varianter/shared-workflows/.github/workflows/build-and-deploy-shared.yaml@main
     secrets: inherit
     with:
       environment: ${{ inputs.environment || 'dev' }}
