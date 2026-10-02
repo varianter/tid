@@ -14,14 +14,14 @@ select
   projects.billable,
   hours.hours,
   hours.billable_hours,
-  -- Assumed equal to billable_hours until we know what "base" means downstream.
-  hours.billable_hours                               as billable_base_hours,
-  rate.billable_rate,
-  round(hours.billable_hours * rate.billable_rate, 2) as amount,
+  hours.billable_base_hours,
+  -- The rate locked on the entry. Assumes a currency with two decimals.
+  (entry.rate / 100.0)::numeric(18, 2)               as billable_rate,
+  round(hours.billable_hours * entry.rate / 100.0, 2) as amount,
   to_char(entry.spent_on, 'IYYYIW')::int             as spent_year_week
 from time_entries entry
 join users         on users.id = entry.user_id
--- The user's organization did the work, so it bills in its currency.
+-- Reported under the user's organization, which did the work.
 join organizations on organizations.id = users.org_id
 join tasks         on tasks.id = entry.task_id
 join projects      on projects.id = tasks.project_id
@@ -29,15 +29,7 @@ join clients       on clients.id = projects.client_id
 cross join lateral (
   select
     round(entry.minutes / 60.0, 2) as hours,
-    case when projects.billable then round(entry.minutes / 60.0, 2) else 0 end as billable_hours
-) hours
-left join lateral (
-  -- Assumes a currency with two decimals.
-  select (assignment_rates.rate / 100.0)::numeric(18, 2) as billable_rate
-  from assignment_rates
-  where assignment_rates.project_id = projects.id
-    and assignment_rates.user_id = entry.user_id
-    and assignment_rates.valid_from <= entry.spent_on
-  order by assignment_rates.valid_from desc
-  limit 1
-) rate on true;
+    case when projects.billable then round(entry.minutes / 60.0, 2) else 0 end as billable_hours,
+    case when projects.counts_toward_billable_base then round(entry.minutes / 60.0, 2) else 0 end
+      as billable_base_hours
+) hours;

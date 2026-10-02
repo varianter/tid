@@ -18,7 +18,9 @@ Assignments, projects, tasks and users all have optional start and end dates. Sh
 
 An assignment records the user's organization, and the database requires it to match the user's current one. So `users.org_id` can't be changed while the user has assignments.
 
-Open questions: should their assignments end or move with them? Which currency applies to hours logged before the move, given that the export bills in the user's current organization's currency?
+Open question: should their assignments end or move with them?
+
+Settled: hours logged before the move keep their currency, since each entry stores the rate and currency it was logged at. The export still reports them under the user's current organization, though.
 
 **Currently:** the database rejects the change.
 

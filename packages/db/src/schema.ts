@@ -1,13 +1,15 @@
 // Before changing this schema, ask the user whether the app is live.
 //
-// Not live: keep the migrations squashed into one. Delete packages/db/migrations, run
+// Not live: keep the migrations squashed. Delete packages/db/migrations, run
 //   bunx drizzle-kit generate --name init
+//   bunx drizzle-kit generate --custom --name time_entry_rates
 //   bunx drizzle-kit generate --custom --name time_entries_export
-// then copy time_entries_export.sql over the generated, empty 0001_time_entries_export.sql.
-// Local databases have to be reset afterwards: bun run db:reset.
+// then copy time_entry_rates.sql and time_entries_export.sql over the generated, empty files.
+// Local databases have to be rebuilt afterwards: bun run db:reset, or bun run db:import.
 //
 // Live: never edit or delete a migration, since the live database has already run it.
-// Add new ones with drizzle-kit generate. Delete this comment and time_entries_export.sql.
+// Add new ones with drizzle-kit generate. Delete this comment, time_entry_rates.sql and
+// time_entries_export.sql.
 
 import { sql } from "drizzle-orm";
 import {
@@ -116,6 +118,8 @@ export const projects = pgTable(
     name: text().notNull(),
     billable: boolean().notNull(),
     openToEveryone: boolean().notNull().default(false),
+    // Only used by reporting, to leave out time such as vacation from billable base hours.
+    countsTowardBillableBase: boolean().notNull().default(true),
     startsOn: date(),
     endsOn: date(),
   },
@@ -123,6 +127,10 @@ export const projects = pgTable(
     unique().on(table.clientId, table.name),
     check("code_length", sql`length(${table.code}) <= 16`),
     check("open_projects_not_billable", sql`not (${table.openToEveryone} and ${table.billable})`),
+    check(
+      "billable_projects_count_toward_base",
+      sql`not ${table.billable} or ${table.countsTowardBillableBase}`,
+    ),
     check("ends_after_start", sql`${table.endsOn} >= ${table.startsOn}`),
   ],
 );
@@ -202,6 +210,8 @@ export const assignmentRates = pgTable(
 // One row per user, task and day, with one note for the day.
 // Users must be assigned to the project unless it's open to everyone. The app enforces
 // this rather than the database, so it can tell the user why an entry was rejected.
+// The rate is locked when the entry is created, so later changes to assignment_rates don't
+// reprice logged time. See time_entry_rates.sql for how it's picked.
 export const timeEntries = pgTable(
   "time_entries",
   {
@@ -211,11 +221,16 @@ export const timeEntries = pgTable(
     spentOn: date().notNull(),
     minutes: integer().notNull(),
     notes: text(),
+    // Minor units of the currency.
+    rate: integer(),
+    currency: char({ length: 3 }),
   },
   (table) => [
     unique().on(table.userId, table.taskId, table.spentOn),
     index("time_entries_task_id").on(table.taskId),
     check("minutes_range", sql`${table.minutes} between 0 and 1440`),
+    check("rate_not_negative", sql`${table.rate} >= 0`),
+    check("rate_has_currency", sql`(${table.rate} is null) = (${table.currency} is null)`),
   ],
 );
 

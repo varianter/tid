@@ -19,8 +19,10 @@ app.use(
 
 app.get("/health", (c) => c.text("ok"));
 
+const isDevLoginEnabled = process.env.DEV_LOGIN === "true";
+
 // Registered before the middleware, so the login page itself doesn't require a user.
-if (process.env.DEV_LOGIN === "true") {
+if (isDevLoginEnabled) {
   app.route("/dev/login", devLogin);
   app.use(requireDevUser);
 }
@@ -31,4 +33,9 @@ app.route("/clients", clients);
 app.route("/projects", projects);
 app.route("/reports", reports);
 
-export default app;
+// Dev login lets anyone act as any user, so it must not be reachable from the network.
+// Otherwise listen on all interfaces, which the Docker container needs.
+export default {
+  fetch: app.fetch,
+  hostname: isDevLoginEnabled ? "127.0.0.1" : "0.0.0.0",
+};

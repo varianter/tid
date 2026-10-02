@@ -24,11 +24,9 @@ A client in another country is a different client, so a client never has more th
 
 **Projects are global, and identified by code.** The same code in several Harvest accounts, or on several projects in one account, becomes one project. Each account that logged time on it becomes a participating organization.
 
-**Customer project codes look like `AAA9999`, or `AAA9999-S` for subcontracting.** An organization that works as a subcontractor on another organization's `AAA9999` logs time on its own `AAA9999-S`. The two are separate projects, and never live in the same Harvest account.
+**Customer project codes look like `AAA9999`, or `AAA9999-S`.** The `-S` suffix is meant to mark a project that has subcontractors, but it isn't applied consistently, so the import doesn't rely on it for ownership. `AAA9999` and `AAA9999-S` are the same project, so the import merges them into one with the code `AAA9999`.
 
-**A `-S` code is owned by the Harvest account it's in.** Only one organization may have a given `-S` code. If it shows up in more than one account, the import must warn.
-
-**The import doesn't decide who owns a project yet.** For now ownership is set by hand. The `-S` suffix will let the import set an owner for subcontracted projects, but the rest still need an owner set by hand.
+**The import doesn't decide who owns a project.** Ownership is set by hand, since we don't yet know the owner of every project.
 
 **A project has one rate per person.** Harvest can bill per task, but we don't. If one person's rate differs between tasks on a project, the project has to be split into one project per rate before import, each with its own code.
 
@@ -36,11 +34,15 @@ A client in another country is a different client, so a client never has more th
 
 **Non-billable projects of the Varianttid client are open to everyone.** Harvest has no such setting, so the import assumes it. Everyone else is assigned to the projects they logged time on.
 
+**Vacation (FER1000) and paid welfare leave (VEL1000) don't count toward billable base hours.** Harvest has no such setting, so the import sets it by code. Reporting is the only thing that uses it. Whether other leave, such as sick leave or unpaid welfare leave, should be left out too is still to be confirmed.
+
 ## Time entries
 
-**An entry keeps the rate it was logged at.** Harvest stamps the rate on each entry rather than keeping a rate history, and so do we. This avoids working out when rates changed, and conflicting rate history between imports.
+**An entry keeps the rate it was logged at.** Harvest stamps the rate on each entry rather than keeping a rate history, and so do we: the import copies Harvest's billable rate and currency onto each entry, and the export reads them from there. An entry Harvest didn't rate, such as on a fixed fee project, has neither.
 
-**One entry per user, task and day.** Harvest entries on the same day are summed, and their notes are joined with line breaks. Hours become minutes, rounded to the nearest minute. Start and end times are dropped.
+**Assignment rates are only for new entries.** The import also builds each assignment's rate list from the entries, with a new rate starting on the first day it's seen. Time logged in Tid afterwards gets its rate from that list, and keeps it. Moving an entry to another task or project picks the rate again; changing its hours doesn't.
+
+**One entry per user, task and day.** Harvest entries on the same day are summed, and their notes are joined with line breaks. They must share a rate, since the merged entry has one. Hours become minutes, rounded to the nearest minute. Start and end times are dropped.
 
 **Imported time is not locked.** Harvest's invoiced and locked status isn't imported.
 

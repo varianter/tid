@@ -86,7 +86,7 @@ clients.get("/:id", async (c) => {
       title={client.name}
       back={{ href: "/clients", label: "Back to clients" }}
       actions={
-        <Button type="button" data-variant="tinted">
+        <Button as="a" href={`/projects/new?client=${id}`} data-variant="tinted">
           New project
         </Button>
       }

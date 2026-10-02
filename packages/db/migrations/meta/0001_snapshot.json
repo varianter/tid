@@ -1,6 +1,6 @@
 {
-  "id": "4cae59a3-abe6-42a6-bb2a-81772488a0c1",
-  "prevId": "3f0b075b-cd74-41e9-9b64-e1bfd82241c0",
+  "id": "6f4c7fff-fd03-41e2-a205-c1bf43aabd61",
+  "prevId": "45f23b12-f83f-471c-8048-1303222550ca",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -421,6 +421,13 @@
           "notNull": true,
           "default": false
         },
+        "counts_toward_billable_base": {
+          "name": "counts_toward_billable_base",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
         "starts_on": {
           "name": "starts_on",
           "type": "date",
@@ -477,6 +484,10 @@
         "open_projects_not_billable": {
           "name": "open_projects_not_billable",
           "value": "not (\"projects\".\"open_to_everyone\" and \"projects\".\"billable\")"
+        },
+        "billable_projects_count_toward_base": {
+          "name": "billable_projects_count_toward_base",
+          "value": "not \"projects\".\"billable\" or \"projects\".\"counts_toward_billable_base\""
         },
         "ends_after_start": {
           "name": "ends_after_start",
@@ -699,6 +710,18 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
+        },
+        "rate": {
+          "name": "rate",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "currency": {
+          "name": "currency",
+          "type": "char(3)",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
@@ -763,6 +786,14 @@
         "minutes_range": {
           "name": "minutes_range",
           "value": "\"time_entries\".\"minutes\" between 0 and 1440"
+        },
+        "rate_not_negative": {
+          "name": "rate_not_negative",
+          "value": "\"time_entries\".\"rate\" >= 0"
+        },
+        "rate_has_currency": {
+          "name": "rate_has_currency",
+          "value": "(\"time_entries\".\"rate\" is null) = (\"time_entries\".\"currency\" is null)"
         }
       },
       "isRLSEnabled": false

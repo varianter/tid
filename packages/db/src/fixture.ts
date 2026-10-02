@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import type { Database } from "./client";
 import {
   assignmentRates,
@@ -30,6 +31,7 @@ type ProjectDefinition = {
   client: string;
   owner: OrganizationSlug;
   billable: boolean;
+  countsTowardBillableBase?: boolean;
   endsWeek?: number;
 };
 
@@ -42,10 +44,10 @@ const projectCatalog = {
   VAR1001: { ...internal, name: "Variantdrift - Admin" },
   VAR1099: { ...internal, name: "Variantdrift - mellom prosjekter" },
   VAR2000: { ...internal, name: "Renhold" },
-  VEL1000: { ...internal, name: "Velferdspermisjoner med lønn" },
+  VEL1000: { ...internal, name: "Velferdspermisjoner med lønn", countsTowardBillableBase: false },
   VEL1001: { ...internal, name: "Velferdspermisjoner fra NAV samt permisjon uten lønn" },
   SYK1000: { ...internal, name: "Sykefravær - korttids" },
-  FER1000: { ...internal, name: "Ferie" },
+  FER1000: { ...internal, name: "Ferie", countsTowardBillableBase: false },
   LYS1001: { name: "Kundeportal", client: "Lysning Energi AS", owner: "trondheim", billable: true },
   BOL1001: {
     name: "Ruteplanlegger",
@@ -372,6 +374,7 @@ export function seedDatabase(database: Database) {
           name: project.name,
           billable: project.billable,
           openToEveryone: !project.billable,
+          countsTowardBillableBase: project.countsTowardBillableBase ?? true,
           endsOn: project.endsWeek === undefined ? null : dayOf(project.endsWeek, 5),
         })),
       )
@@ -445,6 +448,10 @@ export function seedDatabase(database: Database) {
           taskId: taskId(task),
         })),
       ),
+    );
+    // Each entry gets the rate a new entry would, like time logged in the app.
+    await transaction.execute(
+      sql`update time_entries set (rate, currency) = (select rate, currency from entry_rate(user_id, task_id, spent_on))`,
     );
   });
 }

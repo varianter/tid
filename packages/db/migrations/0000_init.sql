@@ -48,12 +48,14 @@ CREATE TABLE "projects" (
 	"name" text NOT NULL,
 	"billable" boolean NOT NULL,
 	"open_to_everyone" boolean DEFAULT false NOT NULL,
+	"counts_toward_billable_base" boolean DEFAULT true NOT NULL,
 	"starts_on" date,
 	"ends_on" date,
 	CONSTRAINT "projects_code_unique" UNIQUE("code"),
 	CONSTRAINT "projects_clientId_name_unique" UNIQUE("client_id","name"),
 	CONSTRAINT "code_length" CHECK (length("projects"."code") <= 16),
 	CONSTRAINT "open_projects_not_billable" CHECK (not ("projects"."open_to_everyone" and "projects"."billable")),
+	CONSTRAINT "billable_projects_count_toward_base" CHECK (not "projects"."billable" or "projects"."counts_toward_billable_base"),
 	CONSTRAINT "ends_after_start" CHECK ("projects"."ends_on" >= "projects"."starts_on")
 );
 --> statement-breakpoint
@@ -81,8 +83,12 @@ CREATE TABLE "time_entries" (
 	"spent_on" date NOT NULL,
 	"minutes" integer NOT NULL,
 	"notes" text,
+	"rate" integer,
+	"currency" char(3),
 	CONSTRAINT "time_entries_userId_taskId_spentOn_unique" UNIQUE("user_id","task_id","spent_on"),
-	CONSTRAINT "minutes_range" CHECK ("time_entries"."minutes" between 0 and 1440)
+	CONSTRAINT "minutes_range" CHECK ("time_entries"."minutes" between 0 and 1440),
+	CONSTRAINT "rate_not_negative" CHECK ("time_entries"."rate" >= 0),
+	CONSTRAINT "rate_has_currency" CHECK (("time_entries"."rate" is null) = ("time_entries"."currency" is null))
 );
 --> statement-breakpoint
 CREATE TABLE "user_identities" (
