@@ -13,12 +13,22 @@ class LocalOnlyPostgreSqlContainer extends PostgreSqlContainer {
   }
 }
 
+// Testcontainers' own error doesn't say that Docker is missing or hiding behind a Docker context.
+async function startDatabase(container: LocalOnlyPostgreSqlContainer) {
+  try {
+    return await container.start();
+  } catch (error) {
+    if (!(error instanceof Error) || !error.message.includes("container runtime strategy")) throw error;
+    throw new Error("Testcontainers can't find Docker. See README → Troubleshooting.", { cause: error });
+  }
+}
+
 // Reused across runs, so dev data survives restarts. Stop it without removing it to keep the data.
 export function startDevelopmentDatabase() {
-  return new LocalOnlyPostgreSqlContainer(image).withDatabase("tid").withReuse().start();
+  return startDatabase(new LocalOnlyPostgreSqlContainer(image).withDatabase("tid").withReuse());
 }
 
 // A fresh container every run, removed when the tests finish or the process dies.
 export function startTestDatabase() {
-  return new LocalOnlyPostgreSqlContainer(image).withDatabase("tid_test").start();
+  return startDatabase(new LocalOnlyPostgreSqlContainer(image).withDatabase("tid_test"));
 }

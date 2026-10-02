@@ -22,6 +22,15 @@ Postgres runs in Docker through [Testcontainers](https://testcontainers.com), on
 
 Tests get a fresh container each run, which is removed afterwards. Shutting down the dev server tears down database.
 
+### Troubleshooting
+
+**"Could not find a working container runtime strategy"**: Testcontainers can't find Docker. Check that Docker is running (`docker info`). If you use Colima, OrbStack or similar, Testcontainers doesn't read Docker contexts, so point it at the socket yourself, e.g. in your shell config:
+
+```sh
+export DOCKER_HOST=$(docker context inspect --format '{{.Endpoints.docker.Host}}')
+export TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE=/var/run/docker.sock
+```
+
 ## Early life of Tid.
 
 To make it easier to import Harvest data, you can can use `bun run db:import 2026-06 2026-09`.
