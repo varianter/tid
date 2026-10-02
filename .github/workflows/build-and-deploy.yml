@@ -24,7 +24,7 @@ jobs:
       environment: ${{ inputs.environment || 'dev' }}
       acr-url: variantplatformacr.azurecr.io
       image-name: time-management
-      docker-context: ./apps/web/
+      docker-context: .
       dockerfile: ./apps/web/Dockerfile
       build-args: ''
       gitops-repository: infrastructure-as-code
