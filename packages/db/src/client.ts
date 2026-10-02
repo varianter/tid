@@ -1,10 +1,13 @@
+import type { SQL } from "bun";
 import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/bun-sql";
 import { migrate } from "drizzle-orm/bun-sql/migrator";
 import * as schema from "./schema";
 
-export function createDatabase(url: string) {
-  return drizzle(url, { schema, casing: "snake_case" });
+// Takes a plain url (password baked in) or a pre-built SQL client (e.g. one with
+// a dynamic password callback for token-based auth).
+export function createDatabase(connection: string | SQL) {
+  return drizzle(connection, { schema, casing: "snake_case" });
 }
 
 export type Database = ReturnType<typeof createDatabase>;
