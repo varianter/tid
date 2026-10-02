@@ -13,7 +13,6 @@
     "apps/web": {
       "name": "@tid/web",
       "dependencies": {
-        "@azure/identity": "^4.13.3",
         "@tid/db": "workspace:*",
         "@tid/ui": "workspace:*",
         "drizzle-orm": "catalog:",
@@ -30,6 +29,7 @@
     "packages/db": {
       "name": "@tid/db",
       "dependencies": {
+        "@azure/identity": "^4.13.3",
         "drizzle-orm": "catalog:",
       },
       "devDependencies": {
