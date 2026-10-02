@@ -1,10 +1,39 @@
+import { WorkloadIdentityCredential } from "@azure/identity";
+import { SQL } from "bun";
 import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/bun-sql";
 import { migrate } from "drizzle-orm/bun-sql/migrator";
 import * as schema from "./schema";
 
+const POSTGRES_ENTRA_SCOPE = "https://ossrdbms-aad.database.windows.net/.default";
+
+/**
+ * With workload identity the URL carries no password. Entra tokens expire
+ * after about an hour, so each new connection asks for one; the SDK caches
+ * it until then.
+ */
+async function fetchPostgresToken(credential: WorkloadIdentityCredential) {
+  const token = await credential.getToken(POSTGRES_ENTRA_SCOPE);
+  if (!token) throw new Error("Workload identity returned no Entra token for Postgres");
+  return token.token;
+}
+
+/**
+ * AZURE_CLIENT_ID is only set in Azure environments, so elsewhere (local
+ * development, CI) the URL's own credentials are used instead of workload identity.
+ */
+function connection(url: string) {
+  if (!process.env.AZURE_CLIENT_ID) return url;
+  const credential = new WorkloadIdentityCredential();
+  return new SQL(url, { password: () => fetchPostgresToken(credential) });
+}
+
+/**
+ * Transparently authenticates with workload identity when available,
+ * falling back to the URL's own credentials otherwise.
+ */
 export function createDatabase(url: string) {
-  return drizzle(url, { schema, casing: "snake_case" });
+  return drizzle(connection(url), { schema, casing: "snake_case" });
 }
 
 export type Database = ReturnType<typeof createDatabase>;
