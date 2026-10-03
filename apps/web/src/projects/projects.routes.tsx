@@ -8,9 +8,9 @@ import {
 } from "@tid/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { Hono } from "hono";
-import type { User } from "../auth/devLogin";
 import { database } from "../database";
 import { formAction } from "../form/formAction";
+import type { User } from "../login/user";
 import { suggestProjectCode } from "./projectCode";
 import { newProjectForm } from "./projects.validation";
 import { NewProjectPage, ProjectPage, ProjectsPage } from "./projects.views";

@@ -5,18 +5,17 @@ import { Hono } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { createMiddleware } from "hono/factory";
 import { database } from "../database";
+import type { UserEnv } from "../login/user";
 
-// ponytail: trusts whoever is named in a cookie, so only dev.ts turns it on. Replace with OIDC.
-
-export type User = typeof users.$inferSelect;
-export type UserEnv = { Variables: { user?: User } };
-
+// Trusts whoever is named in a cookie, so only dev.ts turns it on.
 const cookieName = "dev_user_email";
 const loginPath = "/dev/login";
+// Picking another user is all a dev logout needs.
+export const devLogoutUrl = loginPath;
 
-export const devLogin = new Hono<UserEnv>();
+export const dev = new Hono<UserEnv>();
 
-devLogin.get("/", async (c) => {
+dev.get("/login", async (c) => {
   const people = await database
     .select({
       name: users.name,
@@ -65,7 +64,7 @@ devLogin.get("/", async (c) => {
   );
 });
 
-devLogin.post("/", async (c) => {
+dev.post("/login", async (c) => {
   const { email } = await c.req.parseBody();
   if (typeof email !== "string") return c.text("Missing email", 400);
   setCookie(c, cookieName, email, { path: "/", httpOnly: true, sameSite: "Lax" });

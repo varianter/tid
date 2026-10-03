@@ -2,8 +2,6 @@ import type { Context } from "hono";
 import type { FC } from "hono/jsx";
 import { z } from "zod";
 
-// import type { UserEnv } from "../auth/session";
-
 type Ctx = Context;
 
 // The shape zod gives per field, so `onSubmit` can put errors on fields too.

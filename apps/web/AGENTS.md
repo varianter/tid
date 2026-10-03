@@ -5,6 +5,7 @@ One folder per feature. Start with `<feature>.routes.tsx` and split the rest out
 ```
 src/<feature>/
   <feature>.routes.tsx      # route handlers
+  <feature>.middleware.ts   # Hono middleware
   <feature>.views.tsx       # presentational JSX
   <feature>.validation.ts   # zod schemas for input
   <concept>.ts              # domain logic, named after the concept

@@ -1,7 +1,6 @@
 import { projectAssignments, projects, tasks, timeEntries } from "@tid/db/schema";
 import { and, between, eq, exists, or } from "drizzle-orm";
 import { Hono } from "hono";
-import type { UserEnv } from "../auth/devLogin";
 import { database } from "../database";
 import {
   addDays,
@@ -14,6 +13,7 @@ import {
   mondayOf,
   todayInOslo,
 } from "../dates/dates";
+import type { UserEnv } from "../login/user";
 import { MonthPage, WeekPage } from "./timesheet.views";
 
 export const timesheet = new Hono<UserEnv>();

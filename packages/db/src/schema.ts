@@ -89,18 +89,6 @@ export const userIdentities = pgTable(
   (table) => [unique().on(table.provider, table.tenantId, table.subject)],
 );
 
-export const sessions = pgTable(
-  "sessions",
-  {
-    id: id(),
-    tokenHash: text().notNull().unique(),
-    userId: reference().references(() => users.id),
-    expiresAt: timestamp({ withTimezone: true }).notNull(),
-    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
-  },
-  (table) => [index("sessions_user_id").on(table.userId)],
-);
-
 // Clients and projects are shared across organizations. A client found in several
 // Harvest accounts becomes one row; downstream reporting matches on project code.
 export const clients = pgTable("clients", {
