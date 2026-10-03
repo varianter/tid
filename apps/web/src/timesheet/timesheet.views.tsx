@@ -1,144 +1,70 @@
-import { projectAssignments, projects, tasks, timeEntries } from "@tid/db/schema";
 import { Button, Input, Label, Page, PeriodNavigation, Popover } from "@tid/ui";
-import { and, between, eq, exists, or } from "drizzle-orm";
-import { Hono } from "hono";
 import type { PropsWithChildren } from "hono/jsx";
-import type { UserEnv } from "../auth/devLogin";
-import { database } from "../database";
 import {
-  addDays,
-  addMonths,
-  daysOfMonth,
-  daysOfWeek,
   formatDateRange,
   formatDayMonth,
   formatHours,
   formatMonth,
   formatWeekday,
-  isIsoDate,
-  isIsoMonth,
-  isWeekend,
   mondayOf,
   todayInOslo,
-} from "./dates";
-
-export const timesheet = new Hono<UserEnv>();
+} from "../dates/dates";
 
 type Task = { id: number; name: string; projectName: string };
 type TimeEntry = { taskId: number; spentOn: string; minutes: number };
 
-/** The user's entries between from and till, and every task they may log on or already have. */
-async function loadTimesheet(userId: number, from: string, till: string) {
-  const entries = await database
-    .select({
-      taskId: timeEntries.taskId,
-      spentOn: timeEntries.spentOn,
-      minutes: timeEntries.minutes,
-    })
-    .from(timeEntries)
-    .where(and(eq(timeEntries.userId, userId), between(timeEntries.spentOn, from, till)));
-  const userTasks = await database
-    .select({ id: tasks.id, name: tasks.name, projectName: projects.name })
-    .from(tasks)
-    .innerJoin(projects, eq(projects.id, tasks.projectId))
-    .where(
-      or(
-        eq(projects.openToEveryone, true),
-        exists(
-          database
-            .select()
-            .from(projectAssignments)
-            .where(
-              and(
-                eq(projectAssignments.projectId, projects.id),
-                eq(projectAssignments.userId, userId),
-              ),
-            ),
-        ),
-        // Keeps rows for tasks the user is no longer assigned to.
-        exists(
-          database
-            .select()
-            .from(timeEntries)
-            .where(and(eq(timeEntries.taskId, tasks.id), eq(timeEntries.userId, userId))),
-        ),
-      ),
-    );
-  return { tasks: userTasks, entries };
-}
+type TimesheetGridProps = {
+  days: string[];
+  tasks: Task[];
+  entries: TimeEntry[];
+  cellsAction: string;
+  addedTaskIds: number[];
+  /** The current query string, kept when adding a row. */
+  search: string;
+};
 
-const addedTaskIdsOf = (queries: string[] | undefined) => (queries ?? []).map(Number);
+type PeriodLinks = { previousHref: string; nextHref: string };
 
-const weekPath = (monday: string) => `/timesheet/week/${monday}`;
-const monthPath = (month: string, showWeekends: boolean) =>
-  `/timesheet/month/${month}${showWeekends ? "?weekends=on" : ""}`;
-
-timesheet.get("/", (c) => c.redirect(weekPath(mondayOf(todayInOslo()))));
-
-timesheet.get("/week/:date", async (c) => {
-  const user = c.get("user");
-  if (!user) return c.text("Not logged in", 401);
-  const date = c.req.param("date");
-  if (!isIsoDate(date)) return c.notFound();
-  const monday = mondayOf(date);
-  if (date !== monday) return c.redirect(weekPath(monday));
-  const days = daysOfWeek(monday);
-  const { tasks, entries } = await loadTimesheet(user.id, monday, addDays(monday, 6));
-
-  return c.render(
+export function WeekPage({
+  monday,
+  sunday,
+  previousHref,
+  nextHref,
+  ...grid
+}: { monday: string; sunday: string } & PeriodLinks & TimesheetGridProps) {
+  return (
     <Page
       title="Timesheet"
       actions={
         <PeriodNavigation
-          previousHref={weekPath(addDays(monday, -7))}
-          nextHref={weekPath(addDays(monday, 7))}
+          previousHref={previousHref}
+          nextHref={nextHref}
           previousLabel="Previous week"
           nextLabel="Next week"
         >
-          {formatDateRange(monday, addDays(monday, 6))}
+          {formatDateRange(monday, sunday)}
         </PeriodNavigation>
       }
     >
-      <TimesheetGrid
-        days={days}
-        tasks={tasks}
-        entries={entries}
-        inputWidth="9ch"
-        cellsAction={`${weekPath(monday)}/cells`}
-        addedTaskIds={addedTaskIdsOf(c.req.queries("add"))}
-        search={new URL(c.req.url).search}
-      />
-    </Page>,
+      <TimesheetGrid {...grid} inputWidth="9ch" />
+    </Page>
   );
-});
+}
 
-timesheet.get("/month", (c) => c.redirect(monthPath(todayInOslo().slice(0, 7), false)));
-
-timesheet.get("/month/:month", async (c) => {
-  const user = c.get("user");
-  if (!user) return c.text("Not logged in", 401);
-  const month = c.req.param("month");
-  if (!isIsoMonth(month)) return c.notFound();
-  const showWeekends = c.req.query("weekends") === "on";
-  const addedTaskIds = addedTaskIdsOf(c.req.queries("add"));
-  const monthDays = daysOfMonth(month);
-  const { tasks, entries } = await loadTimesheet(
-    user.id,
-    monthDays[0] ?? "",
-    monthDays.at(-1) ?? "",
-  );
-  // A weekend with hours stays visible, so hiding weekends never hides time.
-  const days = monthDays.filter(
-    (day) => showWeekends || !isWeekend(day) || entries.some((entry) => entry.spentOn === day),
-  );
-
-  return c.render(
+export function MonthPage({
+  month,
+  showWeekends,
+  previousHref,
+  nextHref,
+  ...grid
+}: { month: string; showWeekends: boolean } & PeriodLinks & TimesheetGridProps) {
+  return (
     <Page
       title="Timesheet"
       actions={
         <>
           <form method="get" class="stack-h nowrap items-center gap-2xs">
-            {addedTaskIds.map((taskId) => (
+            {grid.addedTaskIds.map((taskId) => (
               <input type="hidden" name="add" value={taskId} />
             ))}
             {/* A plain input, since Checkbox's props don't allow an inline handler. */}
@@ -159,8 +85,8 @@ timesheet.get("/month/:month", async (c) => {
             </noscript>
           </form>
           <PeriodNavigation
-            previousHref={monthPath(addMonths(month, -1), showWeekends)}
-            nextHref={monthPath(addMonths(month, 1), showWeekends)}
+            previousHref={previousHref}
+            nextHref={nextHref}
             previousLabel="Previous month"
             nextLabel="Next month"
           >
@@ -169,18 +95,10 @@ timesheet.get("/month/:month", async (c) => {
         </>
       }
     >
-      <TimesheetGrid
-        days={days}
-        tasks={tasks}
-        entries={entries}
-        inputWidth="8ch"
-        cellsAction={`/timesheet/month/${month}/cells`}
-        addedTaskIds={addedTaskIds}
-        search={new URL(c.req.url).search}
-      />
-    </Page>,
+      <TimesheetGrid {...grid} inputWidth="8ch" />
+    </Page>
   );
-});
+}
 
 function TimesheetGrid({
   days,
@@ -190,16 +108,9 @@ function TimesheetGrid({
   cellsAction,
   addedTaskIds,
   search,
-}: {
-  days: string[];
-  tasks: Task[];
-  entries: TimeEntry[];
+}: TimesheetGridProps & {
   /** Caps the inputs, which in turn size the day columns. */
   inputWidth: string;
-  cellsAction: string;
-  addedTaskIds: number[];
-  /** The current query string, kept when adding a row. */
-  search: string;
 }) {
   const today = todayInOslo();
   // A week starts wherever the Monday changes, which still holds with weekends hidden.

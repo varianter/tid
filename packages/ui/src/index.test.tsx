@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { Button, Checkbox, Page, Popover } from "./index";
+import { Button, FormField, Page } from "./index";
 
 test("Button renders a button by default and a link with as='a'", () => {
   expect(
@@ -47,4 +47,15 @@ test("Page renders the back link and actions only when given", () => {
   expect(full).toContain('href="/clients"');
   expect(full).toContain("Back to clients");
   expect(full).toContain('<button class="v-button">Edit</button>');
+});
+
+test("FormField links its errors to the input, and shows nothing without errors", () => {
+  const invalid = String(<FormField name="name" label="Name" errors={["Enter a name"]} />);
+  expect(invalid).toContain('aria-invalid="true" aria-describedby="name-error"');
+  expect(invalid).toContain('id="name-error"');
+  expect(invalid).toContain("Enter a name");
+
+  const valid = String(<FormField name="name" label="Name" errors={[]} />);
+  expect(valid).not.toContain("aria-");
+  expect(valid).not.toContain("color-mode");
 });

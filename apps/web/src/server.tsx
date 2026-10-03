@@ -1,11 +1,11 @@
 import { Hono } from "hono";
 import { jsxRenderer } from "hono/jsx-renderer";
 import { devLogin, requireDevUser, type UserEnv } from "./auth/devLogin";
-import { clients } from "./clients/routes";
+import { clients } from "./clients/clients.routes";
 import { Layout } from "./layout";
-import { projects } from "./projects/routes";
-import { reports } from "./reports/routes";
-import { timesheet } from "./timesheet/routes";
+import { projects } from "./projects/projects.routes";
+import { reports } from "./reports/reports.routes";
+import { timesheet } from "./timesheet/timesheet.routes";
 
 const app = new Hono<UserEnv>();
 

@@ -1,4 +1,4 @@
-import { daysOfMonth, isIsoDate } from "../timesheet/dates";
+import { daysOfMonth, isIsoDate } from "../dates/dates";
 
 export const tabs = ["clients", "projects", "consultants", "tasks"] as const;
 export type Tab = (typeof tabs)[number];
