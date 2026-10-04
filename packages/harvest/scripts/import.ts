@@ -3,7 +3,12 @@
 // Each token is a Harvest personal access token; every account they reach is imported.
 
 import { parseArgs } from "node:util";
-import { createDatabase, migrateDatabase, rebuildDatabase } from "@tid/db/client";
+import {
+  closeOtherConnections,
+  createDatabase,
+  migrateDatabase,
+  rebuildDatabase,
+} from "@tid/db/client";
 import { startDevelopmentDatabase } from "@tid/db/container";
 import { organizations, timeEntries } from "@tid/db/schema";
 import { sql } from "drizzle-orm";
@@ -93,6 +98,7 @@ function describeDatabaseError(error: unknown) {
   return details.filter(Boolean).join("\n  ") || String(error);
 }
 
+await closeOtherConnections(database);
 await rebuildDatabase(database);
 await writePlan(database, plan).catch((error) =>
   exitWith(
