@@ -113,7 +113,8 @@ if (stored?.minutes !== plannedMinutes) {
 }
 
 const plural = (count: number, noun: string) => `${count} ${noun}${count === 1 ? "" : "s"}`;
-const organizationCount = new Set(plan.users.map((user) => user.organization)).size;
+// Every account matched the organization with its name, or the import would have stopped.
+const organizationCount = new Set(harvestExports.map(({ account }) => account.name)).size;
 console.log(
   `\n✓ Imported ${plural(harvestExports.length, "Harvest account")}, converted into ` +
     `${plural(organizationCount, "Tid organization")}: ${plural(plan.entries.length, "time entry")} ` +
