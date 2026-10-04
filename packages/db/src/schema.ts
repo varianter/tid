@@ -86,19 +86,10 @@ export const userIdentities = pgTable(
     tenantId: text().notNull(),
     subject: text().notNull(),
   },
-  (table) => [unique().on(table.provider, table.tenantId, table.subject)],
-);
-
-export const sessions = pgTable(
-  "sessions",
-  {
-    id: id(),
-    tokenHash: text().notNull().unique(),
-    userId: reference().references(() => users.id),
-    expiresAt: timestamp({ withTimezone: true }).notNull(),
-    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
-  },
-  (table) => [index("sessions_user_id").on(table.userId)],
+  (table) => [
+    unique().on(table.provider, table.tenantId, table.subject),
+    unique().on(table.userId, table.provider, table.tenantId),
+  ],
 );
 
 // Clients and projects are shared across organizations. A client found in several

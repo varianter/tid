@@ -22,6 +22,20 @@
       "when": 1790879107488,
       "tag": "0002_time_entries_export",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791049050400,
+      "tag": "0003_drop_sessions",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791095700731,
+      "tag": "0004_one_identity_per_user",
+      "breakpoints": true
     }
   ]
 }

@@ -4,6 +4,7 @@ type LayoutProps = PropsWithChildren<{
   title: string;
   currentPath: string;
   user?: { name: string };
+  logoutUrl: string;
 }>;
 
 const navigation = [
@@ -17,7 +18,7 @@ function isActive(href: string, currentPath: string) {
   return currentPath === href || currentPath.startsWith(`${href}/`);
 }
 
-export function Layout({ title, currentPath, user, children }: LayoutProps) {
+export function Layout({ title, currentPath, user, logoutUrl, children }: LayoutProps) {
   return (
     <html lang="en">
       <head>
@@ -47,8 +48,8 @@ export function Layout({ title, currentPath, user, children }: LayoutProps) {
           {user && (
             <div class="stack-v mt-auto px-xs py-2xs">
               <span class="fw-medium">{user.name}</span>
-              <a href="/dev/login" class="fs-s ink-subtle">
-                Switch user
+              <a href={logoutUrl} class="fs-s ink-subtle">
+                Log out
               </a>
             </div>
           )}
