@@ -1,0 +1,79 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment to deploy'
+        required: true
+        default: dev
+        type: choice
+        options:
+          - lab
+          - dev
+          - prod
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+
+  deploy:
+    needs: ci
+    # Prod only runs code that has been reviewed into main.
+    if: inputs.environment != 'prod' || github.ref == 'refs/heads/main'
+    uses: varianter/shared-workflows/.github/workflows/build-and-deploy-shared.yaml@main
+    secrets: inherit
+    with:
+      environment: ${{ inputs.environment || 'dev' }}
+      acr-url: variantplatformacr.azurecr.io
+      image-name: time-management
+      docker-context: .
+      dockerfile: ./apps/web/Dockerfile
+      build-args: ''
+      gitops-repository: infrastructure-as-code
+      gitops-directory-path: deployments/${{ inputs.environment || 'dev' }}/workloads/time-management
+      gitops-workload-name: time-management
+      gitops-file-to-update: values.yaml
+      gitops-yq-path: .image.tag
+      gitops-continue-on-error: 'true'
+      enable-gitops: 'true'
+
+  rollout:
+    needs: deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions: {}
+    env:
+      ARGOCD_SERVER: ${{ secrets.ARGOCD_SERVER }}
+      ARGOCD_AUTH_TOKEN: ${{ secrets.ARGOCD_AUTH_TOKEN }}
+      # The ArgoCD server sits behind nginx ingress, which doesn't pass plain gRPC through.
+      ARGOCD_OPTS: --grpc-web
+      ARGOCD_APP: time-management-${{ inputs.environment || 'dev' }}
+    steps:
+      # The server ships a CLI matching its own version, so it never drifts from the cluster.
+      - name: Install ArgoCD CLI
+        run: |
+          curl -fsSL -o /usr/local/bin/argocd "https://$ARGOCD_SERVER/download/argocd-linux-amd64"
+          chmod +x /usr/local/bin/argocd
+
+      # Without waiting for the new tag, the previous healthy revision would pass the check.
+      - name: Wait for new image
+        run: |
+          # Mirrors the shared workflow's docker/metadata-action tag: <branch>-<sha7>, slashes as dashes.
+          IMAGE_TAG="${GITHUB_REF_NAME//\//-}-${GITHUB_SHA::7}"
+          argocd app get "$ARGOCD_APP" --refresh > /dev/null
+          until argocd app get "$ARGOCD_APP" -o json | jq -e --arg tag "$IMAGE_TAG" '.status.summary.images[] | select(endswith(":" + $tag))' > /dev/null; do
+            sleep 10
+          done
+
+      - name: Wait for healthy rollout
+        run: argocd app wait "$ARGOCD_APP" --sync --health --timeout 300
+
+      - name: Rollout logs
+        if: failure()
+        run: argocd app logs "$ARGOCD_APP" --tail 200
