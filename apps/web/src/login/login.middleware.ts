@@ -1,23 +1,31 @@
 import { userIdentities, users } from "@tid/db/schema";
 import { and, eq, getTableColumns, sql } from "drizzle-orm";
+import type { Context } from "hono";
 import { createMiddleware } from "hono/factory";
 import { database } from "../database";
-import type { UserEnv } from "./user";
+import type { User, UserEnv } from "./user";
 
 // oauth2-proxy logs the user in with Entra and nginx overwrites these headers on every
 // request, so they can be trusted as long as only the ingress can reach the app.
 const subjectHeader = "x-auth-request-user";
 const emailHeader = "x-auth-request-email";
-const provider = "entra";
+export const identityProvider = "entra";
+export const signupPath = "/signup";
 
-async function findUserByIdentity(tenantId: string, subject: string) {
+export function readProxyIdentity(c: Context) {
+  const subject = c.req.header(subjectHeader);
+  const email = c.req.header(emailHeader);
+  return subject && email ? { subject, email } : undefined;
+}
+
+export async function findUserByIdentity(tenantId: string, subject: string) {
   const [user] = await database
     .select(getTableColumns(users))
     .from(users)
     .innerJoin(userIdentities, eq(userIdentities.userId, users.id))
     .where(
       and(
-        eq(userIdentities.provider, provider),
+        eq(userIdentities.provider, identityProvider),
         eq(userIdentities.tenantId, tenantId),
         eq(userIdentities.subject, subject),
       ),
@@ -25,16 +33,19 @@ async function findUserByIdentity(tenantId: string, subject: string) {
   return user;
 }
 
-// Users have no identity until their first login, so they are matched on the imported email.
-async function linkUserByEmail(tenantId: string, subject: string, email: string) {
+export async function findUserByEmail(email: string) {
   const [user] = await database
     .select()
     .from(users)
     .where(sql`lower(${users.email}) = lower(${email})`);
-  if (!user) return undefined;
+  return user;
+}
+
+// Imported users have no identity until their first login, so they are matched on email.
+async function linkIdentity(tenantId: string, subject: string, user: User) {
   const [identity] = await database
     .insert(userIdentities)
-    .values({ userId: user.id, provider, tenantId, subject })
+    .values({ userId: user.id, provider: identityProvider, tenantId, subject })
     // Conflicts when concurrent first requests race, or when the email now belongs to someone
     // other than the subject the user is already linked to. Only the stored owner may log in.
     .onConflictDoNothing()
@@ -46,15 +57,18 @@ async function linkUserByEmail(tenantId: string, subject: string, email: string)
 
 export const requireProxyUser = (tenantId: string) =>
   createMiddleware<UserEnv>(async (c, next) => {
-    const subject = c.req.header(subjectHeader);
-    const email = c.req.header(emailHeader);
-    if (!subject || !email) return c.text("Not logged in", 401);
+    const identity = readProxyIdentity(c);
+    if (!identity) return c.text("Not logged in", 401);
+    const { subject, email } = identity;
 
-    const user =
-      (await findUserByIdentity(tenantId, subject)) ??
-      (await linkUserByEmail(tenantId, subject, email));
-    // Users come from the Harvest import, since a user can't exist without an organization.
-    if (!user) return c.text(`No user with the email ${email}`, 403);
+    let user = await findUserByIdentity(tenantId, subject);
+    if (!user) {
+      const userWithEmail = await findUserByEmail(email);
+      // A user can't exist without an organization, so new people choose one first.
+      if (!userWithEmail) return c.redirect(signupPath);
+      user = await linkIdentity(tenantId, subject, userWithEmail);
+    }
+    if (!user) return c.text(`${email} belongs to another login`, 403);
 
     c.set("user", user);
     await next();

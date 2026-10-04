@@ -5,36 +5,29 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1790879106533,
+      "when": 1791104281219,
       "tag": "0000_init",
       "breakpoints": true
     },
     {
       "idx": 1,
       "version": "7",
-      "when": 1790879106998,
+      "when": 1791104281661,
       "tag": "0001_time_entry_rates",
       "breakpoints": true
     },
     {
       "idx": 2,
       "version": "7",
-      "when": 1790879107488,
+      "when": 1791104282109,
       "tag": "0002_time_entries_export",
       "breakpoints": true
     },
     {
       "idx": 3,
       "version": "7",
-      "when": 1791049050400,
-      "tag": "0003_drop_sessions",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1791095700731,
-      "tag": "0004_one_identity_per_user",
+      "when": 1791104282555,
+      "tag": "0003_organizations",
       "breakpoints": true
     }
   ]

@@ -42,6 +42,14 @@ export function migrateDatabase(database: Database) {
   return migrate(database, { migrationsFolder: `${import.meta.dir}/../migrations` });
 }
 
+// A running dev server's prepared statements refer to types by id, which a rebuild changes.
+// Ending its connections makes it reconnect instead of failing with "cache lookup failed".
+export function closeOtherConnections(database: Database) {
+  return database.execute(
+    sql`select pg_terminate_backend(pid) from pg_stat_activity where datname = current_database() and pid <> pg_backend_pid()`,
+  );
+}
+
 // Drops all data and applies the full chain of migrations to an empty database.
 export async function rebuildDatabase(database: Database) {
   await database.execute(sql`drop schema if exists public, drizzle cascade`);

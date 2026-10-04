@@ -1,4 +1,4 @@
-import type { Database } from "../client";
+import type { Database } from "@tid/db/client";
 import {
   assignmentRates,
   clients,
@@ -9,7 +9,7 @@ import {
   tasks,
   timeEntries,
   users,
-} from "../schema";
+} from "@tid/db/schema";
 import type { ImportPlan } from "./plan";
 
 // Postgres caps a statement at 65535 parameters, so large inserts go in chunks.
@@ -29,9 +29,7 @@ function lookup<Value>(map: Map<string, Value>, key: string) {
 
 export function writePlan(database: Database, plan: ImportPlan) {
   return database.transaction(async (transaction) => {
-    const organizationRows = await inChunks(plan.organizations, (chunk) =>
-      transaction.insert(organizations).values(chunk).returning(),
-    );
+    const organizationRows = await transaction.select().from(organizations);
     const organizationIds = new Map(organizationRows.map((row) => [row.slug, row.id]));
 
     const userRows = await inChunks(plan.users, (chunk) =>

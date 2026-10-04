@@ -33,6 +33,4 @@ export TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE=/var/run/docker.sock
 
 ## Early life of Tid.
 
-To make it easier to import Harvest data, you can can use `bun run db:import 2026-06 2026-09`.
-This will rebuild the dev database from Harvest instead, but needs ta PAT token per organization to do so.
-Pass them comma separated: `bun run db:import 2026-06 2026-09 --tokens <oslo>,<trondheim>`. It checks everything before touching the database, and lists every problem it finds. If needed, use `--save` to keep the raw Harvest data in `packages/db/harvest-export`. That folder is gitignored
+To check the app against real data, the dev database can be rebuilt from Harvest. See [packages/harvest](packages/harvest/README.md).

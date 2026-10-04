@@ -1,14 +1,14 @@
 import { createDatabase, migrateDatabase } from "@tid/db/client";
 import { startDevelopmentDatabase } from "@tid/db/container";
 import { seedDatabase } from "@tid/db/fixture";
-import { organizations } from "@tid/db/schema";
+import { users } from "@tid/db/schema";
 
 const container = await startDevelopmentDatabase();
 const databaseUrl = container.getConnectionUri();
 
 const database = createDatabase(databaseUrl);
 await migrateDatabase(database);
-if ((await database.$count(organizations)) === 0) await seedDatabase(database);
+if ((await database.$count(users)) === 0) await seedDatabase(database);
 await database.$client.close();
 console.log(`Postgres running at ${databaseUrl}`);
 
