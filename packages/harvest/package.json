@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "import": "bun scripts/import.ts"
+    "import:norway": "bun scripts/import-norway.ts"
   },
   "dependencies": {
     "@tid/db": "workspace:*",

@@ -1,14 +1,10 @@
-// Rebuilds the dev database from Harvest, so the app can be checked against real data.
-// Usage: bun run harvest:import <from-month> [to-month] --tokens <token>,<token> [--save]
+// Rebuilds the dev database from the Norwegian Harvest accounts, so the app can be checked
+// against real data.
+// Usage: bun run harvest:import:norway <from-month> [to-month] --tokens <token>,<token> [--save]
 // Each token is a Harvest personal access token; every account they reach is imported.
 
 import { parseArgs } from "node:util";
-import {
-  closeOtherConnections,
-  createDatabase,
-  migrateDatabase,
-  rebuildDatabase,
-} from "@tid/db/client";
+import { closeOtherConnections, createDatabase, rebuildDatabase } from "@tid/db/client";
 import { startDevelopmentDatabase } from "@tid/db/container";
 import { organizations, timeEntries } from "@tid/db/schema";
 import { sql } from "drizzle-orm";
@@ -30,7 +26,7 @@ const [fromMonth, toMonth = fromMonth] = positionals;
 const isMonth = (value?: string) => value !== undefined && /^\d{4}-(0[1-9]|1[0-2])$/.test(value);
 if (!isMonth(fromMonth) || !isMonth(toMonth) || (toMonth as string) < (fromMonth as string)) {
   exitWith(
-    "Usage: bun run harvest:import <from-month> [to-month] --tokens <token>,<token> [--save], with months as YYYY-MM.",
+    "Usage: bun run harvest:import:norway <from-month> [to-month] --tokens <token>,<token> [--save], with months as YYYY-MM.",
   );
 }
 const [toYear, toMonthNumber] = (toMonth as string).split("-").map(Number) as [number, number];
@@ -69,10 +65,12 @@ if (options.save) {
   console.log(`Saved to ${directory}`);
 }
 
-// Accounts are matched to the organizations the migrations add, before anything is replaced.
+// Rebuilt first, since accounts are matched to the organizations the migrations add, and
+// migrating a database built from older migrations fails.
 const container = await startDevelopmentDatabase();
 const database = createDatabase(container.getConnectionUri());
-await migrateDatabase(database);
+await closeOtherConnections(database);
+await rebuildDatabase(database);
 const { plan, problems, warnings } = planImport(
   harvestExports,
   await database.select().from(organizations),
@@ -84,7 +82,7 @@ if (warnings.length > 0) {
 if (problems.length > 0) {
   console.error(`\n${problems.length} problems:`);
   for (const problem of problems) console.error(`  ✗ ${problem}`);
-  exitWith("Nothing was imported; the dev database is unchanged.");
+  exitWith("Nothing was imported; the dev database is now empty.");
 }
 
 // Drizzle wraps the driver's error, which holds what Postgres said and why.
@@ -98,8 +96,6 @@ function describeDatabaseError(error: unknown) {
   return details.filter(Boolean).join("\n  ") || String(error);
 }
 
-await closeOtherConnections(database);
-await rebuildDatabase(database);
 await writePlan(database, plan).catch((error) =>
   exitWith(
     `Postgres rejected the import, so the dev database is now empty:\n  ${describeDatabaseError(error)}`,
@@ -116,7 +112,11 @@ if (stored?.minutes !== plannedMinutes) {
   exitWith(`Stored ${stored?.minutes} minutes, but Harvest had ${plannedMinutes}.`);
 }
 
+const plural = (count: number, noun: string) => `${count} ${noun}${count === 1 ? "" : "s"}`;
+const organizationCount = new Set(plan.users.map((user) => user.organization)).size;
 console.log(
-  `\n✓ Imported ${plan.entries.length} time entries (${(plannedMinutes / 60).toFixed(2)} hours), ` +
-    `${plan.users.length} users and ${plan.projects.length} projects from ${harvestExports.length} organizations.`,
+  `\n✓ Imported ${plural(harvestExports.length, "Harvest account")}, converted into ` +
+    `${plural(organizationCount, "Tid organization")}: ${plural(plan.entries.length, "time entry")} ` +
+    `(${(plannedMinutes / 60).toFixed(2)} hours), ${plural(plan.users.length, "user")} and ` +
+    `${plural(plan.projects.length, "project")}.`,
 );

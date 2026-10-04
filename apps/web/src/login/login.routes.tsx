@@ -36,10 +36,10 @@ export function signup(
       loader: async (c) => {
         const identity = readIdentity(c);
         if (!identity) return c.text("Not logged in", 401);
-        const isUser =
+        const existingUser =
           (await findUserByIdentity(tenantId, identity.subject)) ??
           (await findUserByEmail(identity.email));
-        if (isUser) return c.redirect("/");
+        if (existingUser) return c.redirect("/");
         const country = employeeCountry(identity.email);
         if (!country) {
           c.status(403);

@@ -36,7 +36,7 @@ Moving `billable` to tasks would record this faithfully, but the rule that open 
 
 Sweden probably has one Harvest account for all its offices, while each office is its own organization. Which organization should its users and projects go to?
 
-**Currently:** the import only accepts accounts named exactly like an organization, so it stops on that account.
+**Currently:** the Norwegian import only accepts accounts named exactly like an organization. Sweden will get its own import.
 
 ## Importing from Harvest (on hold)
 
