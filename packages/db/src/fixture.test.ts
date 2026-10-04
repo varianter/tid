@@ -2,17 +2,16 @@ import { afterAll, beforeAll, expect, test } from "bun:test";
 import { sql } from "drizzle-orm";
 import { createDatabase, rebuildDatabase } from "./client";
 import { seedDatabase } from "./fixture";
-import { organizations, timeEntriesExport } from "./schema";
+import { timeEntriesExport } from "./schema";
 
 const database = createDatabase(process.env.DATABASE_URL ?? "");
 
 beforeAll(() => rebuildDatabase(database));
 afterAll(() => database.$client.close());
 
-test("the fixture seeds both organizations, with a rate for every billable hour", async () => {
+test("the fixture logs time in Oslo and Trondheim, with a rate for every billable hour", async () => {
   await seedDatabase(database);
 
-  expect(await database.$count(organizations)).toBe(2);
   const [totals] = await database
     .select({
       accounts: sql<string[]>`array_agg(distinct ${timeEntriesExport.accountName})`,

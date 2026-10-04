@@ -4,12 +4,12 @@
 
 import { parseArgs } from "node:util";
 import { sql } from "drizzle-orm";
-import { createDatabase, rebuildDatabase } from "../src/client";
+import { createDatabase, migrateDatabase, rebuildDatabase } from "../src/client";
 import { startDevelopmentDatabase } from "../src/container";
 import { fetchHarvestAccounts } from "../src/harvest/fetch";
 import { planImport } from "../src/harvest/plan";
 import { writePlan } from "../src/harvest/write";
-import { timeEntries } from "../src/schema";
+import { organizations, timeEntries } from "../src/schema";
 
 function exitWith(message: string): never {
   console.error(`\n✗ ${message}`);
@@ -64,7 +64,14 @@ if (options.save) {
   console.log(`Saved to ${directory}`);
 }
 
-const { plan, problems, warnings } = planImport(harvestExports);
+// Accounts are matched to the organizations the migrations add, before anything is replaced.
+const container = await startDevelopmentDatabase();
+const database = createDatabase(container.getConnectionUri());
+await migrateDatabase(database);
+const { plan, problems, warnings } = planImport(
+  harvestExports,
+  await database.select().from(organizations),
+);
 if (warnings.length > 0) {
   console.log(`\n${warnings.length} warnings:`);
   for (const warning of warnings) console.log(`  ! ${warning}`);
@@ -86,8 +93,6 @@ function describeDatabaseError(error: unknown) {
   return details.filter(Boolean).join("\n  ") || String(error);
 }
 
-const container = await startDevelopmentDatabase();
-const database = createDatabase(container.getConnectionUri());
 await rebuildDatabase(database);
 await writePlan(database, plan).catch((error) =>
   exitWith(
@@ -107,5 +112,5 @@ if (stored?.minutes !== plannedMinutes) {
 
 console.log(
   `\n✓ Imported ${plan.entries.length} time entries (${(plannedMinutes / 60).toFixed(2)} hours), ` +
-    `${plan.users.length} users and ${plan.projects.length} projects from ${plan.organizations.length} organizations.`,
+    `${plan.users.length} users and ${plan.projects.length} projects from ${harvestExports.length} organizations.`,
 );

@@ -2,7 +2,7 @@
 
 How Harvest data maps onto our database, and the rules the import follows where the two models disagree. Open questions live in `identified-edge-cases.md` until they're settled here.
 
-Each Harvest account, such as Variant Trondheim AS, becomes one organization.
+Organizations are added by migrations, not by the import. Each Harvest account belongs to the organization with the same name, and an account without one, or one logging time in another currency, stops the import.
 
 ## Users
 

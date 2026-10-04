@@ -18,6 +18,7 @@ CREATE TABLE "organizations" (
 	"id" bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "organizations_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 9223372036854775807 START WITH 1 CACHE 1),
 	"slug" text NOT NULL,
 	"name" text NOT NULL,
+	"country" char(2) NOT NULL,
 	"currency" char(3) NOT NULL,
 	"full_day_minutes" integer NOT NULL,
 	CONSTRAINT "organizations_slug_unique" UNIQUE("slug"),
@@ -59,15 +60,6 @@ CREATE TABLE "projects" (
 	CONSTRAINT "ends_after_start" CHECK ("projects"."ends_on" >= "projects"."starts_on")
 );
 --> statement-breakpoint
-CREATE TABLE "sessions" (
-	"id" bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "sessions_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 9223372036854775807 START WITH 1 CACHE 1),
-	"token_hash" text NOT NULL,
-	"user_id" bigint NOT NULL,
-	"expires_at" timestamp with time zone NOT NULL,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "sessions_tokenHash_unique" UNIQUE("token_hash")
-);
---> statement-breakpoint
 CREATE TABLE "tasks" (
 	"id" bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "tasks_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 9223372036854775807 START WITH 1 CACHE 1),
 	"project_id" bigint NOT NULL,
@@ -97,7 +89,8 @@ CREATE TABLE "user_identities" (
 	"provider" text NOT NULL,
 	"tenant_id" text NOT NULL,
 	"subject" text NOT NULL,
-	CONSTRAINT "user_identities_provider_tenantId_subject_unique" UNIQUE("provider","tenant_id","subject")
+	CONSTRAINT "user_identities_provider_tenantId_subject_unique" UNIQUE("provider","tenant_id","subject"),
+	CONSTRAINT "user_identities_userId_provider_tenantId_unique" UNIQUE("user_id","provider","tenant_id")
 );
 --> statement-breakpoint
 CREATE TABLE "user_roles" (
@@ -122,7 +115,6 @@ ALTER TABLE "project_assignments" ADD CONSTRAINT "project_assignments_organizati
 ALTER TABLE "project_organizations" ADD CONSTRAINT "project_organizations_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "project_organizations" ADD CONSTRAINT "project_organizations_org_id_organizations_id_fk" FOREIGN KEY ("org_id") REFERENCES "public"."organizations"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "projects" ADD CONSTRAINT "projects_client_id_clients_id_fk" FOREIGN KEY ("client_id") REFERENCES "public"."clients"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "sessions" ADD CONSTRAINT "sessions_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "tasks" ADD CONSTRAINT "tasks_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "time_entries" ADD CONSTRAINT "time_entries_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "time_entries" ADD CONSTRAINT "time_entries_task_id_tasks_id_fk" FOREIGN KEY ("task_id") REFERENCES "public"."tasks"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
@@ -131,7 +123,6 @@ ALTER TABLE "user_roles" ADD CONSTRAINT "user_roles_user_id_users_id_fk" FOREIGN
 ALTER TABLE "users" ADD CONSTRAINT "users_org_id_organizations_id_fk" FOREIGN KEY ("org_id") REFERENCES "public"."organizations"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "project_assignments_user_id" ON "project_assignments" USING btree ("user_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "project_organizations_one_owner" ON "project_organizations" USING btree ("project_id") WHERE "project_organizations"."is_owner";--> statement-breakpoint
-CREATE INDEX "sessions_user_id" ON "sessions" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "time_entries_task_id" ON "time_entries" USING btree ("task_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "users_email_unique" ON "users" USING btree (lower("email"));--> statement-breakpoint
 CREATE INDEX "users_org_id" ON "users" USING btree ("org_id");

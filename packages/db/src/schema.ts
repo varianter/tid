@@ -4,12 +4,14 @@
 //   bunx drizzle-kit generate --name init
 //   bunx drizzle-kit generate --custom --name time_entry_rates
 //   bunx drizzle-kit generate --custom --name time_entries_export
-// then copy time_entry_rates.sql and time_entries_export.sql over the generated, empty files.
-// Local databases have to be rebuilt afterwards: bun run db:reset, or bun run db:import.
+//   bunx drizzle-kit generate --custom --name organizations
+// then copy time_entry_rates.sql, time_entries_export.sql and organizations.sql over the
+// generated, empty files. Databases that ran the old migrations have to be rebuilt afterwards:
+// locally with bun run db:reset or bun run db:import, and deployed ones by emptying them.
 //
 // Live: never edit or delete a migration, since the live database has already run it.
-// Add new ones with drizzle-kit generate. Delete this comment, time_entry_rates.sql and
-// time_entries_export.sql.
+// Add new ones with drizzle-kit generate. Delete this comment, time_entry_rates.sql,
+// time_entries_export.sql and organizations.sql.
 
 import { sql } from "drizzle-orm";
 import {
@@ -41,6 +43,8 @@ export const organizations = pgTable(
     id: id(),
     slug: text().notNull().unique(),
     name: text().notNull(),
+    // ISO 3166-1 alpha-2, like NO or SE.
+    country: char({ length: 2 }).notNull(),
     currency: char({ length: 3 }).notNull(),
     fullDayMinutes: integer().notNull(),
   },

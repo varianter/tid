@@ -26,9 +26,12 @@ export type HarvestExport = {
   }[];
 };
 
-// Rows refer to each other by email, client name and project code; the writer resolves ids.
+// The organizations in the database, which Harvest accounts are matched to by name.
+export type KnownOrganization = { slug: string; name: string; currency: string };
+
+// Rows refer to each other by email, client name, project code and organization slug; the
+// writer resolves ids.
 export type ImportPlan = {
-  organizations: { slug: string; name: string; currency: string; fullDayMinutes: number }[];
   users: { email: string; name: string; organization: string }[];
   clients: string[];
   projects: {
@@ -61,20 +64,8 @@ export type ImportPlan = {
 const internalClientName = "Varianttid";
 // Leave that reporting keeps out of billable base hours. Harvest has no such setting.
 const notCountingTowardBillableBase = new Set(["FER1000", "VEL1000"]);
-// Harvest's weekly capacity is 37.5 hours for everyone.
-const fullDayMinutes = 450;
 // The reporting database holds project codes of at most 16 characters.
 const maxCodeLength = 16;
-
-// "Variant Trondheim AS" becomes "trondheim", since slugs appear in URLs.
-export function organizationSlug(accountName: string) {
-  return accountName
-    .replace(/^variant\s+/i, "")
-    .replace(/\s+as$/i, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
-}
 
 function groupBy<Item>(items: Item[], key: (item: Item) => string) {
   const groups = new Map<string, Item[]>();
@@ -82,11 +73,10 @@ function groupBy<Item>(items: Item[], key: (item: Item) => string) {
   return groups;
 }
 
-export function planImport(harvestExports: HarvestExport[]) {
+export function planImport(harvestExports: HarvestExport[], organizations: KnownOrganization[]) {
   const problems: string[] = [];
   const warnings: string[] = [];
   const plan: ImportPlan = {
-    organizations: [],
     users: [],
     clients: [],
     projects: [],
@@ -97,21 +87,19 @@ export function planImport(harvestExports: HarvestExport[]) {
 
   const slugByAccount = new Map<number, string>();
   for (const { account, timeEntries } of harvestExports) {
-    const slug = organizationSlug(account.name);
-    if (plan.organizations.some((organization) => organization.slug === slug)) {
-      problems.push(`${account.name}: another account also becomes the organization "${slug}".`);
+    const organization = organizations.find((known) => known.name === account.name);
+    if (!organization) {
+      problems.push(`${account.name}: no organization has this name; add it in a migration.`);
+      continue;
     }
-    const currencies = [...new Set(timeEntries.map((entry) => entry.client.currency))];
-    if (currencies.length > 1) {
-      problems.push(`${account.name}: logs time in several currencies (${currencies.join(", ")}).`);
+    const currencies = new Set(timeEntries.map((entry) => entry.client.currency));
+    currencies.delete(organization.currency);
+    if (currencies.size > 0) {
+      problems.push(
+        `${account.name}: logs time in ${[...currencies].join(", ")}, but the organization uses ${organization.currency}.`,
+      );
     }
-    slugByAccount.set(account.id, slug);
-    plan.organizations.push({
-      slug,
-      name: account.name,
-      currency: currencies[0] ?? "NOK",
-      fullDayMinutes,
-    });
+    slugByAccount.set(account.id, organization.slug);
   }
 
   // One person is one user across accounts, matched by email ignoring case.

@@ -1,13 +1,19 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import { createDatabase, rebuildDatabase } from "../client";
-import { timeEntriesExport } from "../schema";
-import { type HarvestExport, organizationSlug, planImport } from "./plan";
+import { organizations, timeEntriesExport } from "../schema";
+import { type HarvestExport, type KnownOrganization, planImport } from "./plan";
 import { writePlan } from "./write";
 
 // The test preload points DATABASE_URL at a throwaway container.
 const database = createDatabase(process.env.DATABASE_URL ?? "");
 
-beforeAll(() => rebuildDatabase(database));
+// The organizations the migrations add, which accounts are matched to.
+let known: KnownOrganization[];
+
+beforeAll(async () => {
+  await rebuildDatabase(database);
+  known = await database.select().from(organizations);
+});
 afterAll(() => database.$client.close());
 
 const project = (id: number, code: string, client = "Kunde AS") => ({
@@ -58,13 +64,26 @@ const oslo: HarvestExport = {
   timeEntries: [entry(20, 200, "2026-08-06", 2, 1600)],
 };
 
-test("account names become short slugs", () => {
-  expect(organizationSlug("Variant Trondheim AS")).toBe("trondheim");
-  expect(organizationSlug("Variant Øst AS")).toBe("st");
+test("accounts must match an organization by name and currency", () => {
+  const { problems } = planImport(
+    [
+      { ...trondheim, account: { id: 3, name: "Variant Øst AS" } },
+      {
+        ...oslo,
+        timeEntries: [{ ...entry(20, 200, "2026-08-06", 2), client: { currency: "SEK" } }],
+      },
+    ],
+    known,
+  );
+
+  expect(problems).toEqual([
+    "Variant Øst AS: no organization has this name; add it in a migration.",
+    "Variant Oslo AS: logs time in SEK, but the organization uses NOK.",
+  ]);
 });
 
 test("merges people and projects across accounts, and copies each entry's rate", () => {
-  const { plan, problems, warnings } = planImport([trondheim, oslo]);
+  const { plan, problems, warnings } = planImport([trondheim, oslo], known);
 
   expect(problems).toEqual([]);
   expect(warnings).toEqual([
@@ -109,7 +128,7 @@ test("reports every problem instead of stopping at the first", () => {
       entry(99, 100, "2026-08-04", 1),
     ],
   };
-  const { problems } = planImport([broken]);
+  const { problems } = planImport([broken], known);
 
   expect(problems).toEqual([
     'Variant Trondheim AS: project "Uten kode" has no code.',
@@ -120,16 +139,19 @@ test("reports every problem instead of stopping at the first", () => {
 });
 
 test("vacation and paid welfare leave don't count toward billable base hours", () => {
-  const { plan } = planImport([
-    {
-      ...trondheim,
-      projects: [
-        ...trondheim.projects,
-        project(102, "FER1000", "Varianttid"),
-        project(103, "VEL1000", "Varianttid"),
-      ],
-    },
-  ]);
+  const { plan } = planImport(
+    [
+      {
+        ...trondheim,
+        projects: [
+          ...trondheim.projects,
+          project(102, "FER1000", "Varianttid"),
+          project(103, "VEL1000", "Varianttid"),
+        ],
+      },
+    ],
+    known,
+  );
 
   const countsTowardBase = (code: string) =>
     plan.projects.find((p) => p.code === code)?.countsTowardBillableBase;
@@ -141,7 +163,7 @@ test("vacation and paid welfare leave don't count toward billable base hours", (
 
 // A plan without problems must be one Postgres accepts, or the import fails halfway.
 test("a plan without problems is written and exported as Harvest had it", async () => {
-  const { plan, problems } = planImport([trondheim, oslo]);
+  const { plan, problems } = planImport([trondheim, oslo], known);
   expect(problems).toEqual([]);
 
   await writePlan(database, plan);
@@ -197,7 +219,7 @@ test("a -S code is merged into its base code", () => {
     ],
     timeEntries: [entry(10, 100, "2026-08-03", 4), entry(10, 101, "2026-08-04", 4)],
   };
-  const { plan, problems, warnings } = planImport([withSuffix]);
+  const { plan, problems, warnings } = planImport([withSuffix], known);
 
   expect(problems).toEqual([]);
   expect(warnings).toEqual([]);
@@ -214,7 +236,7 @@ test("projects sharing a name under one client get their codes added, so Postgre
     ],
     timeEntries: [entry(10, 100, "2026-08-03", 4), entry(10, 101, "2026-08-04", 4)],
   };
-  const { plan, problems, warnings } = planImport([twoCodes]);
+  const { plan, problems, warnings } = planImport([twoCodes], known);
 
   expect(problems).toEqual([]);
   expect(warnings).toContain(

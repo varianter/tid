@@ -19,12 +19,8 @@ import {
 
 const firstWeek = -17;
 
+// Organizations come from the migrations; people and projects refer to them by slug.
 type OrganizationSlug = "trondheim" | "oslo";
-
-const organizationCatalog: Record<OrganizationSlug, string> = {
-  trondheim: "Variant Trondheim AS",
-  oslo: "Variant Oslo AS",
-};
 
 type ProjectDefinition = {
   name: string;
@@ -324,19 +320,9 @@ export function seedDatabase(database: Database) {
   const projectEntries = Object.entries(projectCatalog) as [ProjectCode, ProjectDefinition][];
 
   return database.transaction(async (transaction) => {
-    const organizationRows = await transaction
-      .insert(organizations)
-      .values(
-        Object.entries(organizationCatalog).map(([slug, name]) => ({
-          slug,
-          name,
-          currency: "NOK",
-          fullDayMinutes: 450,
-        })),
-      )
-      .returning();
+    const organizationRows = await transaction.select().from(organizations);
     const organizationIds = byKey(organizationRows, (row) => row.slug);
-    const organizationId = (slug: OrganizationSlug) => lookup(organizationIds, slug).id;
+    const organizationId = (slug: string) => lookup(organizationIds, slug).id;
 
     const userRows = await transaction
       .insert(users)
@@ -392,10 +378,10 @@ export function seedDatabase(database: Database) {
               .filter((person) => person.assignments?.some((a) => a.project === code))
               .map((person) => person.organization),
           ])
-        : Object.keys(organizationCatalog);
+        : organizationRows.map((row) => row.slug);
       return [...slugs].map((slug) => ({
         projectId: projectId(code),
-        orgId: organizationId(slug as OrganizationSlug),
+        orgId: organizationId(slug),
         isOwner: slug === project.owner,
       }));
     });

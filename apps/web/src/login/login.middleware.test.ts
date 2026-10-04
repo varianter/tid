@@ -20,7 +20,13 @@ beforeAll(async () => {
   await rebuildDatabase(database);
   const [organization] = await database
     .insert(organizations)
-    .values({ slug: "variant", name: "Variant", currency: "NOK", fullDayMinutes: 450 })
+    .values({
+      slug: "variant",
+      name: "Variant",
+      country: "NO",
+      currency: "NOK",
+      fullDayMinutes: 450,
+    })
     .returning();
   if (!organization) throw new Error("Expected an organization");
   const [user] = await database
