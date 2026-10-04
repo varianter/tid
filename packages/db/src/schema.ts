@@ -86,7 +86,10 @@ export const userIdentities = pgTable(
     tenantId: text().notNull(),
     subject: text().notNull(),
   },
-  (table) => [unique().on(table.provider, table.tenantId, table.subject)],
+  (table) => [
+    unique().on(table.provider, table.tenantId, table.subject),
+    unique().on(table.userId, table.provider, table.tenantId),
+  ],
 );
 
 // Clients and projects are shared across organizations. A client found in several

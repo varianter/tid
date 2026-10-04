@@ -58,3 +58,11 @@ test("links by email on first login, then by subject", async () => {
   });
   expect(await afterEmailChange.text()).toBe(String(userId));
 });
+
+test("rejects a new subject that reuses a linked user's email", async () => {
+  const response = await requestAs({
+    "x-auth-request-user": "new-hire-sub",
+    "x-auth-request-email": "kari@variant.no",
+  });
+  expect(response.status).toBe(403);
+});
