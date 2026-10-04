@@ -2,9 +2,10 @@ import { Hono } from "hono";
 import { csrf } from "hono/csrf";
 import { jsxRenderer } from "hono/jsx-renderer";
 import { clients } from "./clients/clients.routes";
-import { dev, devLogoutUrl, requireDevUser } from "./dev/dev.routes";
+import { dev, devLogoutUrl, devTenantId, readDevIdentity, requireDevUser } from "./dev/dev.routes";
 import { Layout } from "./layout";
-import { proxyLogoutUrl, requireProxyUser } from "./login/login.middleware";
+import { proxyLogoutUrl, requireProxyUser, signupPath } from "./login/login.middleware";
+import { signup } from "./login/login.routes";
 import type { UserEnv } from "./login/user";
 import { projects } from "./projects/projects.routes";
 import { reports } from "./reports/reports.routes";
@@ -13,10 +14,20 @@ import { timesheet } from "./timesheet/timesheet.routes";
 const isDevLoginEnabled = process.env.DEV_LOGIN === "true";
 
 function chooseLogin() {
-  if (isDevLoginEnabled) return { requireUser: requireDevUser, logoutUrl: devLogoutUrl };
+  if (isDevLoginEnabled) {
+    return {
+      requireUser: requireDevUser,
+      logoutUrl: devLogoutUrl,
+      signup: signup(devTenantId, readDevIdentity),
+    };
+  }
   const tenantId = process.env.ENTRA_TENANT_ID;
   if (!tenantId) throw new Error("ENTRA_TENANT_ID is not set");
-  return { requireUser: requireProxyUser(tenantId), logoutUrl: proxyLogoutUrl(tenantId) };
+  return {
+    requireUser: requireProxyUser(tenantId),
+    logoutUrl: proxyLogoutUrl(tenantId),
+    signup: signup(tenantId),
+  };
 }
 const login = chooseLogin();
 
@@ -34,8 +45,9 @@ app.use(
 
 app.get("/health", (c) => c.text("ok"));
 
-// Registered before the middleware, so the login page itself doesn't require a user.
+// Registered before the middleware, so logging in and signing up don't require a user.
 if (isDevLoginEnabled) app.route("/dev", dev);
+app.route(signupPath, login.signup);
 app.use(login.requireUser);
 
 app.get("/", (c) => c.redirect("/timesheet"));
