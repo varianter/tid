@@ -7,7 +7,7 @@
 //   bunx drizzle-kit generate --custom --name organizations
 // then copy time_entry_rates.sql, time_entries_export.sql and organizations.sql over the
 // generated, empty files. Databases that ran the old migrations have to be rebuilt afterwards:
-// locally with bun run db:reset or bun run db:import, and deployed ones by emptying them.
+// locally with bun run db:reset or bun run harvest:import, and deployed ones by emptying them.
 //
 // Live: never edit or delete a migration, since the live database has already run it.
 // Add new ones with drizzle-kit generate. Delete this comment, time_entry_rates.sql,

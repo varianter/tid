@@ -16,7 +16,7 @@
     "db:generate": "bun --filter @tid/db generate",
     "db:migrate": "bun --filter @tid/db migrate",
     "db:reset": "bun --filter @tid/db reset",
-    "db:import": "bun packages/db/scripts/harvest-import.ts",
+    "harvest:import": "bun --filter @tid/harvest import",
     "db:studio": "bun --filter @tid/db studio",
     "test": "bun test",
     "typecheck": "tsc --noEmit",

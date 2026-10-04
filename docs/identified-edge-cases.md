@@ -40,4 +40,4 @@ Sweden probably has one Harvest account for all its offices, while each office i
 
 ## Importing from Harvest (on hold)
 
-The database enforces some rules that Harvest may not have: users can only be assigned through one of the project's organizations, and emails must be unique regardless of case. Imported history that breaks these rules will be rejected, so it needs cleaning or a decision before import. Settled rules are in `decisions-for-import-rules.md`.
+The database enforces some rules that Harvest may not have: users can only be assigned through one of the project's organizations, and emails must be unique regardless of case. Imported history that breaks these rules will be rejected, so it needs cleaning or a decision before import. Settled rules are in the [Harvest import](../packages/harvest/README.md).

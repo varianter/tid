@@ -1,4 +1,4 @@
-// Maps Harvest exports onto our tables, following docs/decisions-for-import-rules.md.
+// Maps Harvest exports onto our tables, following the rules in README.md.
 // Nothing here touches the database, so every problem is found before anything is written.
 
 export type HarvestExport = {

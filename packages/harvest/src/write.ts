@@ -1,4 +1,4 @@
-import type { Database } from "../client";
+import type { Database } from "@tid/db/client";
 import {
   assignmentRates,
   clients,
@@ -9,7 +9,7 @@ import {
   tasks,
   timeEntries,
   users,
-} from "../schema";
+} from "@tid/db/schema";
 import type { ImportPlan } from "./plan";
 
 // Postgres caps a statement at 65535 parameters, so large inserts go in chunks.

@@ -1,15 +1,15 @@
 // Rebuilds the dev database from Harvest, so the app can be checked against real data.
-// Usage: bun run db:import <from-month> [to-month] --tokens <token>,<token> [--save]
+// Usage: bun run harvest:import <from-month> [to-month] --tokens <token>,<token> [--save]
 // Each token is a Harvest personal access token; every account they reach is imported.
 
 import { parseArgs } from "node:util";
+import { createDatabase, migrateDatabase, rebuildDatabase } from "@tid/db/client";
+import { startDevelopmentDatabase } from "@tid/db/container";
+import { organizations, timeEntries } from "@tid/db/schema";
 import { sql } from "drizzle-orm";
-import { createDatabase, migrateDatabase, rebuildDatabase } from "../src/client";
-import { startDevelopmentDatabase } from "../src/container";
-import { fetchHarvestAccounts } from "../src/harvest/fetch";
-import { planImport } from "../src/harvest/plan";
-import { writePlan } from "../src/harvest/write";
-import { organizations, timeEntries } from "../src/schema";
+import { fetchHarvestAccounts } from "../src/fetch";
+import { planImport } from "../src/plan";
+import { writePlan } from "../src/write";
 
 function exitWith(message: string): never {
   console.error(`\n✗ ${message}`);
@@ -25,7 +25,7 @@ const [fromMonth, toMonth = fromMonth] = positionals;
 const isMonth = (value?: string) => value !== undefined && /^\d{4}-(0[1-9]|1[0-2])$/.test(value);
 if (!isMonth(fromMonth) || !isMonth(toMonth) || (toMonth as string) < (fromMonth as string)) {
   exitWith(
-    "Usage: bun run db:import <from-month> [to-month] --tokens <token>,<token> [--save], with months as YYYY-MM.",
+    "Usage: bun run harvest:import <from-month> [to-month] --tokens <token>,<token> [--save], with months as YYYY-MM.",
   );
 }
 const [toYear, toMonthNumber] = (toMonth as string).split("-").map(Number) as [number, number];

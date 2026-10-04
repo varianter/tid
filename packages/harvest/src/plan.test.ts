@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
-import { createDatabase, rebuildDatabase } from "../client";
-import { organizations, timeEntriesExport } from "../schema";
+import { createDatabase, rebuildDatabase } from "@tid/db/client";
+import { organizations, timeEntriesExport } from "@tid/db/schema";
 import { type HarvestExport, type KnownOrganization, planImport } from "./plan";
 import { writePlan } from "./write";
 

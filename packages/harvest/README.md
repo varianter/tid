@@ -1,6 +1,16 @@
-# Decisions for import rules
+# Harvest import
 
-How Harvest data maps onto our database, and the rules the import follows where the two models disagree. Open questions live in `identified-edge-cases.md` until they're settled here.
+Rebuilds the dev database from Harvest, so the app can be checked against real data. It's only needed while we move off Harvest, so it lives in its own package that can be deleted.
+
+```sh
+bun run harvest:import <from-month> [to-month] --tokens <token>,<token> [--save]
+```
+
+Pass one Harvest personal access token per account, with months as `YYYY-MM`. It checks everything before touching the database, and lists every problem it finds. `--save` keeps the raw Harvest data in `packages/harvest/harvest-export`, which is gitignored.
+
+## Import rules
+
+How Harvest data maps onto our database, and the rules the import follows where the two models disagree. Open questions live in [identified-edge-cases.md](../../docs/identified-edge-cases.md) until they're settled here.
 
 Organizations are added by migrations, not by the import. Each Harvest account belongs to the organization with the same name, and an account without one, or one logging time in another currency, stops the import.
 

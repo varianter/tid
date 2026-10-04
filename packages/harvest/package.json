@@ -1,0 +1,12 @@
+{
+  "name": "@tid/harvest",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "import": "bun scripts/import.ts"
+  },
+  "dependencies": {
+    "@tid/db": "workspace:*",
+    "drizzle-orm": "catalog:"
+  }
+}
