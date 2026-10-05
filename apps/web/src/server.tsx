@@ -1,8 +1,12 @@
 import { Hono } from "hono";
 import { csrf } from "hono/csrf";
+import { HTTPException } from "hono/http-exception";
 import { jsxRenderer } from "hono/jsx-renderer";
+import { assignments } from "./assignments/assignments.routes";
 import { clients } from "./clients/clients.routes";
 import { dev, devLogoutUrl, devTenantId, readDevIdentity, requireDevUser } from "./dev/dev.routes";
+import { errorReport } from "./errors/errorReport";
+import { ErrorPage } from "./errors/errors.views";
 import { Layout } from "./layout";
 import { proxyLogoutUrl, requireProxyUser, signupPath } from "./login/login.middleware";
 import { signup } from "./login/login.routes";
@@ -43,6 +47,21 @@ app.use(
   )),
 );
 
+app.notFound((c) => {
+  c.status(404);
+  return c.render(<ErrorPage status={404} message="Page not found" />);
+});
+
+app.onError((error, c) => {
+  // Hono throws these itself, for example when the CSRF check fails.
+  if (error instanceof HTTPException) return error.getResponse();
+  console.error(error);
+  c.status(500);
+
+  const report = c.get("user") ? errorReport(error) : undefined;
+  return c.render(<ErrorPage status={500} message="Something went wrong" report={report} />);
+});
+
 app.get("/health", (c) => c.text("ok"));
 
 // Registered before the middleware, so logging in and signing up don't require a user.
@@ -54,6 +73,7 @@ app.get("/", (c) => c.redirect("/timesheet"));
 app.route("/timesheet", timesheet);
 app.route("/clients", clients);
 app.route("/projects", projects);
+app.route("/projects/:projectId/assignments", assignments);
 app.route("/reports", reports);
 
 // Dev login lets anyone act as any user, so it must not be reachable from the network.
