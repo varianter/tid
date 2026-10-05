@@ -24,10 +24,6 @@ export function mondayOf(isoDate: string) {
   return addDays(isoDate, -daysSinceMonday);
 }
 
-export function daysOfWeek(monday: string) {
-  return Array.from({ length: 7 }, (_, index) => addDays(monday, index));
-}
-
 export function todayInOslo() {
   // Swedish formats dates as YYYY-MM-DD.
   return new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Oslo" });
@@ -64,29 +60,6 @@ export const formatDayMonth = (isoDate: string) => {
   return `${date.getUTCDate()} ${shortMonths[date.getUTCMonth()]}`;
 };
 
-export const formatDateRange = (start: string, end: string) => {
-  const startDate = parseIsoDate(start);
-  const endDate = parseIsoDate(end);
-
-  const startDay = startDate.getUTCDate();
-  const endDay = endDate.getUTCDate();
-  const startMonth = shortMonths[startDate.getUTCMonth()];
-  const endMonth = shortMonths[endDate.getUTCMonth()];
-  const startYear = startDate.getUTCFullYear();
-  const endYear = endDate.getUTCFullYear();
-
-  if (startYear !== endYear) {
-    return `${startDay} ${startMonth} ${startYear} – ${endDay} ${endMonth} ${endYear}`;
-  }
-  if (startMonth !== endMonth) {
-    return `${startDay} ${startMonth} – ${endDay} ${endMonth} ${endYear}`;
-  }
-  if (startDay !== endDay) {
-    return `${startDay}–${endDay} ${endMonth} ${endYear}`;
-  }
-  return `${startDay} ${startMonth} ${startYear}`;
-};
-
 export function isIsoMonth(value: string) {
   return /^\d{4}-\d{2}$/.test(value) && isIsoDate(`${value}-01`);
 }
@@ -115,3 +88,6 @@ const monthFormat = new Intl.DateTimeFormat("en-GB", {
 });
 
 export const formatMonth = (month: string) => monthFormat.format(parseIsoDate(`${month}-01`));
+
+export const formatDate = (isoDate: string) =>
+  `${formatDayMonth(isoDate)} ${parseIsoDate(isoDate).getUTCFullYear()}`;

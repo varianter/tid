@@ -1,19 +1,22 @@
 import {
   clients,
   organizations,
+  projectAssignments,
   projectOrganizations,
   projects as projectsTable,
   tasks,
   timeEntries,
+  users,
 } from "@tid/db/schema";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, ne, notExists, type SQL, sql } from "drizzle-orm";
 import { Hono } from "hono";
+import { inProjectOrganization } from "../assignments/assignments.routes";
 import { database } from "../database";
 import { formAction } from "../form/formAction";
 import type { User } from "../login/user";
 import { suggestProjectCode } from "./projectCode";
-import { newProjectForm } from "./projects.validation";
-import { NewProjectPage, ProjectPage, ProjectsPage } from "./projects.views";
+import { editProjectForm, newProjectForm } from "./projects.validation";
+import { ProjectFormPage, ProjectPage, ProjectsPage } from "./projects.views";
 
 export const projects = new Hono();
 
@@ -30,22 +33,35 @@ const participatingOrganizations = sql<string[]>`(
   where ${projectOrganizations.projectId} = ${projectsTable.id}
 )`;
 
-projects.get("/", async (c) => {
-  const rows = await database
+const projectDetails = {
+  id: projectsTable.id,
+  name: projectsTable.name,
+  code: projectsTable.code,
+  billable: projectsTable.billable,
+  clientId: clients.id,
+  client: clients.name,
+  spentMinutes,
+  organizations: participatingOrganizations,
+};
+
+// Every project, or a client's with `where`, sorted by client so they group.
+export const listProjects = (where?: SQL) =>
+  database
     .select({
       id: projectsTable.id,
       name: projectsTable.name,
       code: projectsTable.code,
+      clientId: clients.id,
       client: clients.name,
       spentMinutes,
       organizations: participatingOrganizations,
     })
     .from(projectsTable)
     .innerJoin(clients, eq(clients.id, projectsTable.clientId))
+    .where(where)
     .orderBy(clients.name, projectsTable.name);
 
-  return c.render(<ProjectsPage projects={rows} />);
-});
+projects.get("/", async (c) => c.render(<ProjectsPage projects={await listProjects()} />));
 
 projects.on(
   ["GET", "POST"],
@@ -95,7 +111,48 @@ projects.on(
         ? { fieldErrors: { code: ["Already in use"] } }
         : { fieldErrors: { name: ["The client already has a project with this name"] } };
     },
-    view: NewProjectPage,
+    view: ProjectFormPage,
+  }),
+);
+
+projects.on(
+  ["GET", "POST"],
+  "/:id/edit",
+  formAction({
+    schema: editProjectForm,
+    loader: async (c) => {
+      const id = Number(c.req.param("id"));
+      if (!Number.isSafeInteger(id)) return c.notFound();
+      const [project] = await database
+        .select({
+          ...projectDetails,
+          openToEveryone: projectsTable.openToEveryone,
+          countsTowardBillableBase: projectsTable.countsTowardBillableBase,
+        })
+        .from(projectsTable)
+        .innerJoin(clients, eq(clients.id, projectsTable.clientId))
+        .where(eq(projectsTable.id, id));
+      return project ? { project } : c.notFound();
+    },
+    onSubmit: async (_c, form, { project }) => {
+      if (form.billable && project.openToEveryone) {
+        return { formError: "Projects open to everyone can't be billable" };
+      }
+      try {
+        await database.update(projectsTable).set(form).where(eq(projectsTable.id, project.id));
+      } catch {
+        // ponytail: assumes a unique violation; any other failure reads as a name clash.
+        const codeTaken = await database.$count(
+          projectsTable,
+          and(eq(projectsTable.code, form.code), ne(projectsTable.id, project.id)),
+        );
+        return codeTaken
+          ? { fieldErrors: { code: ["Already in use"] } }
+          : { fieldErrors: { name: ["The client already has a project with this name"] } };
+      }
+      return { redirect: `/projects/${project.id}` };
+    },
+    view: ProjectFormPage,
   }),
 );
 
@@ -103,15 +160,7 @@ projects.get("/:id", async (c) => {
   const id = Number(c.req.param("id"));
   if (!Number.isSafeInteger(id)) return c.notFound();
   const [project] = await database
-    .select({
-      name: projectsTable.name,
-      code: projectsTable.code,
-      billable: projectsTable.billable,
-      clientId: clients.id,
-      client: clients.name,
-      spentMinutes,
-      organizations: participatingOrganizations,
-    })
+    .select(projectDetails)
     .from(projectsTable)
     .innerJoin(clients, eq(clients.id, projectsTable.clientId))
     .where(eq(projectsTable.id, id));
@@ -128,5 +177,35 @@ projects.get("/:id", async (c) => {
     .groupBy(tasks.id)
     .orderBy(tasks.name);
 
-  return c.render(<ProjectPage project={project} tasks={projectTasks} />);
+  const assignedPeople = await database
+    .select({ id: users.id, name: users.name })
+    .from(projectAssignments)
+    .innerJoin(users, eq(users.id, projectAssignments.userId))
+    .where(eq(projectAssignments.projectId, id))
+    .orderBy(users.name);
+
+  const assignablePeople = await database
+    .select({ id: users.id, name: users.name })
+    .from(users)
+    .innerJoin(projectOrganizations, inProjectOrganization(id))
+    .where(
+      notExists(
+        database
+          .select()
+          .from(projectAssignments)
+          .where(
+            and(eq(projectAssignments.projectId, id), eq(projectAssignments.userId, users.id)),
+          ),
+      ),
+    )
+    .orderBy(users.name);
+
+  return c.render(
+    <ProjectPage
+      project={project}
+      tasks={projectTasks}
+      assignedPeople={assignedPeople}
+      assignablePeople={assignablePeople}
+    />,
+  );
 });

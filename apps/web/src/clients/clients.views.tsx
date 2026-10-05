@@ -1,67 +1,103 @@
-import type { clients, projects } from "@tid/db/schema";
-import { Button, FormField, Page } from "@tid/ui";
+import type { clients } from "@tid/db/schema";
+import { Button, EmptyState, FormField, Page } from "@tid/ui";
 import type { FormProps } from "../form/formAction";
+import { Detail, formatSpent, type ProjectRow, ProjectTable } from "../projects/projects.views";
 
 type Client = typeof clients.$inferSelect;
-type Project = typeof projects.$inferSelect;
 
-export function ClientsPage({ clients, values, fieldErrors }: { clients: Client[] } & FormProps) {
+type ClientRow = Client & { projectCount: number; spentMinutes: number };
+
+const newClientButton = () => (
+  <Button as="a" href="/clients/new" data-variant="tinted">
+    New client
+  </Button>
+);
+
+export function ClientsPage({ clients }: { clients: ClientRow[] }) {
+  return (
+    <Page title="Clients" actions={newClientButton()}>
+      {clients.length === 0 ? (
+        <EmptyState emoji="🏢" title="No clients yet" action={newClientButton()} />
+      ) : (
+        <div
+          class="d-grid of-scroll gap-column-l lh-snug t-tabular"
+          style="grid-template-columns: minmax(16ch, 1fr) max-content max-content;"
+        >
+          <div class="grid-all-columns grid-subgrid items-center b-b bc-subtle p-xs fs-s ink-subtle fw-bold">
+            <span>Name</span>
+            <span class="ta-right">Projects</span>
+            <span class="ta-right">Spent</span>
+          </div>
+          {clients.map((client) => (
+            <a
+              href={`/clients/${client.id}`}
+              class="grid-all-columns grid-subgrid items-center b-b bc-subtle bg-wash:hover p-xs fs-s"
+            >
+              <span class="fw-medium">{client.name}</span>
+              <span class="ta-right">{client.projectCount}</span>
+              <span class="ta-right">{formatSpent(client.spentMinutes)}</span>
+            </a>
+          ))}
+        </div>
+      )}
+    </Page>
+  );
+}
+
+/** Creates a client, or renames `client` when given. */
+export function ClientFormPage({ client, values, fieldErrors }: { client?: Client } & FormProps) {
   return (
     <Page
-      title="Clients"
-      actions={
-        <Button type="button" data-variant="tinted">
-          New client
-        </Button>
+      title={client ? `Edit ${client.name}` : "New client"}
+      back={
+        client
+          ? { href: `/clients/${client.id}`, label: "Back to client" }
+          : { href: "/clients", label: "Back to clients" }
       }
     >
-      <ul class="stack-v gap-3xs b-all bc-subtle p-2xs">
-        {clients.map((client) => (
-          <li class="surface-tinted">
-            <a href={`/clients/${client.id}`} class="d-block p-xs px-m">
-              {client.name}
-            </a>
-          </li>
-        ))}
-      </ul>
-      <form method="post" class="w-max-5">
+      <form method="post" class="stack-v gap-m w-max-5">
         <FormField
           name="name"
-          label="Client name"
-          value={values?.name}
+          label="Name"
+          value={values?.name ?? client?.name}
           errors={fieldErrors?.name}
           required
         />
-
-        <Button class="mt-s" type="submit">
-          Add client
+        <Button type="submit" class="w-max-content">
+          {client ? "Save changes" : "Create client"}
         </Button>
       </form>
     </Page>
   );
 }
 
-export function ClientPage({ client, projects }: { client: Client; projects: Project[] }) {
+export function ClientPage({ client, projects }: { client: Client; projects: ProjectRow[] }) {
+  const spentMinutes = projects.reduce((total, project) => total + project.spentMinutes, 0);
+  const organizations = [...new Set(projects.flatMap((project) => project.organizations))].sort();
   return (
     <Page
       title={client.name}
       back={{ href: "/clients", label: "Back to clients" }}
       actions={
-        <Button as="a" href={`/projects/new?client=${client.id}`} data-variant="tinted">
-          New project
-        </Button>
+        <span class="stack-h gap-xs">
+          <Button as="a" href={`/clients/${client.id}/edit`} data-variant="tinted">
+            Edit
+          </Button>
+          <Button as="a" href={`/projects/new?client=${client.id}`} data-variant="tinted">
+            New project
+          </Button>
+        </span>
       }
     >
+      <dl class="stack-h items-start gap-xl b-all bc-default br-l p-m">
+        <Detail label="Projects">{projects.length}</Detail>
+        <Detail label="Organizations">{organizations.join(", ") || "None"}</Detail>
+        <Detail label="Spent">{formatSpent(spentMinutes)}</Detail>
+      </dl>
       {projects.length === 0 ? (
         <p class="ink-subtle">No projects yet.</p>
       ) : (
-        <ul class="stack-v gap-3xs b-all bc-subtle p-2xs">
-          {projects.map((project) => (
-            <li class="p-xs px-m surface-tinted">
-              {project.name} <span class="ink-subtle">{project.code}</span>
-            </li>
-          ))}
-        </ul>
+        <ProjectTable projects={projects} groupByClient={false} />
       )}
     </Page>
   );

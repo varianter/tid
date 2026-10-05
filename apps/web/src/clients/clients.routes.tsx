@@ -1,45 +1,83 @@
-import { clients as clientsTable } from "@tid/db/schema";
+import { clients as clientsTable, projects, tasks, timeEntries } from "@tid/db/schema";
+import { and, countDistinct, eq, ne, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { database } from "../database";
 import { formAction } from "../form/formAction";
-import { newClientForm } from "./clients.validation";
-import { ClientPage, ClientsPage } from "./clients.views";
+import { listProjects } from "../projects/projects.routes";
+import { clientForm } from "./clients.validation";
+import { ClientFormPage, ClientPage, ClientsPage } from "./clients.views";
 
 export const clients = new Hono();
 
-// ponytail: smoke test for the database, replace with the real clients page.
+const alreadyExists = { fieldErrors: { name: ["Already exists"] } };
+
+clients.get("/", async (c) => {
+  const rows = await database
+    .select({
+      id: clientsTable.id,
+      name: clientsTable.name,
+      projectCount: countDistinct(projects.id),
+      spentMinutes: sql`coalesce(sum(${timeEntries.minutes}), 0)`.mapWith(Number),
+    })
+    .from(clientsTable)
+    .leftJoin(projects, eq(projects.clientId, clientsTable.id))
+    .leftJoin(tasks, eq(tasks.projectId, projects.id))
+    .leftJoin(timeEntries, eq(timeEntries.taskId, tasks.id))
+    .groupBy(clientsTable.id)
+    .orderBy(clientsTable.name);
+  return c.render(<ClientsPage clients={rows} />);
+});
+
 clients.on(
   ["GET", "POST"],
-  "/",
+  "/new",
   formAction({
-    schema: newClientForm,
-    loader: async () => ({
-      clients: await database.select().from(clientsTable).orderBy(clientsTable.name),
-    }),
+    schema: clientForm,
+    loader: async () => ({}),
     onSubmit: async (_c, { name }) => {
-      const inserted = await database
+      const [inserted] = await database
         .insert(clientsTable)
         .values({ name })
         .onConflictDoNothing()
         .returning();
-      if (inserted.length === 0) return { fieldErrors: { name: ["Already exists"] } };
-      return { redirect: "/clients" };
+      return inserted ? { redirect: `/clients/${inserted.id}` } : alreadyExists;
     },
-    view: ClientsPage,
+    view: ClientFormPage,
+  }),
+);
+
+const findClient = async (idParam: string | undefined) => {
+  const id = Number(idParam);
+  if (!Number.isSafeInteger(id)) return undefined;
+  const [client] = await database.select().from(clientsTable).where(eq(clientsTable.id, id));
+  return client;
+};
+
+clients.on(
+  ["GET", "POST"],
+  "/:id/edit",
+  formAction({
+    schema: clientForm,
+    loader: async (c) => {
+      const client = await findClient(c.req.param("id"));
+      return client ? { client } : c.notFound();
+    },
+    onSubmit: async (_c, { name }, { client }) => {
+      const nameTaken = await database.$count(
+        clientsTable,
+        and(eq(clientsTable.name, name), ne(clientsTable.id, client.id)),
+      );
+      if (nameTaken) return alreadyExists;
+      await database.update(clientsTable).set({ name }).where(eq(clientsTable.id, client.id));
+      return { redirect: `/clients/${client.id}` };
+    },
+    view: ClientFormPage,
   }),
 );
 
 clients.get("/:id", async (c) => {
-  const id = Number(c.req.param("id"));
-  if (!Number.isSafeInteger(id)) return c.notFound();
-  const client = await database.query.clients.findFirst({
-    where: (client, { eq }) => eq(client.id, id),
-  });
+  const client = await findClient(c.req.param("id"));
   if (!client) return c.notFound();
-  const projects = await database.query.projects.findMany({
-    where: (project, { eq }) => eq(project.clientId, id),
-    orderBy: (project, { asc }) => asc(project.name),
-  });
-
-  return c.render(<ClientPage client={client} projects={projects} />);
+  const clientProjects = await listProjects(eq(projects.clientId, client.id));
+  return c.render(<ClientPage client={client} projects={clientProjects} />);
 });
