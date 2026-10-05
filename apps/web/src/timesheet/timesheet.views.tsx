@@ -1,7 +1,6 @@
 import { Button, Input, Label, Page, PeriodNavigation, Popover } from "@tid/ui";
 import type { PropsWithChildren } from "hono/jsx";
 import {
-  formatDateRange,
   formatDayMonth,
   formatHours,
   formatMonth,
@@ -12,6 +11,11 @@ import {
 
 type Task = { id: number; name: string; projectName: string };
 type TimeEntry = { taskId: number; spentOn: string; minutes: number };
+/** A save that failed, shown on its cell with what the user typed. */
+export type CellError = { taskId: number; day: string; typed: string; message: string };
+
+// Caps the inputs, which in turn size the day columns.
+const inputWidth = "8ch";
 
 type TimesheetGridProps = {
   days: string[];
@@ -21,35 +25,10 @@ type TimesheetGridProps = {
   addedTaskIds: number[];
   /** The current query string, kept when adding a row. */
   search: string;
+  error?: CellError;
 };
 
 type PeriodLinks = { previousHref: string; nextHref: string };
-
-export function WeekPage({
-  monday,
-  sunday,
-  previousHref,
-  nextHref,
-  ...grid
-}: { monday: string; sunday: string } & PeriodLinks & TimesheetGridProps) {
-  return (
-    <Page
-      title="Timesheet"
-      actions={
-        <PeriodNavigation
-          previousHref={previousHref}
-          nextHref={nextHref}
-          previousLabel="Previous week"
-          nextLabel="Next week"
-        >
-          {formatDateRange(monday, sunday)}
-        </PeriodNavigation>
-      }
-    >
-      <TimesheetGrid {...grid} inputWidth="9ch" />
-    </Page>
-  );
-}
 
 export function MonthPage({
   month,
@@ -95,7 +74,7 @@ export function MonthPage({
         </>
       }
     >
-      <TimesheetGrid {...grid} inputWidth="8ch" />
+      <TimesheetGrid {...grid} />
     </Page>
   );
 }
@@ -104,14 +83,11 @@ function TimesheetGrid({
   days,
   tasks,
   entries,
-  inputWidth,
   cellsAction,
   addedTaskIds,
   search,
-}: TimesheetGridProps & {
-  /** Caps the inputs, which in turn size the day columns. */
-  inputWidth: string;
-}) {
+  error,
+}: TimesheetGridProps) {
   const today = todayInOslo();
   // A week starts wherever the Monday changes, which still holds with weekends hidden.
   const startsWeek = days.map(
@@ -138,12 +114,6 @@ function TimesheetGrid({
       (task) => task.projectName,
     ),
   );
-  const addRowHref = (taskId: number) => {
-    const params = new URLSearchParams(search);
-    params.append("add", String(taskId));
-    return `?${params}`;
-  };
-
   return (
     <div
       class="d-grid of-scroll t-tabular my-s"
@@ -181,77 +151,178 @@ function TimesheetGrid({
               isToday={day === today}
               class={`self-stretch px-3xs stack-v justify-center ${weekGap(index)}`}
             >
-              {/* ponytail: nothing handles this POST yet; saving comes with the database. */}
-              <form method="post" action={cellsAction} class="d-block">
-                <input type="hidden" name="taskId" value={task.id} />
-                <input type="hidden" name="date" value={day} />
-                <Input
-                  name="value"
-                  type="text"
-                  value={formatHours(minutesOn(task.id, day))}
-                  class="ta-right w-min-0 w-full"
-                  data-size="small"
-                  style={`max-width: ${inputWidth}`}
-                  inputmode="decimal"
-                  aria-label={`${task.projectName}, ${task.name}, ${formatWeekday(day)} ${day}`}
-                />
-              </form>
+              <TimesheetCell
+                task={task}
+                day={day}
+                minutes={minutesOn(task.id, day)}
+                action={cellsAction}
+                error={error?.taskId === task.id && error.day === day ? error : undefined}
+              />
             </TodayTint>
           ))}
-          <div class={`ta-right fw-medium self-stretch stack-v justify-center ${stickyEnd} fs-s`}>
+          <div
+            class={`ta-right fw-medium self-stretch stack-v justify-center ${stickyEnd} fs-s`}
+            data-task-total={task.id}
+          >
             {formatHours(sumMinutes((entry) => entry.taskId === task.id))}
           </div>
         </div>
       ))}
 
-      <div class="grid-subgrid grid-all-columns fw-medium ta-right py-s fs-s">
-        <div class={`ta-left ${stickyStart}`}>Total</div>
-        {days.map((day, index) => (
-          <div class={`px-xs${weekGap(index)}`}>
-            {formatHours(sumMinutes((entry) => entry.spentOn === day))}
-          </div>
-        ))}
-        <div class={stickyEnd}>{formatHours(sumMinutes(() => true))}</div>
-      </div>
-
-      <div class="grid-all-columns py-xs">
-        <Button type="button" data-variant="filled" popovertarget="add-row">
-          Add row
-        </Button>
-        <Popover id="add-row" data-type="dialog" style="max-width: 500px;" class="w-full">
-          <div class="w-full surface-base shadow-high p-m stack-v gap-s">
-            <div class="stack-h justify-between items-center">
-              <h2>Add row</h2>
-              <Button
-                type="button"
-                data-variant="plain"
-                popovertarget="add-row"
-                popovertargetaction="hide"
-              >
-                Close
-              </Button>
-            </div>
-            {addableByProject.map(([projectName, projectTasks]) => (
-              <section class=" gap-3xs">
-                <h3 class="fs-xs ink-subtle">{projectName}</h3>
-                <ul class="stack-v py-3xs">
+      {addableByProject.length > 0 && (
+        // Picking a task adds `add` to the query, like the hidden inputs already there.
+        <form method="get" class="grid-subgrid grid-all-columns items-center">
+          {[...new URLSearchParams(search)].map(([name, value]) => (
+            <input type="hidden" name={name} value={value} />
+          ))}
+          <div class={`py-2xs ${stickyStart}`}>
+            {/* A plain select, since Select's props don't allow an inline handler. */}
+            <select
+              name="add"
+              class="v-select w-full"
+              data-size="small"
+              aria-label="Add task"
+              onchange="this.form.requestSubmit()"
+            >
+              <option value="" selected disabled>
+                Add task…
+              </option>
+              {addableByProject.map(([projectName, projectTasks]) => (
+                <optgroup label={projectName}>
                   {projectTasks?.map((task) => (
-                    <li>
-                      <a
-                        class="py-3xs px-xs bg-wash:hover w-full d-block"
-                        href={addRowHref(task.id)}
-                      >
-                        {task.name}
-                      </a>
-                    </li>
+                    <option value={task.id}>{task.name}</option>
                   ))}
-                </ul>
-              </section>
-            ))}
+                </optgroup>
+              ))}
+            </select>
+            <noscript>
+              <Button type="submit" data-size="small">
+                Add
+              </Button>
+            </noscript>
           </div>
-        </Popover>
-      </div>
+          {/* Placeholders so the row reads as part of the sheet; there's no task to log on yet. */}
+          {days.map((day, index) => (
+            <TodayTint
+              isToday={day === today}
+              class={`self-stretch px-3xs stack-v justify-center${weekGap(index)}`}
+            >
+              <Input
+                type="text"
+                disabled
+                tabindex={-1}
+                aria-hidden="true"
+                class="w-min-0 w-full"
+                data-size="small"
+                style={`max-width: ${inputWidth}`}
+              />
+            </TodayTint>
+          ))}
+          <div class={`self-stretch ${stickyEnd}`} />
+        </form>
+      )}
+
+      {rows.length > 0 && (
+        <div class="grid-subgrid grid-all-columns fw-medium ta-right py-s fs-s">
+          <div class={`ta-left ${stickyStart}`}>Total</div>
+          {days.map((day, index) => (
+            <div class={`px-xs${weekGap(index)}`} data-day-total={day}>
+              {formatHours(sumMinutes((entry) => entry.spentOn === day))}
+            </div>
+          ))}
+          <div class={stickyEnd} data-grand-total>
+            {formatHours(sumMinutes(() => true))}
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+/**
+ * One day of one task: the unit a save swaps. `data-minutes` holds what's stored,
+ * so totals can be summed without parsing the typed text.
+ */
+export function TimesheetCell({
+  task,
+  day,
+  minutes,
+  action,
+  error,
+}: {
+  task: Task;
+  day: string;
+  minutes: number;
+  action: string;
+  error?: CellError;
+}) {
+  const errorId = `cell-error-${task.id}-${day}`;
+  const input = (
+    <Input
+      name="hours"
+      type="text"
+      value={error ? error.typed : formatHours(minutes)}
+      class="ta-right w-min-0 w-full"
+      data-size="small"
+      style={`max-width: ${inputWidth}`}
+      inputmode="decimal"
+      aria-label={`${task.projectName}, ${task.name}, ${formatWeekday(day)} ${day}`}
+      aria-invalid={error ? "true" : undefined}
+      aria-describedby={error ? errorId : undefined}
+    />
+  );
+  return (
+    <form
+      method="post"
+      action={action}
+      class="d-block"
+      data-task={task.id}
+      data-day={day}
+      data-minutes={minutes}
+    >
+      <input type="hidden" name="taskId" value={task.id} />
+      <input type="hidden" name="date" value={day} />
+      {error ? (
+        <color-mode palette="coral" class="stack-h nowrap items-center gap-3xs">
+          {input}
+          <button
+            type="button"
+            popovertarget={errorId}
+            aria-label="Show error"
+            class="ink-prominent"
+          >
+            <ErrorIcon />
+          </button>
+          <Popover id={errorId} data-type="tooltip" class="px-2xs py-2xs">
+            <div class="b-all bc-subtle px-xs py-2xs surface-base br-m shadow-mid fs-s">
+              {error.message}
+            </div>
+          </Popover>
+        </color-mode>
+      ) : (
+        input
+      )}
+    </form>
+  );
+}
+
+function ErrorIcon() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="12" r="10" />
+      <line x1="12" y1="8" x2="12" y2="12" />
+      <line x1="12" y1="16" x2="12.01" y2="16" />
+    </svg>
   );
 }
 
