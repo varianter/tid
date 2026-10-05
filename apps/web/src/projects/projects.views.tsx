@@ -231,18 +231,31 @@ export function ProjectPage({
         <Detail label="Organizations">{project.organizations.join(", ") || "None"}</Detail>
         <Detail label="Spent">{formatSpent(project.spentMinutes)}</Detail>
       </dl>
-      {tasks.length === 0 ? (
-        <p class="ink-subtle">No tasks yet.</p>
-      ) : (
-        <ul class="stack-v gap-3xs b-all bc-subtle p-2xs t-tabular">
-          {tasks.map((task) => (
-            <li class="stack-h justify-between p-xs px-m surface-tinted">
-              {task.name}
-              <span class="ink-subtle">{formatSpent(task.spentMinutes)}</span>
-            </li>
-          ))}
-        </ul>
-      )}
+      <section class="stack-v gap-s">
+        <div class="stack-h items-center justify-between gap-m wrap">
+          <h2 class="fs-l fw-bold">Tasks</h2>
+          <form
+            method="post"
+            action={`/projects/${project.id}/tasks`}
+            class="stack-h items-center gap-xs"
+          >
+            <Input name="name" aria-label="Task name" placeholder="Task name" required />
+            <Button type="submit">Add task</Button>
+          </form>
+        </div>
+        {tasks.length === 0 ? (
+          <p class="ink-subtle">No tasks yet.</p>
+        ) : (
+          <ul class="stack-v gap-3xs b-all bc-subtle p-2xs t-tabular">
+            {tasks.map((task) => (
+              <li class="stack-h justify-between p-xs px-m surface-tinted">
+                {task.name}
+                <span class="ink-subtle">{formatSpent(task.spentMinutes)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
       <section class="stack-v gap-s">
         <div class="stack-h items-center justify-between gap-m wrap">
           <h2 class="fs-l fw-bold">Consultants</h2>
