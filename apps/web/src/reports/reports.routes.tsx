@@ -3,25 +3,30 @@ import { and, between, eq, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { database } from "../database";
 import { addMonths, daysOfMonth, isWeekend, todayInOslo } from "../dates/dates";
+import type { UserEnv } from "../login/user";
 import { reportQuery, type Tab } from "./period";
 import { ReportPage, type ReportRows, type Totals } from "./reports.views";
 
-export const reports = new Hono();
-
-// ponytail: everyone lands on Trondheim until we know which organization the user belongs to.
-const defaultOrganization = "trondheim";
+export const reports = new Hono<UserEnv>();
 
 const reportPath = (organization: string, query: URLSearchParams) =>
   `/reports/${organization}?${query}`;
 
-reports.get("/", (c) =>
-  c.redirect(
+reports.get("/", async (c) => {
+  const user = c.get("user");
+  if (!user) return c.text("Not logged in", 401);
+  const [organization] = await database
+    .select({ slug: organizations.slug })
+    .from(organizations)
+    .where(eq(organizations.id, user.orgId));
+  if (!organization) return c.notFound();
+  return c.redirect(
     reportPath(
-      defaultOrganization,
+      organization.slug,
       reportQuery(c.req.query("from"), c.req.query("tab"), todayInOslo()),
     ),
-  ),
-);
+  );
+});
 
 reports.get("/:organization", async (c) => {
   const slug = c.req.param("organization");

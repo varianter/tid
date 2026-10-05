@@ -1,5 +1,6 @@
 import { Button, EmptyState, Page, PeriodNavigation } from "@tid/ui";
 import type { Child } from "hono/jsx";
+import { formatAmount } from "../currency/currency";
 import { formatHours, formatMonth } from "../dates/dates";
 import { type Tab, tabs } from "./period";
 
@@ -183,14 +184,6 @@ const percentFormat = new Intl.NumberFormat("nb-NO", { style: "percent" });
 /** Blank when there's nothing to take a share of, rather than NaN or Infinity. */
 function formatShare(part: number, whole: number) {
   return whole === 0 ? "" : percentFormat.format(part / whole);
-}
-
-function formatAmount(amount: number, currency: string) {
-  return new Intl.NumberFormat("nb-NO", {
-    style: "currency",
-    currency,
-    maximumFractionDigits: 0,
-  }).format(amount);
 }
 
 function Summary({
