@@ -1,17 +1,16 @@
-name: Verify
-run-name: "Verify — ${{ github.ref_name }} by @${{ github.actor }}"
+name: CI
+run-name: "CI — ${{ github.ref_name }} by @${{ github.actor }}"
 
 on:
-  workflow_call:
   pull_request:
-    branches: [main]
+  workflow_call:
 
 permissions:
   contents: read
 
 # Literal prefix: under workflow_call, github.workflow is the caller's name and would collide with its group.
 concurrency:
-  group: verify-${{ github.ref }}
+  group: ci-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -51,7 +50,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
-
     steps:
       - uses: actions/checkout@v6
 
@@ -64,3 +62,22 @@ jobs:
 
       - name: Test
         run: bun test
+
+  smoke-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Build image
+        run: docker build -f apps/web/Dockerfile -t tid-web .
+
+      - name: Smoke test
+        run: |
+          docker run -d --name tid-web-smoke -p 3000:3000 -e DATABASE_URL=postgres://smoketest@localhost/smoketest -e ENTRA_TENANT_ID=smoketest tid-web
+          curl -fsS --retry 10 --retry-all-errors --retry-delay 1 localhost:3000/health
+
+      - name: Smoke test logs
+        if: failure()
+        run: docker logs tid-web-smoke
