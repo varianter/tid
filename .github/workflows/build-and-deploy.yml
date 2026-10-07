@@ -1,4 +1,4 @@
-name: Build and Deploy (Time Management)
+name: Build and Deploy (Tid)
 
 on:
   push:
@@ -28,8 +28,8 @@ jobs:
       dockerfile: ./apps/web/Dockerfile
       build-args: ''
       gitops-repository: infrastructure-as-code
-      gitops-directory-path: deployments/${{ inputs.environment || 'dev' }}/workloads/time-management
-      gitops-workload-name: time-management
+      gitops-directory-path: deployments/${{ inputs.environment || 'dev' }}/workloads/tid
+      gitops-workload-name: tid
       gitops-file-to-update: values.yaml
       gitops-yq-path: .image.tag
       gitops-continue-on-error: 'true'
