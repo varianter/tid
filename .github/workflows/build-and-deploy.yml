@@ -23,7 +23,7 @@ jobs:
     with:
       environment: ${{ inputs.environment || 'dev' }}
       acr-url: variantplatformacr.azurecr.io
-      image-name: time-management
+      image-name: tid
       docker-context: .
       dockerfile: ./apps/web/Dockerfile
       build-args: ''
