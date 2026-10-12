@@ -74,7 +74,9 @@ export function MonthPage({
         </>
       }
     >
-      <TimesheetGrid {...grid} />
+      <timesheet-conductor>
+        <TimesheetGrid {...grid} />
+      </timesheet-conductor>
     </Page>
   );
 }
@@ -276,6 +278,7 @@ export function TimesheetCell({
       method="post"
       action={action}
       class="d-block"
+      data-cell={`${task.id}:${day}`}
       data-task={task.id}
       data-day={day}
       data-minutes={minutes}
@@ -283,13 +286,13 @@ export function TimesheetCell({
       <input type="hidden" name="taskId" value={task.id} />
       <input type="hidden" name="date" value={day} />
       {error ? (
-        <color-mode palette="coral" class="stack-h nowrap items-center gap-3xs">
+        <color-mode palette="coral" class="pos-relative stack-h nowrap items-center gap-3xs">
           {input}
           <button
             type="button"
             popovertarget={errorId}
             aria-label="Show error"
-            class="ink-prominent"
+            class="m-2xs pos-absolute"
           >
             <ErrorIcon />
           </button>

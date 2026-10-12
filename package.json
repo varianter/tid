@@ -19,7 +19,7 @@
     "harvest:import:norway": "bun --filter @tid/harvest import:norway",
     "db:studio": "bun --filter @tid/db studio",
     "test": "bun test",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p packages/elements",
     "lint": "biome check .",
     "check": "bun run typecheck && bun run lint && bun run test"
   },

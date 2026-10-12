@@ -1,0 +1,8 @@
+{
+  "name": "@tid/elements",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./bundle": "./src/bundle.ts"
+  }
+}
