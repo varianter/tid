@@ -5,29 +5,36 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1791104281219,
+      "when": 1791800587188,
       "tag": "0000_init",
       "breakpoints": true
     },
     {
       "idx": 1,
       "version": "7",
-      "when": 1791104281661,
+      "when": 1791800587646,
       "tag": "0001_time_entry_rates",
       "breakpoints": true
     },
     {
       "idx": 2,
       "version": "7",
-      "when": 1791104282109,
+      "when": 1791800588081,
       "tag": "0002_time_entries_export",
       "breakpoints": true
     },
     {
       "idx": 3,
       "version": "7",
-      "when": 1791104282555,
+      "when": 1791800588514,
       "tag": "0003_organizations",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791800588940,
+      "tag": "0004_month_locks",
       "breakpoints": true
     }
   ]

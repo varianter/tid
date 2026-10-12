@@ -14,6 +14,18 @@ CREATE TABLE "clients" (
 	CONSTRAINT "clients_name_unique" UNIQUE("name")
 );
 --> statement-breakpoint
+CREATE TABLE "month_locks" (
+	"id" bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "month_locks_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 9223372036854775807 START WITH 1 CACHE 1),
+	"org_id" bigint NOT NULL,
+	"month" date NOT NULL,
+	"locked_by" bigint NOT NULL,
+	"locked_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"unlocked_by" bigint,
+	"unlocked_at" timestamp with time zone,
+	CONSTRAINT "month_is_first_day" CHECK (extract(day from "month_locks"."month") = 1),
+	CONSTRAINT "unlocked_by_and_at" CHECK (("month_locks"."unlocked_by" is null) = ("month_locks"."unlocked_at" is null))
+);
+--> statement-breakpoint
 CREATE TABLE "organizations" (
 	"id" bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "organizations_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 9223372036854775807 START WITH 1 CACHE 1),
 	"slug" text NOT NULL,
@@ -110,6 +122,9 @@ CREATE TABLE "users" (
 );
 --> statement-breakpoint
 ALTER TABLE "assignment_rates" ADD CONSTRAINT "assignment_rates_project_id_user_id_project_assignments_project_id_user_id_fk" FOREIGN KEY ("project_id","user_id") REFERENCES "public"."project_assignments"("project_id","user_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "month_locks" ADD CONSTRAINT "month_locks_org_id_organizations_id_fk" FOREIGN KEY ("org_id") REFERENCES "public"."organizations"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "month_locks" ADD CONSTRAINT "month_locks_locked_by_users_id_fk" FOREIGN KEY ("locked_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "month_locks" ADD CONSTRAINT "month_locks_unlocked_by_users_id_fk" FOREIGN KEY ("unlocked_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "project_assignments" ADD CONSTRAINT "project_assignments_user_in_organization" FOREIGN KEY ("user_id","org_id") REFERENCES "public"."users"("id","org_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "project_assignments" ADD CONSTRAINT "project_assignments_organization_on_project" FOREIGN KEY ("project_id","org_id") REFERENCES "public"."project_organizations"("project_id","org_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "project_organizations" ADD CONSTRAINT "project_organizations_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
@@ -121,6 +136,7 @@ ALTER TABLE "time_entries" ADD CONSTRAINT "time_entries_task_id_tasks_id_fk" FOR
 ALTER TABLE "user_identities" ADD CONSTRAINT "user_identities_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "user_roles" ADD CONSTRAINT "user_roles_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "users" ADD CONSTRAINT "users_org_id_organizations_id_fk" FOREIGN KEY ("org_id") REFERENCES "public"."organizations"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+CREATE UNIQUE INDEX "month_locks_one_active" ON "month_locks" USING btree ("org_id","month") WHERE "month_locks"."unlocked_at" is null;--> statement-breakpoint
 CREATE INDEX "project_assignments_user_id" ON "project_assignments" USING btree ("user_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "project_organizations_one_owner" ON "project_organizations" USING btree ("project_id") WHERE "project_organizations"."is_owner";--> statement-breakpoint
 CREATE INDEX "time_entries_task_id" ON "time_entries" USING btree ("task_id");--> statement-breakpoint

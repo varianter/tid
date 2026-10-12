@@ -1,6 +1,6 @@
 {
-  "id": "b2e2d529-ed11-4b99-8103-b9c18afe2f15",
-  "prevId": "2272fa03-c6d9-4f38-9aa3-0ada9327b74a",
+  "id": "119a75b3-f6a4-4e3e-89a2-ddd464eef2da",
+  "prevId": "5da14ab2-72dd-407d-bdb2-792d9a0b4ee3",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -113,6 +113,145 @@
       },
       "policies": {},
       "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.month_locks": {
+      "name": "month_locks",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "name": "month_locks_id_seq",
+            "increment": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "startWith": "1",
+            "cache": "1",
+            "cycle": false,
+            "schema": "public",
+            "type": "always"
+          }
+        },
+        "org_id": {
+          "name": "org_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "month": {
+          "name": "month",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "locked_by": {
+          "name": "locked_by",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "locked_at": {
+          "name": "locked_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "unlocked_by": {
+          "name": "unlocked_by",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "unlocked_at": {
+          "name": "unlocked_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "month_locks_one_active": {
+          "name": "month_locks_one_active",
+          "columns": [
+            {
+              "expression": "org_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "month",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "where": "\"month_locks\".\"unlocked_at\" is null",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "month_locks_org_id_organizations_id_fk": {
+          "name": "month_locks_org_id_organizations_id_fk",
+          "tableFrom": "month_locks",
+          "columnsFrom": [
+            "org_id"
+          ],
+          "tableTo": "organizations",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        },
+        "month_locks_locked_by_users_id_fk": {
+          "name": "month_locks_locked_by_users_id_fk",
+          "tableFrom": "month_locks",
+          "columnsFrom": [
+            "locked_by"
+          ],
+          "tableTo": "users",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        },
+        "month_locks_unlocked_by_users_id_fk": {
+          "name": "month_locks_unlocked_by_users_id_fk",
+          "tableFrom": "month_locks",
+          "columnsFrom": [
+            "unlocked_by"
+          ],
+          "tableTo": "users",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "month_is_first_day": {
+          "name": "month_is_first_day",
+          "value": "extract(day from \"month_locks\".\"month\") = 1"
+        },
+        "unlocked_by_and_at": {
+          "name": "unlocked_by_and_at",
+          "value": "(\"month_locks\".\"unlocked_by\" is null) = (\"month_locks\".\"unlocked_at\" is null)"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.organizations": {

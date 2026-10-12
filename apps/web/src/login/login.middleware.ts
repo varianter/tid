@@ -1,9 +1,9 @@
-import { userIdentities, users } from "@tid/db/schema";
+import { userIdentities, userRoles, users } from "@tid/db/schema";
 import { and, eq, getTableColumns, sql } from "drizzle-orm";
 import type { Context } from "hono";
 import { createMiddleware } from "hono/factory";
 import { database } from "../database";
-import type { PublicEnv, User } from "./user";
+import type { PublicEnv, User, UserEnv } from "./user";
 
 // oauth2-proxy logs the user in with Entra and nginx overwrites these headers on every
 // request, so they can be trusted as long as only the ingress can reach the app.
@@ -80,3 +80,16 @@ export function proxyLogoutUrl(tenantId: string) {
   const entraLogoutUrl = `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/logout`;
   return `/oauth2/sign_out?rd=${encodeURIComponent(entraLogoutUrl)}`;
 }
+
+export async function isManager(userId: number) {
+  const roles = await database
+    .select()
+    .from(userRoles)
+    .where(and(eq(userRoles.userId, userId), eq(userRoles.role, "manager")));
+  return roles.length > 0;
+}
+
+export const requireManager = createMiddleware<UserEnv>(async (c, next) => {
+  if (!(await isManager(c.get("user").id))) return c.text("Only managers can do this", 403);
+  await next();
+});

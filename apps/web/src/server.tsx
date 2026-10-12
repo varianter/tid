@@ -6,6 +6,7 @@ import { jsxRenderer } from "hono/jsx-renderer";
 import { assignments } from "./assignments/assignments.routes";
 import { clients } from "./clients/clients.routes";
 import { dev, devLogoutUrl, devTenantId, readDevIdentity, requireDevUser } from "./dev/dev.routes";
+import { endOfTheMonth } from "./endOfTheMonth/endOfTheMonth.routes";
 import { errorReport } from "./errors/errorReport";
 import { ErrorPage } from "./errors/errors.views";
 import { Layout } from "./layout";
@@ -90,6 +91,7 @@ app.route("/clients", clients);
 app.route("/projects", projects);
 app.route("/projects/:projectId/assignments", assignments);
 app.route("/reports", reports);
+app.route("/end-of-the-month", endOfTheMonth);
 
 // Dev login lets anyone act as any user, so it must not be reachable from the network.
 // Otherwise listen on all interfaces, which the Docker container needs.

@@ -2,8 +2,9 @@ import { organizations, timeEntriesExport } from "@tid/db/schema";
 import { and, between, eq, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { database } from "../database";
-import { addMonths, daysOfMonth, isWeekend, todayInOslo } from "../dates/dates";
+import { addMonths, todayInOslo } from "../dates/dates";
 import type { UserEnv } from "../login/user";
+import { capacityMinutes } from "./capacity";
 import { reportQuery, type Tab } from "./period";
 import { ReportPage, type ReportRows, type Totals } from "./reports.views";
 
@@ -59,9 +60,7 @@ reports.get("/:organization", async (c) => {
       ),
   };
   const currency = organization.currency;
-  // ponytail: capacity counts every weekday as a full day; subtract holidays and leave once we store them.
-  const capacityHours =
-    (daysOfMonth(month).filter((day) => !isWeekend(day)).length * organization.fullDayMinutes) / 60;
+  const capacityHours = capacityMinutes(month, organization.fullDayMinutes) / 60;
 
   const report = await (async (): Promise<ReportRows> => {
     switch (tab) {
