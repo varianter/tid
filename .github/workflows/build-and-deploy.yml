@@ -16,8 +16,16 @@ on:
           - dev
           - prod
 jobs:
+  verify:
+    uses: ./.github/workflows/verify.yml
+    permissions:
+      contents: read
+
   build-container-and-deploy-to-argocd:
     name: Build Container Image and Deploy with GitOps/ArgoCD
+    needs: verify
+    # Prod only runs code that has been reviewed into main.
+    if: inputs.environment != 'prod' || github.ref == 'refs/heads/main'
     uses: varianter/shared-workflows/.github/workflows/build-and-deploy-shared.yaml@main
     secrets: inherit
     with:
