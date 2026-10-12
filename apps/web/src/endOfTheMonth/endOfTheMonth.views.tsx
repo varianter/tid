@@ -1,5 +1,7 @@
+import { formatHours } from "@tid/elements/hours";
 import { Button, Page, PeriodNavigation } from "@tid/ui";
-import { formatHours, formatMonth, formatTimestamp } from "../dates/dates";
+import { formatDate, formatMonth, isoDateInOslo } from "../dates/dates";
+import { formatShare } from "../percent/percent";
 
 type ConsultantRow = {
   name: string;
@@ -50,7 +52,7 @@ export function EndOfTheMonthPage({
       <section class="stack-h items-center gap-m b-all bc-default br-l py-xs px-m">
         <span class={activeLock ? "fw-medium" : "ink-subtle"}>
           {activeLock
-            ? `Locked by ${activeLock.lockedByName}, ${formatTimestamp(activeLock.lockedAt)}`
+            ? `Locked by ${activeLock.lockedByName}, ${formatDate(isoDateInOslo(activeLock.lockedAt))}`
             : `${formatMonth(month)} is open`}
         </span>
         {canChangeLock && (activeLock || hasStarted) && (
@@ -112,13 +114,6 @@ function ConsultantTable({
       </div>
     </section>
   );
-}
-
-const percentFormat = new Intl.NumberFormat("nb-NO", { style: "percent" });
-
-/** Blank when nothing is logged, rather than NaN. */
-function formatShare(part: number, whole: number) {
-  return whole === 0 ? "" : percentFormat.format(part / whole);
 }
 
 /** Unlike a timesheet cell, an empty total still reads as zero. */

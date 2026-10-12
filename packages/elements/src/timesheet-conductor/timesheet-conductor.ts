@@ -1,6 +1,5 @@
-// Same rule as the server's formatHours, so a total reads the same before and after a reload.
-const hoursFormat = new Intl.NumberFormat("nb-NO", { maximumFractionDigits: 2 });
-const formatHours = (minutes: number) => (minutes === 0 ? "" : hoursFormat.format(minutes / 60));
+// The server renders hours with the same function, so a total reads the same before and after a reload.
+import { formatHours } from "../hours";
 
 /**
  * Saves timesheet cells as you leave them, without reloading the page.

@@ -1,4 +1,5 @@
 import type { clients } from "@tid/db/schema";
+import { formatHours } from "@tid/elements/hours";
 import {
   Button,
   Checkbox,
@@ -12,7 +13,6 @@ import {
   Select,
 } from "@tid/ui";
 import type { PropsWithChildren } from "hono/jsx";
-import { formatHours } from "../dates/dates";
 import type { FormProps } from "../form/formAction";
 
 export type ProjectRow = {

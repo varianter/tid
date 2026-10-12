@@ -1,13 +1,7 @@
+import { formatHours } from "@tid/elements/hours";
 import { Button, Input, Label, Page, PeriodNavigation, Popover } from "@tid/ui";
 import type { PropsWithChildren } from "hono/jsx";
-import {
-  formatDayMonth,
-  formatHours,
-  formatMonth,
-  formatWeekday,
-  mondayOf,
-  todayInOslo,
-} from "../dates/dates";
+import { formatDate, formatDayInMonth, formatMonth, mondayOf, todayInOslo } from "../dates/dates";
 
 type Task = { id: number; name: string; projectName: string };
 type TimeEntry = { taskId: number; spentOn: string; minutes: number };
@@ -152,8 +146,7 @@ function TimesheetGrid({
             isToday={day === today}
             class={`ta-right fs-s py-xs px-3xs d-block b-b bc-subtle br-m br-bl-none br-br-none${weekGap(index)}`}
           >
-            <div class="ink-subtle">{formatWeekday(day)}</div>
-            <div class="ink-prominent">{formatDayMonth(day)}</div>
+            {formatDayInMonth(day)}
           </TodayTint>
         ))}
         <div class={`ta-right py-xs ink-subtle ${stickyEnd}`}>Total</div>
@@ -288,7 +281,7 @@ export function TimesheetCell({
       data-size="small"
       style={`max-width: ${inputWidth}`}
       inputmode="decimal"
-      aria-label={`${task.projectName}, ${task.name}, ${formatWeekday(day)} ${day}`}
+      aria-label={`${task.projectName}, ${task.name}, ${formatDate(day)}`}
       aria-invalid={error ? "true" : undefined}
       aria-describedby={error ? errorId : undefined}
       pattern="[0-9]+([.,:][0-9]+)?"

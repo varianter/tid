@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./bundle": "./src/bundle.ts"
+    "./bundle": "./src/bundle.ts",
+    "./hours": "./src/hours.ts"
   }
 }

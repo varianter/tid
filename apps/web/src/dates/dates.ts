@@ -1,6 +1,21 @@
+// Dates are ISO strings: days as YYYY-MM-DD, months as YYYY-MM.
+// They're handled at midnight UTC, so no time zone can shift a day.
+
 const dayInMilliseconds = 86_400_000;
 
-// Dates are ISO strings (YYYY-MM-DD) handled at midnight UTC, so no time zone can shift a day.
+// Every date reads one way, from these three formats. Pick one of them over adding a fourth.
+const dateFormat = new Intl.DateTimeFormat("en-GB", { dateStyle: "long", timeZone: "UTC" });
+const dayInMonthFormat = new Intl.DateTimeFormat("en-GB", {
+  weekday: "short",
+  day: "numeric",
+  timeZone: "UTC",
+});
+const monthFormat = new Intl.DateTimeFormat("en-GB", {
+  month: "long",
+  year: "numeric",
+  timeZone: "UTC",
+});
+
 function parseIsoDate(isoDate: string) {
   return new Date(`${isoDate}T00:00:00Z`);
 }
@@ -9,10 +24,19 @@ function toIsoDate(date: Date) {
   return date.toISOString().slice(0, 10);
 }
 
+export function isoDateInOslo(moment: Date) {
+  // Swedish formats dates as YYYY-MM-DD.
+  return moment.toLocaleDateString("sv-SE", { timeZone: "Europe/Oslo" });
+}
+
 export function isIsoDate(value: string) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   const date = parseIsoDate(value);
   return !Number.isNaN(date.getTime()) && toIsoDate(date) === value;
+}
+
+export function todayInOslo() {
+  return isoDateInOslo(new Date());
 }
 
 export function addDays(isoDate: string, days: number) {
@@ -24,41 +48,20 @@ export function mondayOf(isoDate: string) {
   return addDays(isoDate, -daysSinceMonday);
 }
 
-export function todayInOslo() {
-  // Swedish formats dates as YYYY-MM-DD.
-  return new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Oslo" });
+export function isWeekend(isoDate: string) {
+  const weekday = parseIsoDate(isoDate).getUTCDay();
+  return weekday === 0 || weekday === 6;
 }
 
-const hoursFormat = new Intl.NumberFormat("nb-NO", { maximumFractionDigits: 2 });
-
-/** Hours in Norwegian notation (450 → "7,5"). Zero is blank, like an empty cell. */
-export function formatHours(minutes: number) {
-  return minutes === 0 ? "" : hoursFormat.format(minutes / 60);
+/** Like "3 October 2026". */
+export function formatDate(isoDate: string) {
+  return dateFormat.format(parseIsoDate(isoDate));
 }
 
-// English short names are fixed here because September differs by ICU version ("Sep" before CLDR 42, "Sept" after).
-const shortWeekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const shortMonths = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
-];
-
-export const formatWeekday = (isoDate: string) => shortWeekdays[parseIsoDate(isoDate).getUTCDay()];
-
-export const formatDayMonth = (isoDate: string) => {
-  const date = parseIsoDate(isoDate);
-  return `${date.getUTCDate()} ${shortMonths[date.getUTCMonth()]}`;
-};
+/** Like "Sat 3", for where the month is already shown. */
+export function formatDayInMonth(isoDate: string) {
+  return dayInMonthFormat.format(parseIsoDate(isoDate));
+}
 
 export function isIsoMonth(value: string) {
   return /^\d{4}-\d{2}$/.test(value) && isIsoDate(`${value}-01`);
@@ -71,34 +74,12 @@ export function addMonths(month: string, months: number) {
 }
 
 export function daysOfMonth(month: string) {
-  return Array.from({ length: 31 }, (_, index) => addDays(`${month}-01`, index)).filter((day) =>
-    day.startsWith(month),
-  );
+  const firstDay = `${month}-01`;
+  const dayCount = Number(addDays(`${addMonths(month, 1)}-01`, -1).slice(8));
+  return Array.from({ length: dayCount }, (_, index) => addDays(firstDay, index));
 }
 
-export function isWeekend(isoDate: string) {
-  const weekday = parseIsoDate(isoDate).getUTCDay();
-  return weekday === 0 || weekday === 6;
-}
-
-const monthFormat = new Intl.DateTimeFormat("en-GB", {
-  month: "long",
-  year: "numeric",
-  timeZone: "UTC",
-});
-
-export const formatMonth = (month: string) => monthFormat.format(parseIsoDate(`${month}-01`));
-
-export const formatDate = (isoDate: string) =>
-  `${formatDayMonth(isoDate)} ${parseIsoDate(isoDate).getUTCFullYear()}`;
-
-/** A moment as seen in Oslo, like "3 Oct 14:02". */
-export function formatTimestamp(moment: Date) {
-  const day = moment.toLocaleDateString("sv-SE", { timeZone: "Europe/Oslo" });
-  const time = moment.toLocaleTimeString("sv-SE", {
-    timeZone: "Europe/Oslo",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-  return `${formatDayMonth(day)} ${time}`;
+/** Like "October 2026". */
+export function formatMonth(month: string) {
+  return monthFormat.format(parseIsoDate(`${month}-01`));
 }
