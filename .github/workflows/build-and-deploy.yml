@@ -34,3 +34,15 @@ jobs:
       gitops-yq-path: .image.tag
       gitops-continue-on-error: 'true'
       enable-gitops: 'true'
+
+  verify-argocd-rollout:
+    name: Verify Argo CD rollout
+    needs: build-container-and-deploy-to-argocd
+    # Nothing to wait for when GitOps pushed no commit (disabled, nothing changed, or the push failed).
+    if: needs.build-container-and-deploy-to-argocd.outputs.gitops-commit-sha != ''
+    permissions:
+      id-token: write # lets the shared workflow swap this job's OIDC token for read-only Argo CD access, no secrets
+    uses: varianter/shared-workflows/.github/workflows/check-argocd-shared.yaml@main
+    with:
+      app: tid-${{ inputs.environment || 'dev' }}
+      expected-revision: ${{ needs.build-container-and-deploy-to-argocd.outputs.gitops-commit-sha }}
