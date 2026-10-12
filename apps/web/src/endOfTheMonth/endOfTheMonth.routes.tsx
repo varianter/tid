@@ -1,34 +1,27 @@
-import { organizations, projects, tasks, timeEntries, users } from "@tid/db/schema";
+import { projects, tasks, timeEntries, users } from "@tid/db/schema";
 import { and, between, eq, gte, isNull, or, sql } from "drizzle-orm";
 import { type Context, Hono } from "hono";
 import { database } from "../database";
 import { addMonths, daysOfMonth, isIsoMonth, todayInOslo } from "../dates/dates";
-import { isManager, requireManager } from "../login/login.middleware";
 import type { UserEnv } from "../login/user";
+import { findOrganizationBySlug, findOrganizationSlug } from "../organizations/organization";
 import { capacityMinutes } from "../reports/capacity";
 import { EndOfTheMonthPage } from "./endOfTheMonth.views";
+import { managesOrganization } from "./manager";
 import { findActiveLock, lockMonth, unlockMonth } from "./monthLock";
 
 export const endOfTheMonth = new Hono<UserEnv>();
 
-const monthPath = (organization: string, month: string) =>
-  `/end-of-the-month/${organization}/${month}`;
+const monthPath = (organizationSlug: string, month: string) =>
+  `/end-of-the-month/${organizationSlug}/${month}`;
 
-async function findOrganization(c: Context<UserEnv>) {
-  const [organization] = await database
-    .select()
-    .from(organizations)
-    .where(eq(organizations.slug, c.req.param("organization") ?? ""));
-  return organization;
-}
+const findOrganization = (c: Context<UserEnv>) =>
+  findOrganizationBySlug(c.req.param("organization") ?? "");
 
 endOfTheMonth.get("/", async (c) => {
-  const [organization] = await database
-    .select({ slug: organizations.slug })
-    .from(organizations)
-    .where(eq(organizations.id, c.get("user").orgId));
-  if (!organization) return c.notFound();
-  return c.redirect(`/end-of-the-month/${organization.slug}`);
+  const slug = await findOrganizationSlug(c.get("user").orgId);
+  if (!slug) return c.notFound();
+  return c.redirect(`/end-of-the-month/${slug}`);
 });
 
 // The month being closed: last month until it's locked, then this one.
@@ -88,13 +81,17 @@ endOfTheMonth.get("/:organization/:month", async (c) => {
     };
   });
 
+  const [activeLock, canChangeLock] = await Promise.all([
+    findActiveLock(organization.id, month),
+    managesOrganization(c.get("user"), organization.id),
+  ]);
   return c.render(
     <EndOfTheMonthPage
-      organization={organization.name}
+      organizationName={organization.name}
       month={month}
       rows={rows}
-      lock={await findActiveLock(organization.id, month)}
-      canLock={await isManager(c.get("user").id)}
+      activeLock={activeLock}
+      canChangeLock={canChangeLock}
       lockAction={`${monthPath(organization.slug, month)}/lock`}
       unlockAction={`${monthPath(organization.slug, month)}/unlock`}
       previousHref={monthPath(organization.slug, addMonths(month, -1))}
@@ -103,18 +100,29 @@ endOfTheMonth.get("/:organization/:month", async (c) => {
   );
 });
 
-endOfTheMonth.post("/:organization/:month/lock", requireManager, async (c) => {
-  const month = c.req.param("month");
+/** The month a lock or unlock names, once the user manages its organization. */
+async function readLockChange(c: Context<UserEnv>) {
+  const month = c.req.param("month") ?? "";
   const organization = await findOrganization(c);
   if (!organization || !isIsoMonth(month)) return c.notFound();
+  if (!(await managesOrganization(c.get("user"), organization.id))) {
+    return c.text("Only the organization's managers can do this", 403);
+  }
+  return { organization, month };
+}
+
+endOfTheMonth.post("/:organization/:month/lock", async (c) => {
+  const change = await readLockChange(c);
+  if (change instanceof Response) return change;
+  const { organization, month } = change;
   await lockMonth(organization.id, month, c.get("user").id);
   return c.redirect(monthPath(organization.slug, month), 303);
 });
 
-endOfTheMonth.post("/:organization/:month/unlock", requireManager, async (c) => {
-  const month = c.req.param("month");
-  const organization = await findOrganization(c);
-  if (!organization || !isIsoMonth(month)) return c.notFound();
+endOfTheMonth.post("/:organization/:month/unlock", async (c) => {
+  const change = await readLockChange(c);
+  if (change instanceof Response) return change;
+  const { organization, month } = change;
   await unlockMonth(organization.id, month, c.get("user").id);
   return c.redirect(monthPath(organization.slug, month), 303);
 });

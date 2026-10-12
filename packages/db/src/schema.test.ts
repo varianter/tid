@@ -392,12 +392,62 @@ test("a month has at most one active lock per organization", async () => {
   await database.insert(monthLocks).values(lock);
 });
 
+test("a locked month raises its own error code, so the app can tell it apart", async () => {
+  const { organization, user, task } = await insertRatedAssignment();
+  await database
+    .insert(monthLocks)
+    .values({ orgId: organization.id, month: "2026-10-01", lockedBy: user.id });
+  const error = await database
+    .insert(timeEntries)
+    .values({ userId: user.id, taskId: task.id, spentOn: "2026-10-01", minutes: 60 })
+    .then(
+      () => undefined,
+      (error: Error) => error,
+    );
+  expect((error?.cause as { errno?: string } | undefined)?.errno).toBe("TL001");
+});
+
+test("only the organization's own people lock or unlock its months", async () => {
+  const { organization, user } = await insertRatedAssignment();
+  const other = await insertOrganization("other");
+  expect(
+    await violatedConstraint(
+      database
+        .insert(monthLocks)
+        .values({ orgId: other.id, month: "2026-10-01", lockedBy: user.id }),
+    ),
+  ).toBe("month_locks_locked_by_in_organization");
+
+  const lock = onlyRow(
+    await database
+      .insert(monthLocks)
+      .values({ orgId: organization.id, month: "2026-10-01", lockedBy: user.id })
+      .returning(),
+  );
+  const [outsider] = await database
+    .insert(users)
+    .values({ name: "Outsider", email: "outsider@variant.no", orgId: other.id })
+    .returning();
+  expect(
+    await violatedConstraint(
+      database
+        .update(monthLocks)
+        .set({ unlockedBy: outsider?.id, unlockedAt: new Date() })
+        .where(eq(monthLocks.id, lock.id)),
+    ),
+  ).toBe("month_locks_unlocked_by_in_organization");
+});
+
 test("a lock covers only its organization's entries", async () => {
   const { user, task } = await insertRatedAssignment();
   const other = await insertOrganization("other");
+  const [manager] = await database
+    .insert(users)
+    .values({ name: "Manager", email: "manager@variant.no", orgId: other.id })
+    .returning();
   await database
     .insert(monthLocks)
-    .values({ orgId: other.id, month: "2026-10-01", lockedBy: user.id });
+    .values({ orgId: other.id, month: "2026-10-01", lockedBy: manager?.id ?? 0 });
 
   await database
     .insert(timeEntries)

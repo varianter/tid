@@ -238,12 +238,23 @@ export const monthLocks = pgTable(
     id: id(),
     orgId: reference().references(() => organizations.id),
     month: date().notNull(),
-    lockedBy: reference().references(() => users.id),
+    lockedBy: reference(),
     lockedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
-    unlockedBy: bigint({ mode: "number" }).references(() => users.id),
+    unlockedBy: bigint({ mode: "number" }),
     unlockedAt: timestamp({ withTimezone: true }),
   },
   (table) => [
+    // Only the organization's own people may lock or unlock its months.
+    foreignKey({
+      name: "month_locks_locked_by_in_organization",
+      columns: [table.lockedBy, table.orgId],
+      foreignColumns: [users.id, users.orgId],
+    }),
+    foreignKey({
+      name: "month_locks_unlocked_by_in_organization",
+      columns: [table.unlockedBy, table.orgId],
+      foreignColumns: [users.id, users.orgId],
+    }),
     uniqueIndex("month_locks_one_active")
       .on(table.orgId, table.month)
       .where(sql`${table.unlockedAt} is null`),

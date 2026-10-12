@@ -23,7 +23,9 @@ begin
   foreach entry in array array[old, new] loop
     continue when entry is null;
     if month_locked((select org_id from users where id = entry.user_id), entry.spent_on) then
-      raise exception 'Time entries in % are locked', to_char(entry.spent_on, 'YYYY-MM');
+      -- The app catches TL001 to tell the user the month is locked.
+      raise exception 'Time entries in % are locked', to_char(entry.spent_on, 'YYYY-MM')
+        using errcode = 'TL001';
     end if;
   end loop;
   return coalesce(new, old);

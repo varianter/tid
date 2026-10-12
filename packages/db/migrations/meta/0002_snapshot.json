@@ -1,6 +1,6 @@
 {
-  "id": "5da14ab2-72dd-407d-bdb2-792d9a0b4ee3",
-  "prevId": "fa2d010b-d705-476c-af3f-64a4036b0881",
+  "id": "d175e1f0-7011-4d72-b067-4ff853632198",
+  "prevId": "634a3145-1ea6-4122-8f3f-89bce9e05f86",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -212,28 +212,32 @@
           "onUpdate": "no action",
           "onDelete": "no action"
         },
-        "month_locks_locked_by_users_id_fk": {
-          "name": "month_locks_locked_by_users_id_fk",
+        "month_locks_locked_by_in_organization": {
+          "name": "month_locks_locked_by_in_organization",
           "tableFrom": "month_locks",
           "columnsFrom": [
-            "locked_by"
+            "locked_by",
+            "org_id"
           ],
           "tableTo": "users",
           "columnsTo": [
-            "id"
+            "id",
+            "org_id"
           ],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
-        "month_locks_unlocked_by_users_id_fk": {
-          "name": "month_locks_unlocked_by_users_id_fk",
+        "month_locks_unlocked_by_in_organization": {
+          "name": "month_locks_unlocked_by_in_organization",
           "tableFrom": "month_locks",
           "columnsFrom": [
-            "unlocked_by"
+            "unlocked_by",
+            "org_id"
           ],
           "tableTo": "users",
           "columnsTo": [
-            "id"
+            "id",
+            "org_id"
           ],
           "onUpdate": "no action",
           "onDelete": "no action"

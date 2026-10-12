@@ -123,8 +123,8 @@ CREATE TABLE "users" (
 --> statement-breakpoint
 ALTER TABLE "assignment_rates" ADD CONSTRAINT "assignment_rates_project_id_user_id_project_assignments_project_id_user_id_fk" FOREIGN KEY ("project_id","user_id") REFERENCES "public"."project_assignments"("project_id","user_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "month_locks" ADD CONSTRAINT "month_locks_org_id_organizations_id_fk" FOREIGN KEY ("org_id") REFERENCES "public"."organizations"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "month_locks" ADD CONSTRAINT "month_locks_locked_by_users_id_fk" FOREIGN KEY ("locked_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "month_locks" ADD CONSTRAINT "month_locks_unlocked_by_users_id_fk" FOREIGN KEY ("unlocked_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "month_locks" ADD CONSTRAINT "month_locks_locked_by_in_organization" FOREIGN KEY ("locked_by","org_id") REFERENCES "public"."users"("id","org_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "month_locks" ADD CONSTRAINT "month_locks_unlocked_by_in_organization" FOREIGN KEY ("unlocked_by","org_id") REFERENCES "public"."users"("id","org_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "project_assignments" ADD CONSTRAINT "project_assignments_user_in_organization" FOREIGN KEY ("user_id","org_id") REFERENCES "public"."users"("id","org_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "project_assignments" ADD CONSTRAINT "project_assignments_organization_on_project" FOREIGN KEY ("project_id","org_id") REFERENCES "public"."project_organizations"("project_id","org_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "project_organizations" ADD CONSTRAINT "project_organizations_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint

@@ -10,21 +10,21 @@ type ConsultantRow = {
 };
 
 export function EndOfTheMonthPage({
-  organization,
+  organizationName,
   month,
   rows,
-  lock,
-  canLock,
+  activeLock,
+  canChangeLock,
   lockAction,
   unlockAction,
   previousHref,
   nextHref,
 }: {
-  organization: string;
+  organizationName: string;
   month: string;
   rows: ConsultantRow[];
-  lock?: { lockedAt: Date; lockedBy: string };
-  canLock: boolean;
+  activeLock?: { lockedAt: Date; lockedByName: string };
+  canChangeLock: boolean;
   lockAction: string;
   unlockAction: string;
   previousHref: string;
@@ -32,7 +32,7 @@ export function EndOfTheMonthPage({
 }) {
   return (
     <Page
-      title={`End of the month · ${organization}`}
+      title={`End of the month · ${organizationName}`}
       actions={
         <PeriodNavigation
           previousHref={previousHref}
@@ -45,15 +45,15 @@ export function EndOfTheMonthPage({
       }
     >
       <section class="stack-h items-center gap-m b-all bc-default br-l py-xs px-m">
-        <span class={lock ? "fw-medium" : "ink-subtle"}>
-          {lock
-            ? `Locked by ${lock.lockedBy}, ${formatTimestamp(lock.lockedAt)}`
+        <span class={activeLock ? "fw-medium" : "ink-subtle"}>
+          {activeLock
+            ? `Locked by ${activeLock.lockedByName}, ${formatTimestamp(activeLock.lockedAt)}`
             : `${formatMonth(month)} is open`}
         </span>
-        {canLock && (
-          <form method="post" action={lock ? unlockAction : lockAction} class="ml-auto">
-            <Button type="submit" data-variant={lock ? undefined : "tinted"}>
-              {lock ? "Unlock this month" : `Lock this month`}
+        {canChangeLock && (
+          <form method="post" action={activeLock ? unlockAction : lockAction} class="ml-auto">
+            <Button type="submit" data-variant={activeLock ? undefined : "tinted"}>
+              {activeLock ? "Unlock this month" : `Lock this month`}
             </Button>
           </form>
         )}

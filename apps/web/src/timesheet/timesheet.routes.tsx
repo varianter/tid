@@ -10,7 +10,7 @@ import {
   isWeekend,
   todayInOslo,
 } from "../dates/dates";
-import { isLockedOn } from "../endOfTheMonth/monthLock";
+import { isLockedOn, isMonthLockedError } from "../endOfTheMonth/monthLock";
 import type { User, UserEnv } from "../login/user";
 import { cellHours, hoursHint, timesheetCell } from "./timesheet.validation";
 import { type MonthError, MonthPage, TimesheetCell } from "./timesheet.views";
@@ -157,15 +157,16 @@ async function readPostedCell(c: Context<UserEnv>) {
 /** Saves the hours as minutes, or says why they can't be: what was typed and what's wrong. */
 async function saveHours(user: User, taskId: number, day: string, hours: unknown) {
   const typed = typeof hours === "string" ? hours : "";
-  // The database refuses these too; checking first lets the cell say why.
-  if (await isLockedOn(user.orgId, day)) {
-    return { error: { typed, message: `${formatMonth(day.slice(0, 7))} is locked` } };
-  }
   const minutes = cellHours.safeParse(hours);
   if (!minutes.success) {
     return { error: { typed, message: minutes.error.issues[0]?.message ?? hoursHint } };
   }
-  await saveCell(user.id, taskId, day, minutes.data);
+  try {
+    await saveCell(user.id, taskId, day, minutes.data);
+  } catch (error) {
+    if (!isMonthLockedError(error)) throw error;
+    return { error: { typed, message: `${formatMonth(day.slice(0, 7))} is locked` } };
+  }
   return { minutes: minutes.data };
 }
 

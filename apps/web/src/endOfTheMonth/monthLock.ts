@@ -12,7 +12,7 @@ const isActiveLock = (orgId: number, month: string) =>
 
 export async function findActiveLock(orgId: number, month: string) {
   const [lock] = await database
-    .select({ lockedAt: monthLocks.lockedAt, lockedBy: users.name })
+    .select({ lockedAt: monthLocks.lockedAt, lockedByName: users.name })
     .from(monthLocks)
     .innerJoin(users, eq(users.id, monthLocks.lockedBy))
     .where(isActiveLock(orgId, month));
@@ -40,4 +40,12 @@ export async function isLockedOn(orgId: number, day: string) {
     sql`select month_locked(${orgId}, ${day}) as locked`,
   );
   return row?.locked ?? false;
+}
+
+/** Whether the error is the database refusing to change an entry in a locked month. */
+export function isMonthLockedError(error: unknown) {
+  // month_locks.sql raises TL001; Bun puts the SQLSTATE in errno, under Drizzle's wrapper.
+  return (
+    error instanceof Error && (error.cause as { errno?: string } | undefined)?.errno === "TL001"
+  );
 }
