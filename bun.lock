@@ -14,6 +14,7 @@
       "name": "@tid/web",
       "dependencies": {
         "@tid/db": "workspace:*",
+        "@tid/elements": "workspace:*",
         "@tid/ui": "workspace:*",
         "drizzle-orm": "catalog:",
         "hono": "4.13.9",
@@ -36,6 +37,9 @@
         "@testcontainers/postgresql": "12.2.0",
         "drizzle-kit": "0.31.11",
       },
+    },
+    "packages/elements": {
+      "name": "@tid/elements",
     },
     "packages/harvest": {
       "name": "@tid/harvest",
@@ -191,6 +195,8 @@
     "@testcontainers/postgresql": ["@testcontainers/postgresql@12.2.0", "", { "dependencies": { "testcontainers": "^12.2.0" } }, "sha512-14oNBbKdqIkWTiw8XwP6YqWnuBebiij8m4fF03WTSHvNt5FfvQpGTLwIV3p07UpDnqWRFvY50YFzbiYdB+SWuA=="],
 
     "@tid/db": ["@tid/db@workspace:packages/db"],
+
+    "@tid/elements": ["@tid/elements@workspace:packages/elements"],
 
     "@tid/harvest": ["@tid/harvest@workspace:packages/harvest"],
 

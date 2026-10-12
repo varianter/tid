@@ -6,7 +6,7 @@ import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { createMiddleware } from "hono/factory";
 import { database } from "../database";
 import { signupPath } from "../login/login.middleware";
-import type { UserEnv } from "../login/user";
+import type { PublicEnv } from "../login/user";
 
 // Trusts whoever is named in a cookie, so only dev.ts turns it on.
 const cookieName = "dev_user_email";
@@ -31,7 +31,7 @@ export function readDevIdentity(c: Context) {
   return email ? { subject: email.toLowerCase(), email } : undefined;
 }
 
-export const dev = new Hono<UserEnv>();
+export const dev = new Hono<PublicEnv>();
 
 dev.get("/login", async (c) => {
   const people = await database
@@ -106,7 +106,7 @@ dev.post("/login", async (c) => {
   return c.redirect("/", 303);
 });
 
-export const requireDevUser = createMiddleware<UserEnv>(async (c, next) => {
+export const requireDevUser = createMiddleware<PublicEnv>(async (c, next) => {
   const email = getCookie(c, cookieName);
   const [user] = email
     ? await database.select().from(users).where(sql`lower(${users.email}) = lower(${email})`)

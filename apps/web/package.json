@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@tid/db": "workspace:*",
+    "@tid/elements": "workspace:*",
     "@tid/ui": "workspace:*",
     "drizzle-orm": "catalog:",
     "hono": "4.13.9",

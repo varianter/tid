@@ -1,3 +1,4 @@
+import { bundleElements } from "@tid/elements/bundle";
 import { Hono } from "hono";
 import { csrf } from "hono/csrf";
 import { HTTPException } from "hono/http-exception";
@@ -10,7 +11,7 @@ import { ErrorPage } from "./errors/errors.views";
 import { Layout } from "./layout";
 import { proxyLogoutUrl, requireProxyUser, signupPath } from "./login/login.middleware";
 import { signup } from "./login/login.routes";
-import type { UserEnv } from "./login/user";
+import type { PublicEnv } from "./login/user";
 import { projects } from "./projects/projects.routes";
 import { reports } from "./reports/reports.routes";
 import { timesheet } from "./timesheet/timesheet.routes";
@@ -35,13 +36,21 @@ function chooseLogin() {
 }
 const login = chooseLogin();
 
-const app = new Hono<UserEnv>();
+const elements = await bundleElements();
+
+const app = new Hono<PublicEnv>();
 
 // Login is a session cookie, so form posts from other sites would otherwise be trusted.
 app.use(csrf());
 app.use(
   jsxRenderer(({ children }, c) => (
-    <Layout title="Tid" currentPath={c.req.path} user={c.get("user")} logoutUrl={login.logoutUrl}>
+    <Layout
+      title="Tid"
+      currentPath={c.req.path}
+      user={c.get("user")}
+      logoutUrl={login.logoutUrl}
+      elementsSrc={elements.path}
+    >
       {children}
     </Layout>
   )),
@@ -63,6 +72,12 @@ app.onError((error, c) => {
 });
 
 app.get("/health", (c) => c.text("ok"));
+app.get(elements.path, (c) =>
+  c.body(elements.code, 200, {
+    "Content-Type": "text/javascript",
+    "Cache-Control": "public, max-age=31536000, immutable",
+  }),
+);
 
 // Registered before the middleware, so logging in and signing up don't require a user.
 if (isDevLoginEnabled) app.route("/dev", dev);

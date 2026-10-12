@@ -12,7 +12,7 @@ import {
 } from "./login.middleware";
 import { signupForm } from "./login.validation";
 import { NotAnEmployeePage, SignupPage } from "./login.views";
-import type { UserEnv } from "./user";
+import type { PublicEnv } from "./user";
 
 type SignupProps = {
   subject: string;
@@ -27,7 +27,7 @@ export function signup(
   tenantId: string,
   readIdentity: (c: Context) => Identity | undefined = readProxyIdentity,
 ) {
-  const routes = new Hono<UserEnv>();
+  const routes = new Hono<PublicEnv>();
   routes.on(
     ["GET", "POST"],
     "/",

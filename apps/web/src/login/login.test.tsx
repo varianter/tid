@@ -6,9 +6,9 @@ import { Hono } from "hono";
 import { database } from "../database";
 import { requireProxyUser } from "./login.middleware";
 import { signup } from "./login.routes";
-import type { UserEnv } from "./user";
+import type { PublicEnv } from "./user";
 
-const app = new Hono<UserEnv>()
+const app = new Hono<PublicEnv>()
   .route("/signup", signup("tenant"))
   .use(requireProxyUser("tenant"))
   .get("/", (c) => c.text(String(c.get("user")?.id)));

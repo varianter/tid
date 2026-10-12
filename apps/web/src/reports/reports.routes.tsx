@@ -14,7 +14,6 @@ const reportPath = (organization: string, query: URLSearchParams) =>
 
 reports.get("/", async (c) => {
   const user = c.get("user");
-  if (!user) return c.text("Not logged in", 401);
   const [organization] = await database
     .select({ slug: organizations.slug })
     .from(organizations)

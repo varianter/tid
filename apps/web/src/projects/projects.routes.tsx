@@ -90,14 +90,14 @@ projects.on(
       if (!clients.some((client) => client.id === project.clientId)) {
         return { fieldErrors: { clientId: ["Pick a client"] } };
       }
-      const user: User | undefined = c.get("user");
+      const user: User = c.get("user");
       const [inserted] = await database.transaction(async (transaction) => {
         const rows = await transaction
           .insert(projectsTable)
           .values(project)
           .onConflictDoNothing()
           .returning();
-        if (rows[0] && user) {
+        if (rows[0]) {
           await transaction
             .insert(projectOrganizations)
             .values({ projectId: rows[0].id, orgId: user.orgId, isOwner: true });

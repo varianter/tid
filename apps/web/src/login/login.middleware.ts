@@ -3,7 +3,7 @@ import { and, eq, getTableColumns, sql } from "drizzle-orm";
 import type { Context } from "hono";
 import { createMiddleware } from "hono/factory";
 import { database } from "../database";
-import type { User, UserEnv } from "./user";
+import type { PublicEnv, User } from "./user";
 
 // oauth2-proxy logs the user in with Entra and nginx overwrites these headers on every
 // request, so they can be trusted as long as only the ingress can reach the app.
@@ -56,7 +56,7 @@ async function linkIdentity(tenantId: string, subject: string, user: User) {
 }
 
 export const requireProxyUser = (tenantId: string) =>
-  createMiddleware<UserEnv>(async (c, next) => {
+  createMiddleware<PublicEnv>(async (c, next) => {
     const identity = readProxyIdentity(c);
     if (!identity) return c.text("Not logged in", 401);
     const { subject, email } = identity;

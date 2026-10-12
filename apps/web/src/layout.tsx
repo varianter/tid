@@ -5,6 +5,8 @@ type LayoutProps = PropsWithChildren<{
   currentPath: string;
   user?: { name: string };
   logoutUrl: string;
+  /** The bundled custom elements, loaded on every page. */
+  elementsSrc: string;
 }>;
 
 const navigation = [
@@ -18,7 +20,14 @@ function isActive(href: string, currentPath: string) {
   return currentPath === href || currentPath.startsWith(`${href}/`);
 }
 
-export function Layout({ title, currentPath, user, logoutUrl, children }: LayoutProps) {
+export function Layout({
+  title,
+  currentPath,
+  user,
+  logoutUrl,
+  elementsSrc,
+  children,
+}: LayoutProps) {
   return (
     <html lang="en">
       <head>
@@ -26,6 +35,7 @@ export function Layout({ title, currentPath, user, logoutUrl, children }: Layout
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>{title}</title>
         <link rel="stylesheet" href="https://varde.variant.dev/v/1.0.0/styles.css" />
+        <script type="module" src={elementsSrc} />
       </head>
       <body class="stack-h nowrap items-stretch">
         <nav
