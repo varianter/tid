@@ -20,10 +20,10 @@ jobs:
     timeout-minutes: 2
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Setup Biome
-        uses: biomejs/setup-biome@v2
+        uses: biomejs/setup-biome@4c91541eaada48f67d7dbd7833600ce162b68f51 # v2.7.1
 
       - name: Run Biome
         run: biome ci .
@@ -33,9 +33,9 @@ jobs:
     timeout-minutes: 5
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
-      - uses: oven-sh/setup-bun@v2
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version-file: ".bun-version"
 
@@ -53,9 +53,9 @@ jobs:
 
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
-      - uses: oven-sh/setup-bun@v2
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version-file: ".bun-version"
 
@@ -64,3 +64,22 @@ jobs:
 
       - name: Test
         run: bun test
+
+  smoke-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build image
+        run: docker build -f apps/web/Dockerfile -t tid-web .
+
+      - name: Smoke test
+        run: |
+          docker run -d --name tid-web-smoke -p 3000:3000 -e DATABASE_URL=postgres://smoketest@localhost/smoketest -e ENTRA_TENANT_ID=smoketest tid-web
+          curl -fsS --retry 10 --retry-all-errors --retry-delay 1 localhost:3000/health
+
+      - name: Smoke test logs
+        if: failure()
+        run: docker logs tid-web-smoke

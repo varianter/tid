@@ -1,4 +1,4 @@
-name: Build and Deploy (Tid)
+name: Deploy
 
 on:
   push:
@@ -15,9 +15,40 @@ on:
           - lab
           - dev
           - prod
+
+permissions: {}
+
+# Queued, never cancelled: a half-finished deploy can leave GitOps out of sync.
+# Overlapping runs could land an older image tag last.
+concurrency:
+  group: deploy-${{ inputs.environment || 'dev' }}
+  cancel-in-progress: false
+
 jobs:
-  build-container-and-deploy-to-argocd:
-    name: Build Container Image and Deploy with GitOps/ArgoCD
+  verify:
+    uses: ./.github/workflows/verify.yml
+    permissions:
+      contents: read
+
+  refuse-prod-off-main:
+    name: Refuse prod off main
+    if: inputs.environment == 'prod' && github.ref != 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - run: |
+          echo "::error::Prod deploys only from main, not $BRANCH."
+          exit 1
+        env:
+          BRANCH: ${{ github.ref_name }}
+
+  deploy:
+    name: Deploy
+    needs: verify
+    # Prod only runs code that has been reviewed into main.
+    if: inputs.environment != 'prod' || github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
     uses: varianter/shared-workflows/.github/workflows/build-and-deploy-shared.yaml@main
     secrets: inherit
     with:
@@ -35,14 +66,14 @@ jobs:
       gitops-continue-on-error: 'true'
       enable-gitops: 'true'
 
-  verify-argocd-rollout:
-    name: Verify Argo CD rollout
-    needs: build-container-and-deploy-to-argocd
+  rollout:
+    name: Check rollout
+    needs: deploy
     # Nothing to wait for when GitOps pushed no commit (disabled, nothing changed, or the push failed).
-    if: needs.build-container-and-deploy-to-argocd.outputs.gitops-commit-sha != ''
+    if: needs.deploy.outputs.gitops-commit-sha != ''
     permissions:
       id-token: write # lets the shared workflow swap this job's OIDC token for read-only Argo CD access, no secrets
     uses: varianter/shared-workflows/.github/workflows/check-argocd-shared.yaml@main
     with:
       app: tid-${{ inputs.environment || 'dev' }}
-      expected-revision: ${{ needs.build-container-and-deploy-to-argocd.outputs.gitops-commit-sha }}
+      expected-revision: ${{ needs.deploy.outputs.gitops-commit-sha }}
