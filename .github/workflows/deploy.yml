@@ -1,4 +1,4 @@
-name: Build and Deploy (Tid)
+name: Deploy
 
 on:
   push:
@@ -21,8 +21,8 @@ jobs:
     permissions:
       contents: read
 
-  build-container-and-deploy-to-argocd:
-    name: Build Container Image and Deploy with GitOps/ArgoCD
+  deploy:
+    name: Deploy
     needs: verify
     # Prod only runs code that has been reviewed into main.
     if: inputs.environment != 'prod' || github.ref == 'refs/heads/main'
@@ -43,14 +43,14 @@ jobs:
       gitops-continue-on-error: 'true'
       enable-gitops: 'true'
 
-  verify-argocd-rollout:
-    name: Verify Argo CD rollout
-    needs: build-container-and-deploy-to-argocd
+  rollout:
+    name: Check rollout
+    needs: deploy
     # Nothing to wait for when GitOps pushed no commit (disabled, nothing changed, or the push failed).
-    if: needs.build-container-and-deploy-to-argocd.outputs.gitops-commit-sha != ''
+    if: needs.deploy.outputs.gitops-commit-sha != ''
     permissions:
       id-token: write # lets the shared workflow swap this job's OIDC token for read-only Argo CD access, no secrets
     uses: varianter/shared-workflows/.github/workflows/check-argocd-shared.yaml@main
     with:
       app: tid-${{ inputs.environment || 'dev' }}
-      expected-revision: ${{ needs.build-container-and-deploy-to-argocd.outputs.gitops-commit-sha }}
+      expected-revision: ${{ needs.deploy.outputs.gitops-commit-sha }}
