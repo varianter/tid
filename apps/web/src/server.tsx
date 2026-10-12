@@ -11,7 +11,7 @@ import { ErrorPage } from "./errors/errors.views";
 import { Layout } from "./layout";
 import { proxyLogoutUrl, requireProxyUser, signupPath } from "./login/login.middleware";
 import { signup } from "./login/login.routes";
-import type { UserEnv } from "./login/user";
+import type { PublicEnv } from "./login/user";
 import { projects } from "./projects/projects.routes";
 import { reports } from "./reports/reports.routes";
 import { timesheet } from "./timesheet/timesheet.routes";
@@ -38,7 +38,7 @@ const login = chooseLogin();
 
 const elements = await bundleElements();
 
-const app = new Hono<UserEnv>();
+const app = new Hono<PublicEnv>();
 
 // Login is a session cookie, so form posts from other sites would otherwise be trusted.
 app.use(csrf());

@@ -12,7 +12,9 @@ import {
 type Task = { id: number; name: string; projectName: string };
 type TimeEntry = { taskId: number; spentOn: string; minutes: number };
 /** A save that failed, shown on its cell with what the user typed. */
-export type CellError = { taskId: number; day: string; typed: string; message: string };
+type CellError = { typed: string; message: string };
+/** A failed save on the month, naming the cell to show it on. */
+export type MonthError = CellError & { taskId: number; day: string };
 
 // Caps the inputs, which in turn size the day columns.
 const inputWidth = "8ch";
@@ -25,7 +27,7 @@ type TimesheetGridProps = {
   addedTaskIds: number[];
   /** The current query string, kept when adding a row. */
   search: string;
-  error?: CellError;
+  error?: MonthError;
 };
 
 type PeriodLinks = { previousHref: string; nextHref: string };
@@ -35,8 +37,15 @@ export function MonthPage({
   showWeekends,
   previousHref,
   nextHref,
+  cellAction,
   ...grid
-}: { month: string; showWeekends: boolean } & PeriodLinks & TimesheetGridProps) {
+}: {
+  month: string;
+  showWeekends: boolean;
+  /** Where the timesheet element saves a cell, getting just that cell back. */
+  cellAction: string;
+} & PeriodLinks &
+  TimesheetGridProps) {
   return (
     <Page
       title="Timesheet"
@@ -74,7 +83,7 @@ export function MonthPage({
         </>
       }
     >
-      <timesheet-conductor>
+      <timesheet-conductor cell-action={cellAction}>
         <TimesheetGrid {...grid} />
       </timesheet-conductor>
     </Page>
@@ -271,6 +280,7 @@ export function TimesheetCell({
       aria-label={`${task.projectName}, ${task.name}, ${formatWeekday(day)} ${day}`}
       aria-invalid={error ? "true" : undefined}
       aria-describedby={error ? errorId : undefined}
+      pattern="[0-9]+([.,:][0-9]+)?"
     />
   );
   return (

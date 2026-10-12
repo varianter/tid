@@ -4,26 +4,26 @@ const formatHours = (minutes: number) => (minutes === 0 ? "" : hoursFormat.forma
 
 /**
  * Saves timesheet cells as you leave them, without reloading the page.
- * Each cell is a form the server renders; this posts it and swaps in the form it gets back.
+ * Each cell is a form the server renders; this posts it to `cell-action` instead of the form's
+ * own action, which answers with the whole month, and swaps in the form it gets back.
+ * An input's default value is what the server last rendered, so an unchanged cell isn't posted.
  */
 class TimesheetConductor extends HTMLElement {
-  /** The save in flight per cell, so a newer value never lands before an older one. */
+  /** The latest save per cell, so a newer value never lands before an older one. */
   #saves = new Map<string, Promise<void>>();
-  /** The value each cell last sent, so blur and Enter on the same value save once. */
-  #sent = new Map<string, string>();
 
   connectedCallback() {
-    // `change` fires when a text input loses focus with a new value, and on Enter.
-    this.addEventListener("change", this.#onChange);
+    // `focusout` rather than `change`, so leaving a cell retries a save that failed.
+    this.addEventListener("focusout", this.#onFocusOut);
     this.addEventListener("submit", this.#onSubmit);
   }
 
   disconnectedCallback() {
-    this.removeEventListener("change", this.#onChange);
+    this.removeEventListener("focusout", this.#onFocusOut);
     this.removeEventListener("submit", this.#onSubmit);
   }
 
-  #onChange = (event: Event) => {
+  #onFocusOut = (event: FocusEvent) => {
     const form = cellOf(event.target);
     if (form) this.#queueSave(form);
   };
@@ -38,38 +38,37 @@ class TimesheetConductor extends HTMLElement {
   #queueSave(form: HTMLFormElement) {
     const key = keyOf(form);
     const previous = this.#saves.get(key) ?? Promise.resolve();
-    const save = previous.then(() => this.#save(key));
-    this.#saves.set(key, save);
-    // Drops the entry once it's the last save, so the map doesn't grow with every edit.
-    save.finally(() => this.#saves.get(key) === save && this.#saves.delete(key));
+    // Caught, so one failed save doesn't skip the ones queued after it.
+    this.#saves.set(key, previous.then(() => this.#save(key)).catch(reportError));
   }
 
   async #save(key: string) {
     // Looked up now rather than when queued, since an earlier save may have swapped the form.
     const form = this.querySelector<HTMLFormElement>(`form[data-cell="${key}"]`);
     const input = form && hoursInputOf(form);
-    if (!form || !input) return;
-    const value = input.value;
-    if (this.#sent.get(key) === value) return;
-    this.#sent.set(key, value);
+    if (!form || !input || input.value === input.defaultValue) return;
 
-    const fresh = await postCell(form);
-    if (!fresh) {
-      // Lets the next change try again, and keeps what the user typed.
-      this.#sent.delete(key);
-      input.setAttribute("aria-invalid", "true");
-      input.title = "Not saved. Check your connection and try again.";
-      return;
+    const sent = input.value;
+    const result = await postCell(form, this.getAttribute("cell-action") ?? "");
+    if (result === "offline") return markUnsaved(input);
+    // The server answered with something other than a cell, such as a login redirect or an
+    // error page. Submitting the form for real shows it.
+    if (result === "rejected") return form.submit();
+    this.#swapCell(form, input, sent, result);
+  }
+
+  #swapCell(form: HTMLFormElement, input: HTMLInputElement, sent: string, fresh: HTMLFormElement) {
+    const freshInput = hoursInputOf(fresh);
+    if (!freshInput) return;
+    // Keeps what was typed while the save was out; the next save sends it.
+    if (input.value !== sent) freshInput.value = input.value;
+    const hadFocus = input === document.activeElement;
+    form.replaceWith(fresh);
+    if (hadFocus) {
+      freshInput.focus();
+      freshInput.setSelectionRange(input.selectionStart, input.selectionEnd);
     }
-    this.#sent.set(key, hoursInputOf(fresh)?.value ?? value);
-    form.dataset.minutes = fresh.dataset.minutes;
-    // Typing since the save went out wins; the next change saves it.
-    if (input.value === value) {
-      const hadFocus = form.contains(document.activeElement);
-      form.replaceWith(fresh);
-      if (hadFocus) hoursInputOf(fresh)?.focus();
-    }
-    this.#updateTotals(form.dataset.task ?? "", form.dataset.day ?? "");
+    this.#updateTotals(fresh.dataset.task ?? "", fresh.dataset.day ?? "");
   }
 
   #updateTotals(task: string, day: string) {
@@ -97,19 +96,39 @@ const keyOf = (form: HTMLFormElement) => form.dataset.cell ?? "";
 const hoursInputOf = (form: HTMLFormElement) =>
   form.querySelector<HTMLInputElement>('input[name="hours"]');
 
-/** The cell the server sends back, saved or with an error, or nothing if the save failed. */
-async function postCell(form: HTMLFormElement) {
+/** Keeps what the user typed, marked, so leaving the cell again retries it. */
+function markUnsaved(input: HTMLInputElement) {
+  input.setAttribute("aria-invalid", "true");
+  input.title = "Not saved. Check your connection and try again.";
+}
+
+/**
+ * The cell the server sends back, saved or with an error. "offline" when the request never got
+ * an answer, and "rejected" when the answer isn't a cell.
+ */
+async function postCell(
+  form: HTMLFormElement,
+  cellAction: string,
+): Promise<HTMLFormElement | "offline" | "rejected"> {
+  let response: Response;
+  let html: string;
   try {
-    const response = await fetch(form.action, { method: "POST", body: new FormData(form) });
-    // 422 is a cell with an error to show; anything else but 200 has no cell in it.
-    if (response.status !== 200 && response.status !== 422) return null;
-    const template = document.createElement("template");
-    template.innerHTML = await response.text();
-    const fresh = template.content.firstElementChild;
-    return fresh instanceof HTMLFormElement && keyOf(fresh) === keyOf(form) ? fresh : null;
+    // Manual, so a login redirect to another origin is a response here rather than a CORS error.
+    response = await fetch(cellAction, {
+      method: "POST",
+      body: new FormData(form),
+      redirect: "manual",
+    });
+    html = await response.text();
   } catch {
-    return null;
+    return "offline";
   }
+  // 422 is a cell with an error to show; anything else but 200 has no cell in it.
+  if (response.status !== 200 && response.status !== 422) return "rejected";
+  const template = document.createElement("template");
+  template.innerHTML = html;
+  const fresh = template.content.firstElementChild;
+  return fresh instanceof HTMLFormElement && keyOf(fresh) === keyOf(form) ? fresh : "rejected";
 }
 
 customElements.define("timesheet-conductor", TimesheetConductor);

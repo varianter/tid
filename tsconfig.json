@@ -14,5 +14,5 @@
     "verbatimModuleSyntax": true
   },
   // The elements run in the browser and check with DOM types in their own tsconfig.
-  "exclude": ["**/node_modules", "packages/elements/src/*/**"]
+  "exclude": ["**/node_modules", "packages/elements"]
 }
