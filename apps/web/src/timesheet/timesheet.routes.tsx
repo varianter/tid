@@ -2,8 +2,16 @@ import { projectAssignments, projects, tasks, timeEntries } from "@tid/db/schema
 import { and, between, eq, exists, or, sql } from "drizzle-orm";
 import { type Context, Hono } from "hono";
 import { database } from "../database";
-import { addMonths, daysOfMonth, isIsoMonth, isWeekend, todayInOslo } from "../dates/dates";
-import type { UserEnv } from "../login/user";
+import {
+  addMonths,
+  daysOfMonth,
+  formatMonth,
+  isIsoMonth,
+  isWeekend,
+  todayInOslo,
+} from "../dates/dates";
+import { isLockedOn, isMonthLockedError } from "../endOfTheMonth/monthLock";
+import type { User, UserEnv } from "../login/user";
 import { cellHours, hoursHint, timesheetCell } from "./timesheet.validation";
 import { type MonthError, MonthPage, TimesheetCell } from "./timesheet.views";
 
@@ -107,6 +115,7 @@ async function renderMonth(c: Context<UserEnv>, month: string, error?: MonthErro
   return c.render(
     <MonthPage
       month={month}
+      locked={await isLockedOn(c.get("user").orgId, `${month}-01`)}
       showWeekends={showWeekends}
       previousHref={monthPath(addMonths(month, -1), showWeekends)}
       nextHref={monthPath(addMonths(month, 1), showWeekends)}
@@ -142,17 +151,22 @@ async function readPostedCell(c: Context<UserEnv>) {
   const [task] = await userTasks().where(and(eq(tasks.id, cell.data.taskId), loggableBy(user.id)));
   // The grid only offers loggable tasks, so this is a stale or hand-made request.
   if (!task) return c.text("You're not on this project", 403);
-  return { userId: user.id, task, day: cell.data.date, hours: body.hours };
+  return { user, task, day: cell.data.date, hours: body.hours };
 }
 
 /** Saves the hours as minutes, or says why they can't be: what was typed and what's wrong. */
-async function saveHours(userId: number, taskId: number, day: string, hours: unknown) {
+async function saveHours(user: User, taskId: number, day: string, hours: unknown) {
+  const typed = typeof hours === "string" ? hours : "";
   const minutes = cellHours.safeParse(hours);
   if (!minutes.success) {
-    const typed = typeof hours === "string" ? hours : "";
     return { error: { typed, message: minutes.error.issues[0]?.message ?? hoursHint } };
   }
-  await saveCell(userId, taskId, day, minutes.data);
+  try {
+    await saveCell(user.id, taskId, day, minutes.data);
+  } catch (error) {
+    if (!isMonthLockedError(error)) throw error;
+    return { error: { typed, message: `${formatMonth(day.slice(0, 7))} is locked` } };
+  }
   return { minutes: minutes.data };
 }
 
@@ -162,8 +176,8 @@ timesheet.post("/month/:month/cells", async (c) => {
   if (!isIsoMonth(month)) return c.notFound();
   const cell = await readPostedCell(c);
   if (cell instanceof Response) return cell;
-  const { userId, task, day } = cell;
-  const saved = await saveHours(userId, task.id, day, cell.hours);
+  const { user, task, day } = cell;
+  const saved = await saveHours(user, task.id, day, cell.hours);
   if (saved.error) {
     c.status(422);
     return renderMonth(c, month, { taskId: task.id, day, ...saved.error });
@@ -182,12 +196,12 @@ timesheet.post("/month/:month/cell", async (c) => {
   if (!isIsoMonth(month)) return c.notFound();
   const cell = await readPostedCell(c);
   if (cell instanceof Response) return cell;
-  const { userId, task, day } = cell;
-  const { error } = await saveHours(userId, task.id, day, cell.hours);
+  const { user, task, day } = cell;
+  const { error } = await saveHours(user, task.id, day, cell.hours);
   const [stored] = await database
     .select({ minutes: timeEntries.minutes })
     .from(timeEntries)
-    .where(entryOn(userId, task.id, day));
+    .where(entryOn(user.id, task.id, day));
   return c.html(
     <TimesheetCell
       task={task}
@@ -195,6 +209,8 @@ timesheet.post("/month/:month/cell", async (c) => {
       minutes={stored?.minutes ?? 0}
       action={cellsActionOf(month, new URL(c.req.url).search)}
       error={error}
+      // A save refused by a new lock leaves the cell read-only, like the rest of the month.
+      locked={error ? await isLockedOn(user.orgId, day) : false}
     />,
     error ? 422 : 200,
   );

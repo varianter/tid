@@ -5,13 +5,14 @@
 //   bunx drizzle-kit generate --custom --name time_entry_rates
 //   bunx drizzle-kit generate --custom --name time_entries_export
 //   bunx drizzle-kit generate --custom --name organizations
-// then copy time_entry_rates.sql, time_entries_export.sql and organizations.sql over the
-// generated, empty files. Databases that ran the old migrations have to be rebuilt afterwards:
+//   bunx drizzle-kit generate --custom --name month_locks
+// then copy time_entry_rates.sql, time_entries_export.sql, organizations.sql and month_locks.sql
+// over the generated, empty files. Databases that ran the old migrations have to be rebuilt afterwards:
 // locally with bun run db:reset or bun run harvest:import:norway, and deployed ones by emptying them.
 //
 // Live: never edit or delete a migration, since the live database has already run it.
 // Add new ones with drizzle-kit generate. Delete this comment, time_entry_rates.sql,
-// time_entries_export.sql and organizations.sql.
+// time_entries_export.sql, organizations.sql and month_locks.sql.
 
 import { sql } from "drizzle-orm";
 import {
@@ -226,6 +227,39 @@ export const timeEntries = pgTable(
     check("minutes_range", sql`${table.minutes} between 0 and 1440`),
     check("rate_not_negative", sql`${table.rate} >= 0`),
     check("rate_has_currency", sql`(${table.rate} is null) = (${table.currency} is null)`),
+  ],
+);
+
+// A locked month stops an organization's time entries in it from changing, so invoiced hours and
+// their rates stay put. Unlocking keeps the row as history; month_locks.sql enforces the lock.
+export const monthLocks = pgTable(
+  "month_locks",
+  {
+    id: id(),
+    orgId: reference().references(() => organizations.id),
+    month: date().notNull(),
+    lockedBy: reference(),
+    lockedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    unlockedBy: bigint({ mode: "number" }),
+    unlockedAt: timestamp({ withTimezone: true }),
+  },
+  (table) => [
+    // Only the organization's own people may lock or unlock its months.
+    foreignKey({
+      name: "month_locks_locked_by_in_organization",
+      columns: [table.lockedBy, table.orgId],
+      foreignColumns: [users.id, users.orgId],
+    }),
+    foreignKey({
+      name: "month_locks_unlocked_by_in_organization",
+      columns: [table.unlockedBy, table.orgId],
+      foreignColumns: [users.id, users.orgId],
+    }),
+    uniqueIndex("month_locks_one_active")
+      .on(table.orgId, table.month)
+      .where(sql`${table.unlockedAt} is null`),
+    check("month_is_first_day", sql`extract(day from ${table.month}) = 1`),
+    check("unlocked_by_and_at", sql`(${table.unlockedBy} is null) = (${table.unlockedAt} is null)`),
   ],
 );
 

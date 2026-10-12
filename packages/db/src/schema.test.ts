@@ -4,6 +4,7 @@ import { createDatabase, rebuildDatabase } from "./client";
 import {
   assignmentRates,
   clients,
+  monthLocks,
   organizations,
   projectAssignments,
   projectOrganizations,
@@ -306,4 +307,149 @@ test("a billable project counts toward billable base hours", async () => {
       }),
     ),
   ).toBe("billable_projects_count_toward_base");
+});
+
+async function rejection(query: Promise<unknown>) {
+  return query.then(
+    () => undefined,
+    (error: Error) => (error.cause as Error | undefined)?.message,
+  );
+}
+
+test("a locked month rejects changes to its entries until it's unlocked", async () => {
+  const { organization, user, task } = await insertRatedAssignment();
+  const [september, october] = await database
+    .insert(timeEntries)
+    .values([
+      { userId: user.id, taskId: task.id, spentOn: "2026-09-30", minutes: 60 },
+      { userId: user.id, taskId: task.id, spentOn: "2026-10-01", minutes: 60 },
+    ])
+    .returning();
+  if (!september || !october) throw new Error("Expected two entries");
+  const lock = onlyRow(
+    await database
+      .insert(monthLocks)
+      .values({ orgId: organization.id, month: "2026-10-01", lockedBy: user.id })
+      .returning(),
+  );
+  const locked = "Time entries in 2026-10 are locked";
+
+  expect(
+    await rejection(
+      database
+        .insert(timeEntries)
+        .values({ userId: user.id, taskId: task.id, spentOn: "2026-10-31", minutes: 60 }),
+    ),
+  ).toBe(locked);
+  expect(
+    await rejection(
+      database.update(timeEntries).set({ minutes: 90 }).where(eq(timeEntries.id, october.id)),
+    ),
+  ).toBe(locked);
+  expect(
+    await rejection(
+      database
+        .update(timeEntries)
+        .set({ spentOn: "2026-09-29" })
+        .where(eq(timeEntries.id, october.id)),
+    ),
+  ).toBe(locked);
+  expect(
+    await rejection(
+      database
+        .update(timeEntries)
+        .set({ spentOn: "2026-10-02" })
+        .where(eq(timeEntries.id, september.id)),
+    ),
+  ).toBe(locked);
+  expect(await rejection(database.delete(timeEntries).where(eq(timeEntries.id, october.id)))).toBe(
+    locked,
+  );
+  // Other months stay open.
+  await database.update(timeEntries).set({ minutes: 90 }).where(eq(timeEntries.id, september.id));
+
+  await database
+    .update(monthLocks)
+    .set({ unlockedBy: user.id, unlockedAt: new Date() })
+    .where(eq(monthLocks.id, lock.id));
+
+  await database.update(timeEntries).set({ minutes: 90 }).where(eq(timeEntries.id, october.id));
+});
+
+test("a month has at most one active lock per organization", async () => {
+  const { organization, user } = await insertRatedAssignment();
+  const lock = { orgId: organization.id, month: "2026-10-01", lockedBy: user.id };
+  const first = onlyRow(await database.insert(monthLocks).values(lock).returning());
+
+  expect(await violatedConstraint(database.insert(monthLocks).values(lock))).toBe(
+    "month_locks_one_active",
+  );
+
+  await database
+    .update(monthLocks)
+    .set({ unlockedBy: user.id, unlockedAt: new Date() })
+    .where(eq(monthLocks.id, first.id));
+  await database.insert(monthLocks).values(lock);
+});
+
+test("a locked month raises its own error code, so the app can tell it apart", async () => {
+  const { organization, user, task } = await insertRatedAssignment();
+  await database
+    .insert(monthLocks)
+    .values({ orgId: organization.id, month: "2026-10-01", lockedBy: user.id });
+  const error = await database
+    .insert(timeEntries)
+    .values({ userId: user.id, taskId: task.id, spentOn: "2026-10-01", minutes: 60 })
+    .then(
+      () => undefined,
+      (error: Error) => error,
+    );
+  expect((error?.cause as { errno?: string } | undefined)?.errno).toBe("TL001");
+});
+
+test("only the organization's own people lock or unlock its months", async () => {
+  const { organization, user } = await insertRatedAssignment();
+  const other = await insertOrganization("other");
+  expect(
+    await violatedConstraint(
+      database
+        .insert(monthLocks)
+        .values({ orgId: other.id, month: "2026-10-01", lockedBy: user.id }),
+    ),
+  ).toBe("month_locks_locked_by_in_organization");
+
+  const lock = onlyRow(
+    await database
+      .insert(monthLocks)
+      .values({ orgId: organization.id, month: "2026-10-01", lockedBy: user.id })
+      .returning(),
+  );
+  const [outsider] = await database
+    .insert(users)
+    .values({ name: "Outsider", email: "outsider@variant.no", orgId: other.id })
+    .returning();
+  expect(
+    await violatedConstraint(
+      database
+        .update(monthLocks)
+        .set({ unlockedBy: outsider?.id, unlockedAt: new Date() })
+        .where(eq(monthLocks.id, lock.id)),
+    ),
+  ).toBe("month_locks_unlocked_by_in_organization");
+});
+
+test("a lock covers only its organization's entries", async () => {
+  const { user, task } = await insertRatedAssignment();
+  const other = await insertOrganization("other");
+  const [manager] = await database
+    .insert(users)
+    .values({ name: "Manager", email: "manager@variant.no", orgId: other.id })
+    .returning();
+  await database
+    .insert(monthLocks)
+    .values({ orgId: other.id, month: "2026-10-01", lockedBy: manager?.id ?? 0 });
+
+  await database
+    .insert(timeEntries)
+    .values({ userId: user.id, taskId: task.id, spentOn: "2026-10-01", minutes: 60 });
 });

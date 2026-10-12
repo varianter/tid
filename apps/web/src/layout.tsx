@@ -14,6 +14,7 @@ const navigation = [
   { href: "/clients", label: "Clients" },
   { href: "/projects", label: "Projects" },
   { href: "/reports", label: "Reports" },
+  { href: "/end-of-the-month", label: "End of the month" },
 ];
 
 function isActive(href: string, currentPath: string) {

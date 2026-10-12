@@ -28,6 +28,8 @@ type TimesheetGridProps = {
   /** The current query string, kept when adding a row. */
   search: string;
   error?: MonthError;
+  /** Locked months show their hours but take no changes. */
+  locked?: boolean;
 };
 
 type PeriodLinks = { previousHref: string; nextHref: string };
@@ -83,6 +85,11 @@ export function MonthPage({
         </>
       }
     >
+      {grid.locked && (
+        <p class="b-all bc-subtle br-l fs-s p-xs surface-tinted">
+          {formatMonth(month)} is locked. Ask a manager to unlock it if something needs changing.
+        </p>
+      )}
       <timesheet-conductor cell-action={cellAction}>
         <TimesheetGrid {...grid} />
       </timesheet-conductor>
@@ -98,6 +105,7 @@ function TimesheetGrid({
   addedTaskIds,
   search,
   error,
+  locked = false,
 }: TimesheetGridProps) {
   const today = todayInOslo();
   // A week starts wherever the Monday changes, which still holds with weekends hidden.
@@ -168,6 +176,7 @@ function TimesheetGrid({
                 minutes={minutesOn(task.id, day)}
                 action={cellsAction}
                 error={error?.taskId === task.id && error.day === day ? error : undefined}
+                locked={locked}
               />
             </TodayTint>
           ))}
@@ -180,7 +189,7 @@ function TimesheetGrid({
         </div>
       ))}
 
-      {addableByProject.length > 0 && (
+      {!locked && addableByProject.length > 0 && (
         // Picking a task adds `add` to the query, like the hidden inputs already there.
         <form method="get" class="grid-subgrid grid-all-columns items-center">
           {[...new URLSearchParams(search)].map(([name, value]) => (
@@ -260,12 +269,14 @@ export function TimesheetCell({
   minutes,
   action,
   error,
+  locked = false,
 }: {
   task: Task;
   day: string;
   minutes: number;
   action: string;
   error?: CellError;
+  locked?: boolean;
 }) {
   const errorId = `cell-error-${task.id}-${day}`;
   const input = (
@@ -281,6 +292,7 @@ export function TimesheetCell({
       aria-invalid={error ? "true" : undefined}
       aria-describedby={error ? errorId : undefined}
       pattern="[0-9]+([.,:][0-9]+)?"
+      disabled={locked}
     />
   );
   return (

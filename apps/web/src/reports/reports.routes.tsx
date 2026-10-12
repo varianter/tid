@@ -1,29 +1,24 @@
-import { organizations, timeEntriesExport } from "@tid/db/schema";
+import { timeEntriesExport } from "@tid/db/schema";
 import { and, between, eq, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { database } from "../database";
-import { addMonths, daysOfMonth, isWeekend, todayInOslo } from "../dates/dates";
+import { addMonths, todayInOslo } from "../dates/dates";
 import type { UserEnv } from "../login/user";
+import { findOrganizationBySlug, findOrganizationSlug } from "../organizations/organization";
+import { capacityMinutes } from "./capacity";
 import { reportQuery, type Tab } from "./period";
 import { ReportPage, type ReportRows, type Totals } from "./reports.views";
 
 export const reports = new Hono<UserEnv>();
 
-const reportPath = (organization: string, query: URLSearchParams) =>
-  `/reports/${organization}?${query}`;
+const reportPath = (organizationSlug: string, query: URLSearchParams) =>
+  `/reports/${organizationSlug}?${query}`;
 
 reports.get("/", async (c) => {
-  const user = c.get("user");
-  const [organization] = await database
-    .select({ slug: organizations.slug })
-    .from(organizations)
-    .where(eq(organizations.id, user.orgId));
-  if (!organization) return c.notFound();
+  const slug = await findOrganizationSlug(c.get("user").orgId);
+  if (!slug) return c.notFound();
   return c.redirect(
-    reportPath(
-      organization.slug,
-      reportQuery(c.req.query("from"), c.req.query("tab"), todayInOslo()),
-    ),
+    reportPath(slug, reportQuery(c.req.query("from"), c.req.query("tab"), todayInOslo())),
   );
 });
 
@@ -32,10 +27,7 @@ reports.get("/:organization", async (c) => {
   const query = reportQuery(c.req.query("from"), c.req.query("tab"), todayInOslo());
   if (new URL(c.req.url).search !== `?${query}`) return c.redirect(reportPath(slug, query));
 
-  const [organization] = await database
-    .select()
-    .from(organizations)
-    .where(eq(organizations.slug, slug));
+  const organization = await findOrganizationBySlug(slug);
   if (!organization) return c.notFound();
 
   const from = query.get("from") ?? "";
@@ -59,9 +51,7 @@ reports.get("/:organization", async (c) => {
       ),
   };
   const currency = organization.currency;
-  // ponytail: capacity counts every weekday as a full day; subtract holidays and leave once we store them.
-  const capacityHours =
-    (daysOfMonth(month).filter((day) => !isWeekend(day)).length * organization.fullDayMinutes) / 60;
+  const capacityHours = capacityMinutes(month, organization.fullDayMinutes) / 60;
 
   const report = await (async (): Promise<ReportRows> => {
     switch (tab) {

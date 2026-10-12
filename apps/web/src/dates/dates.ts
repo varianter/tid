@@ -91,3 +91,14 @@ export const formatMonth = (month: string) => monthFormat.format(parseIsoDate(`$
 
 export const formatDate = (isoDate: string) =>
   `${formatDayMonth(isoDate)} ${parseIsoDate(isoDate).getUTCFullYear()}`;
+
+/** A moment as seen in Oslo, like "3 Oct 14:02". */
+export function formatTimestamp(moment: Date) {
+  const day = moment.toLocaleDateString("sv-SE", { timeZone: "Europe/Oslo" });
+  const time = moment.toLocaleTimeString("sv-SE", {
+    timeZone: "Europe/Oslo",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  return `${formatDayMonth(day)} ${time}`;
+}
