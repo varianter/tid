@@ -15,6 +15,9 @@ export const endOfTheMonth = new Hono<UserEnv>();
 const monthPath = (organizationSlug: string, month: string) =>
   `/end-of-the-month/${organizationSlug}/${month}`;
 
+// A future month's hours aren't due yet.
+const hasStarted = (month: string) => month <= todayInOslo().slice(0, 7);
+
 const findOrganization = (c: Context<UserEnv>) =>
   findOrganizationBySlug(c.req.param("organization") ?? "");
 
@@ -92,6 +95,7 @@ endOfTheMonth.get("/:organization/:month", async (c) => {
       rows={rows}
       activeLock={activeLock}
       canChangeLock={canChangeLock}
+      hasStarted={hasStarted(month)}
       lockAction={`${monthPath(organization.slug, month)}/lock`}
       unlockAction={`${monthPath(organization.slug, month)}/unlock`}
       previousHref={monthPath(organization.slug, addMonths(month, -1))}
@@ -115,6 +119,7 @@ endOfTheMonth.post("/:organization/:month/lock", async (c) => {
   const change = await readLockChange(c);
   if (change instanceof Response) return change;
   const { organization, month } = change;
+  if (!hasStarted(month)) return c.text("Months that haven't started can't be locked", 400);
   await lockMonth(organization.id, month, c.get("user").id);
   return c.redirect(monthPath(organization.slug, month), 303);
 });

@@ -209,6 +209,8 @@ timesheet.post("/month/:month/cell", async (c) => {
       minutes={stored?.minutes ?? 0}
       action={cellsActionOf(month, new URL(c.req.url).search)}
       error={error}
+      // A save refused by a new lock leaves the cell read-only, like the rest of the month.
+      locked={error ? await isLockedOn(user.orgId, day) : false}
     />,
     error ? 422 : 200,
   );

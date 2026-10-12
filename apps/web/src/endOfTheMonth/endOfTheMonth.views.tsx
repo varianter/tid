@@ -15,6 +15,7 @@ export function EndOfTheMonthPage({
   rows,
   activeLock,
   canChangeLock,
+  hasStarted,
   lockAction,
   unlockAction,
   previousHref,
@@ -25,6 +26,8 @@ export function EndOfTheMonthPage({
   rows: ConsultantRow[];
   activeLock?: { lockedAt: Date; lockedByName: string };
   canChangeLock: boolean;
+  /** Future months can be unlocked but not locked. */
+  hasStarted: boolean;
   lockAction: string;
   unlockAction: string;
   previousHref: string;
@@ -50,7 +53,7 @@ export function EndOfTheMonthPage({
             ? `Locked by ${activeLock.lockedByName}, ${formatTimestamp(activeLock.lockedAt)}`
             : `${formatMonth(month)} is open`}
         </span>
-        {canChangeLock && (
+        {canChangeLock && (activeLock || hasStarted) && (
           <form method="post" action={activeLock ? unlockAction : lockAction} class="ml-auto">
             <Button type="submit" data-variant={activeLock ? undefined : "tinted"}>
               {activeLock ? "Unlock this month" : `Lock this month`}
@@ -93,7 +96,7 @@ function ConsultantTable({
         <div class="grid-all-columns grid-subgrid items-center b-b bc-subtle p-xs fs-s ink-subtle fw-bold">
           <span>Consultant</span>
           <span class="ta-right">Logged</span>
-          <span class="ta-right">Billable</span>
+          <span class="ta-right">Billable share</span>
           <span class="ta-right">Expected</span>
           {showMissing && <span class="ta-right">Missing</span>}
         </div>
