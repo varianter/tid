@@ -28,7 +28,7 @@ function chooseLogin() {
     };
   }
   const tenantId = process.env.ENTRA_TENANT_ID;
-  if (!tenantId) throw new Error("ENTRA_TENANT_ID is not set");
+  if (!tenantId) throw new Error("ENTRA_TENANT_ID is not set - please check process.env.ENTRA_TENANT_ID");
   return {
     requireUser: requireProxyUser(tenantId),
     logoutUrl: proxyLogoutUrl(tenantId),
