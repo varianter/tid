@@ -45,7 +45,7 @@ jobs:
       - name: Type check
         run: |
           echo "::add-matcher::.github/tsc-matcher.json"
-          bunx tsc --noEmit
+          bun run typecheck
 
   test:
     runs-on: ubuntu-latest
