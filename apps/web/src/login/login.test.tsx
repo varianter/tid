@@ -86,6 +86,17 @@ test("sign-up offers only the organizations in the country of the email domain",
   expect(page).not.toContain("Variant Oslo AS");
 });
 
+test("sign-up prefills the name from the Entra ID token", async () => {
+  const claims = Buffer.from(JSON.stringify({ name: "Ola Martin Nordmann" })).toString("base64url");
+  const ola = {
+    "x-auth-request-user": "ola-sub",
+    "x-auth-request-email": "ola@variant.no",
+    authorization: `Bearer header.${claims}.signature`,
+  };
+  const page = await (await requestAs(ola, "/signup")).text();
+  expect(page).toContain('value="Ola Martin Nordmann"');
+});
+
 test("sign-up turns away email domains that aren't Variant's", async () => {
   const guest = { "x-auth-request-user": "guest-sub", "x-auth-request-email": "guest@example.com" };
   expect((await requestAs(guest, "/signup")).status).toBe(403);
@@ -94,8 +105,7 @@ test("sign-up turns away email domains that aren't Variant's", async () => {
 test("sign-up rejects an organization in another country", async () => {
   const oslo = String(await organizationId("oslo"));
   const response = await signUp(anna, {
-    firstName: "Anna",
-    lastName: "Svensson",
+    name: "Anna Svensson",
     organizationId: oslo,
   });
   expect(response.status).toBe(422);
@@ -103,7 +113,7 @@ test("sign-up rejects an organization in another country", async () => {
 
 test("sign-up creates the user in the chosen organization, who is then logged in", async () => {
   const stockholm = await organizationId("stockholm");
-  const form = { firstName: " Anna ", lastName: "Svensson", organizationId: String(stockholm) };
+  const form = { name: " Anna Svensson ", organizationId: String(stockholm) };
   expect((await signUp(anna, form)).status).toBe(303);
 
   const [user] = await database.select().from(users).where(eq(users.email, "anna@variant.se"));

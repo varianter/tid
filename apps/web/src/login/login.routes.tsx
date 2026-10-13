@@ -17,10 +17,11 @@ import type { PublicEnv } from "./user";
 type SignupProps = {
   subject: string;
   email: string;
+  name?: string;
   organizations: { id: number; name: string }[];
 };
 
-type Identity = { subject: string; email: string };
+type Identity = { subject: string; email: string; name?: string };
 
 // Lets people who log in for the first time become users, by choosing their organization.
 export function signup(
@@ -54,14 +55,14 @@ export function signup(
             .orderBy(organizations.name),
         };
       },
-      onSubmit: async (_c, { firstName, lastName, organizationId }, props) => {
+      onSubmit: async (_c, { name, organizationId }, props) => {
         if (!props.organizations.some((organization) => organization.id === organizationId)) {
           return { fieldErrors: { organizationId: ["Choose your organization"] } };
         }
         await database.transaction(async (transaction) => {
           const [user] = await transaction
             .insert(users)
-            .values({ name: `${firstName} ${lastName}`, email: props.email, orgId: organizationId })
+            .values({ name, email: props.email, orgId: organizationId })
             // Another request signed this person up first; the login middleware takes it from here.
             .onConflictDoNothing()
             .returning();

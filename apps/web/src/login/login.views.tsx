@@ -5,10 +5,11 @@ type OrganizationOption = { id: number; name: string };
 
 export function SignupPage({
   email,
+  name,
   organizations,
   values,
   fieldErrors,
-}: { email: string; organizations: OrganizationOption[] } & FormProps) {
+}: { email: string; name?: string; organizations: OrganizationOption[] } & FormProps) {
   return (
     <Page title="Welcome to Tid">
       <p class="w-max-5">
@@ -17,19 +18,11 @@ export function SignupPage({
       </p>
       <form method="post" class="stack-v gap-m w-max-5">
         <FormField
-          name="firstName"
-          label="First name"
-          value={values?.firstName}
-          errors={fieldErrors?.firstName}
-          autocomplete="given-name"
-          required
-        />
-        <FormField
-          name="lastName"
-          label="Last name"
-          value={values?.lastName}
-          errors={fieldErrors?.lastName}
-          autocomplete="family-name"
+          name="name"
+          label="Name"
+          value={values?.name ?? name}
+          errors={fieldErrors?.name}
+          autocomplete="name"
           required
         />
         <Field name="organizationId" label="Organization" errors={fieldErrors?.organizationId}>
