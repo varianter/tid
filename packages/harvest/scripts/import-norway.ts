@@ -1,6 +1,6 @@
 // Rebuilds the dev database from the Norwegian Harvest accounts, so the app can be checked
 // against real data.
-// Usage: bun run harvest:import:norway <from-month> [to-month] --tokens <token>,<token> [--save]
+// Usage: bun run harvest:import:norway <from-month> [to-month] --tokens <token>,<token> [--save] [--verbose]
 // Each token is a Harvest personal access token; every account they reach is imported.
 
 import { parseArgs } from "node:util";
@@ -10,6 +10,7 @@ import { organizations, timeEntries } from "@tid/db/schema";
 import { sql } from "drizzle-orm";
 import { fetchHarvestAccounts } from "../src/fetch";
 import { planImport } from "../src/plan";
+import { describePlan } from "../src/report";
 import { writePlan } from "../src/write";
 
 function exitWith(message: string): never {
@@ -19,14 +20,18 @@ function exitWith(message: string): never {
 
 const { values: options, positionals } = parseArgs({
   args: Bun.argv.slice(2),
-  options: { tokens: { type: "string" }, save: { type: "boolean", default: false } },
+  options: {
+    tokens: { type: "string" },
+    save: { type: "boolean", default: false },
+    verbose: { type: "boolean", default: false },
+  },
   allowPositionals: true,
 });
 const [fromMonth, toMonth = fromMonth] = positionals;
 const isMonth = (value?: string) => value !== undefined && /^\d{4}-(0[1-9]|1[0-2])$/.test(value);
 if (!isMonth(fromMonth) || !isMonth(toMonth) || (toMonth as string) < (fromMonth as string)) {
   exitWith(
-    "Usage: bun run harvest:import:norway <from-month> [to-month] --tokens <token>,<token> [--save], with months as YYYY-MM.",
+    "Usage: bun run harvest:import:norway <from-month> [to-month] --tokens <token>,<token> [--save] [--verbose], with months as YYYY-MM.",
   );
 }
 const [toYear, toMonthNumber] = (toMonth as string).split("-").map(Number) as [number, number];
@@ -75,6 +80,7 @@ const { plan, problems, warnings } = planImport(
   harvestExports,
   await database.select().from(organizations),
 );
+if (options.verbose) console.log(`\n${describePlan(plan)}`);
 if (warnings.length > 0) {
   console.log(`\n${warnings.length} warnings:`);
   for (const warning of warnings) console.log(`  ! ${warning}`);

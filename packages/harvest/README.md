@@ -7,10 +7,10 @@ Each country's Harvest accounts are organized differently, so each country has i
 ## Norwegian import
 
 ```sh
-bun run harvest:import:norway <from-month> [to-month] --tokens <token>,<token> [--save]
+bun run harvest:import:norway <from-month> [to-month] --tokens <token>,<token> [--save] [--verbose]
 ```
 
-Pass one Harvest personal access token per account, with months as `YYYY-MM`. It lists every problem it finds before importing anything, but the dev database is emptied either way. `--save` keeps the raw Harvest data in `packages/harvest/harvest-export`, which is gitignored.
+Pass one Harvest personal access token per account, with months as `YYYY-MM`. It lists every problem it finds before importing anything, but the dev database is emptied either way. `--save` keeps the raw Harvest data in `packages/harvest/harvest-export`, which is gitignored. `--verbose` shows what Harvest becomes, as tables, before anything is written.
 
 ## Norwegian import rules
 
@@ -22,11 +22,15 @@ Organizations are added by migrations, not by the import. Each Harvest account b
 
 **One person is one user, across Harvest accounts.** Harvest users exist per account, so a consultant who logs time in several accounts appears once in each. They are merged by email, ignoring case.
 
-A user belongs to one organization, and is assigned to projects through it. When a merged user logs time in another organization's Harvest account, their own organization is added as a participant of that project.
+**Active users are imported, and inactive ones only if they logged time in the imported period.** Everyone who may log time today is there from day one, history or not.
 
-**Open:** which organization a merged user belongs to. Harvest can't tell us, so it's set by hand.
+A user belongs to one organization, and is assigned to projects through it. When a merged user is assigned to or logs time on another organization's project, their own organization is added as a participant of that project.
 
-**Not imported:** Harvest roles, cost rates and end dates. Inactive Harvest users are imported without `ends_on`.
+**A merged user belongs to the organization where they work the most:** the account they're assigned to the most projects in, then the one they logged the most time in. Harvest can't tell us, so the import warns and it's corrected by hand.
+
+**Anyone with more than a member's access in Harvest is a Tid manager.** Administrators, managers and project managers in any account get the manager role.
+
+**Not imported:** other Harvest roles, cost rates and end dates. Inactive Harvest users are imported without `ends_on`.
 
 ### Clients
 
@@ -36,17 +40,21 @@ A client in another country is a different client, so a client never has more th
 
 ### Projects
 
+**Active projects are imported, and archived ones only if time was logged on them in the imported period.**
+
 **Projects are global, and identified by code.** The same code in several Harvest accounts, or on several projects in one account, becomes one project. Each account that logged time on it becomes a participating organization.
 
 **Customer project codes look like `AAA9999`, or `AAA9999-S`.** The `-S` suffix is meant to mark a project that has subcontractors, but it isn't applied consistently, so the import doesn't rely on it for ownership. `AAA9999` and `AAA9999-S` are the same project, so the import merges them into one with the code `AAA9999`.
 
 **The import doesn't decide who owns a project.** Ownership is set by hand, since we don't yet know the owner of every project.
 
-**A project has one rate per person.** Harvest can bill per task, but we don't. If one person's rate differs between tasks on a project, the project has to be split into one project per rate before import, each with its own code.
+**A project has one rate per person.** Harvest bills a project at one rate, at each person's rate or at each task's rate, and the import takes the rate from wherever that is. When a project billed per task prices its billable tasks differently, each task stands for a level or a year's price, so each person gets the rate they were last billed at on the project. Someone who hasn't logged time on it in the imported period gets no rate, to be set by hand.
 
 **Billable comes from the project.** Time and materials and fixed fee projects are billable, and non-billable projects aren't. Non-billable tasks on billable projects export as billable; see `identified-edge-cases.md`.
 
-**Non-billable projects of the Varianttid client are open to everyone.** Harvest has no such setting, so the import assumes it. Everyone else is assigned to the projects they logged time on.
+**Non-billable projects of the Varianttid client are open to everyone.** Harvest has no such setting, so the import assumes it. Other projects get Harvest's active assignments; assignments to archived projects, and of deactivated users, are left out.
+
+**Tasks are the project's active Harvest tasks, and any task time was logged on.**
 
 **Vacation (FER1000) and paid welfare leave (VEL1000) don't count toward billable base hours.** Harvest has no such setting, so the import sets it by code. Reporting is the only thing that uses it. Whether other leave, such as sick leave or unpaid welfare leave, should be left out too is still to be confirmed.
 
@@ -54,7 +62,7 @@ A client in another country is a different client, so a client never has more th
 
 **An entry keeps the rate it was logged at.** Harvest stamps the rate on each entry rather than keeping a rate history, and so do we: the import copies Harvest's billable rate and currency onto each entry, and the export reads them from there. An entry Harvest didn't rate, such as on a fixed fee project, has neither.
 
-**Assignment rates are only for new entries.** The import also builds each assignment's rate list from the entries, with a new rate starting on the first day it's seen. Time logged in Tid afterwards gets its rate from that list, and keeps it. Moving an entry to another task or project picks the rate again; changing its hours doesn't.
+**Assignment rates are only for new entries.** Harvest only knows each assignment's current rate, so the import gives it one rate, valid from when the person was assigned in Harvest. Older rates live on the entries. Time logged in Tid afterwards gets its rate from that list, and keeps it. Moving an entry to another task or project picks the rate again; changing its hours doesn't.
 
 **One entry per user, task and day.** Harvest entries on the same day are summed, and their notes are joined with line breaks. They must share a rate, since the merged entry has one. Hours become minutes, rounded to the nearest minute. Start and end times are dropped.
 

@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import { createDatabase, rebuildDatabase } from "@tid/db/client";
-import { organizations, timeEntriesExport } from "@tid/db/schema";
+import { organizations, timeEntriesExport, userRoles, users } from "@tid/db/schema";
+import { eq } from "drizzle-orm";
 import { type HarvestExport, type KnownOrganization, planImport } from "./plan";
 import { writePlan } from "./write";
 
@@ -16,14 +17,47 @@ beforeAll(async () => {
 });
 afterAll(() => database.$client.close());
 
-const project = (id: number, code: string, client = "Kunde AS") => ({
+const project = (
+  id: number,
+  code: string,
+  client = "Kunde AS",
+): HarvestExport["projects"][number] => ({
   id,
   code,
   name: `Project ${code}`,
+  is_active: true,
   is_billable: client !== "Varianttid",
+  is_fixed_fee: false,
+  bill_by: client !== "Varianttid" ? "People" : "none",
+  hourly_rate: null,
   starts_on: null,
   ends_on: null,
-  client: { name: client },
+  client: { name: client, currency: "NOK" },
+});
+
+const user = (id: number, email: string, accessRoles = ["member"]) => ({
+  id,
+  first_name: "Kari",
+  last_name: "Nordmann",
+  email,
+  is_active: true,
+  access_roles: accessRoles,
+  default_hourly_rate: null,
+});
+
+const assignment = (userId: number, projectId: number, rate: number | null = 1600) => ({
+  project: { id: projectId },
+  user: { id: userId },
+  use_default_rates: false,
+  hourly_rate: rate,
+  created_at: "2026-07-01T08:00:00Z",
+});
+
+const taskAssignment = (projectId: number, task: string, rate: number | null, billable = true) => ({
+  project: { id: projectId },
+  task: { name: task },
+  billable,
+  hourly_rate: rate,
 });
 
 const entry = (
@@ -47,8 +81,10 @@ const entry = (
 
 const trondheim: HarvestExport = {
   account: { id: 1, name: "Variant Trondheim AS" },
-  users: [{ id: 10, first_name: "Kari", last_name: "Nordmann", email: "Kari@example.com" }],
+  users: [user(10, "Kari@example.com")],
   projects: [project(100, "KUN1001"), project(101, "VAR1000", "Varianttid")],
+  userAssignments: [assignment(10, 100)],
+  taskAssignments: [],
   timeEntries: [
     entry(10, 100, "2026-08-03", 4),
     entry(10, 100, "2026-08-03", 3.5),
@@ -59,8 +95,10 @@ const trondheim: HarvestExport = {
 
 const oslo: HarvestExport = {
   account: { id: 2, name: "Variant Oslo AS" },
-  users: [{ id: 20, first_name: "Kari", last_name: "Nordmann", email: "kari@example.com" }],
+  users: [user(20, "kari@example.com")],
   projects: [project(200, "KUN1001")],
+  userAssignments: [assignment(20, 200)],
+  taskAssignments: [],
   timeEntries: [entry(20, 200, "2026-08-06", 2, 1600)],
 };
 
@@ -70,7 +108,7 @@ test("accounts must match an organization by name and currency", () => {
       { ...trondheim, account: { id: 3, name: "Variant Øst AS" } },
       {
         ...oslo,
-        timeEntries: [{ ...entry(20, 200, "2026-08-06", 2), client: { currency: "SEK" } }],
+        projects: [{ ...project(200, "KUN1001"), client: { name: "Kunde AS", currency: "SEK" } }],
       },
     ],
     known,
@@ -78,19 +116,25 @@ test("accounts must match an organization by name and currency", () => {
 
   expect(problems).toEqual([
     "Variant Øst AS: no organization has this name; add it in a migration.",
-    "Variant Oslo AS: logs time in SEK, but the organization uses NOK.",
+    "Variant Oslo AS: has clients in SEK, but the organization uses NOK.",
   ]);
 });
 
-test("merges people and projects across accounts, and copies each entry's rate", () => {
+test("merges people and projects across accounts, and keeps each entry's own rate", () => {
   const { plan, problems, warnings } = planImport([trondheim, oslo], known);
 
   expect(problems).toEqual([]);
   expect(warnings).toEqual([
-    "Kari@example.com logs time in trondheim and oslo; placed in trondheim, where they log the most.",
+    "Kari@example.com is in trondheim and oslo; placed in trondheim, where they work the most.",
   ]);
   expect(plan.users).toEqual([
-    { email: "Kari@example.com", name: "Kari Nordmann", organization: "trondheim" },
+    {
+      email: "Kari@example.com",
+      name: "Kari Nordmann",
+      organization: "trondheim",
+      manager: false,
+      harvestRoles: ["member"],
+    },
   ]);
   expect(plan.projects.find((p) => p.code === "KUN1001")?.organizations).toEqual([
     "trondheim",
@@ -101,10 +145,8 @@ test("merges people and projects across accounts, and copies each entry's rate",
     {
       project: "KUN1001",
       email: "Kari@example.com",
-      rates: [
-        { validFrom: "2026-08-03", rate: 150000 },
-        { validFrom: "2026-08-04", rate: 160000 },
-      ],
+      // Harvest only knows today's rate; older ones live on the entries.
+      rates: [{ validFrom: "2026-07-01", rate: 160000 }],
     },
   ]);
   expect(plan.entries.find((e) => e.spentOn === "2026-08-03")).toMatchObject({
@@ -122,19 +164,13 @@ test("reports every problem instead of stopping at the first", () => {
   const broken: HarvestExport = {
     ...trondheim,
     projects: [project(100, "KUN1001"), { ...project(101, ""), name: "Uten kode" }],
-    timeEntries: [
-      entry(10, 100, "2026-08-03", 4, 1500, "Utvikling"),
-      entry(10, 100, "2026-08-03", 3.5, 1800, "Rådgivning"),
-      entry(99, 100, "2026-08-04", 1),
-    ],
+    timeEntries: [entry(99, 100, "2026-08-04", 1)],
   };
   const { problems } = planImport([broken], known);
 
   expect(problems).toEqual([
     'Variant Trondheim AS: project "Uten kode" has no code.',
     "Variant Trondheim AS: an entry on 2026-08-04 has an unknown user.",
-    "Variant Trondheim AS: Kari@example.com has several rates on project KUN1001 on 2026-08-03 " +
-      "(1500, 1800), probably one per task. Split the project into one per rate.",
   ]);
 });
 
@@ -249,4 +285,117 @@ test("projects sharing a name under one client get their codes added, so Postgre
 
   await rebuildDatabase(database);
   await writePlan(database, plan);
+});
+
+test("an assignment's rate comes from wherever Harvest bills the project", () => {
+  const billing: HarvestExport = {
+    ...trondheim,
+    users: [
+      { ...user(10, "Kari@example.com"), default_hourly_rate: 1300 },
+      user(11, "per@example.com"),
+      user(12, "ola@example.com"),
+    ],
+    projects: [
+      { ...project(100, "KUN1001"), bill_by: "Project", hourly_rate: 1400 },
+      { ...project(101, "KUN1002"), bill_by: "Tasks" },
+      project(102, "KUN1003"),
+      project(103, "KUN1004"),
+      { ...project(104, "KUN1005"), bill_by: "none", is_fixed_fee: true },
+      project(105, "KUN1006"),
+      { ...project(106, "KUN1007"), bill_by: "Tasks" },
+    ],
+    userAssignments: [
+      assignment(10, 100, null),
+      assignment(10, 101, null),
+      { ...assignment(10, 102, 9999), use_default_rates: true },
+      assignment(10, 103, 1700),
+      assignment(10, 104, null),
+      assignment(10, 105, null),
+      assignment(10, 106, null),
+      assignment(11, 106, null),
+      assignment(12, 106, null),
+    ],
+    // Non-billable tasks don't count toward the project's rate.
+    taskAssignments: [
+      taskAssignment(101, "Utvikling", 1500),
+      taskAssignment(101, "Internt", 900, false),
+    ],
+    timeEntries: [
+      entry(10, 106, "2026-08-03", 4, 1000, "Nivå 1"),
+      entry(10, 106, "2026-08-10", 4, 1270, "Nivå 2"),
+      entry(12, 106, "2026-08-03", 4, 1270, "Nivå 2"),
+      entry(12, 106, "2026-08-04", 4, 1000, "Nivå 1"),
+    ],
+  };
+  billing.taskAssignments.push(
+    taskAssignment(106, "Nivå 1", 1000),
+    taskAssignment(106, "Nivå 2", 1270),
+  );
+  const { plan, problems, warnings } = planImport([billing], known);
+
+  expect(problems).toEqual([]);
+  expect(warnings).toEqual([
+    "Project KUN1005 is fixed fee, so its hours export without an amount.",
+    "ola@example.com was billed at 1270, 1000 on project KUN1007, not as a price increase; they keep the last, 1000.",
+    "Kari@example.com has no rate on project KUN1006, so their hours export without an amount.",
+    "per@example.com has no rate on project KUN1007, so their hours export without an amount.",
+  ]);
+  expect(
+    Object.fromEntries(
+      plan.assignments
+        .filter((a) => a.email === "Kari@example.com")
+        .map((a) => [a.project, a.rates.map((r) => r.rate)]),
+    ),
+  ).toEqual({
+    KUN1001: [140000],
+    KUN1002: [150000],
+    KUN1003: [130000],
+    KUN1004: [170000],
+    KUN1005: [],
+    KUN1006: [],
+    // Priced per task: the rate of the task last logged on.
+    KUN1007: [127000],
+  });
+});
+
+test("everyone who may log time today is brought in, with or without history", async () => {
+  const today: HarvestExport = {
+    ...trondheim,
+    users: [
+      user(10, "Kari@example.com", ["manager", "project_creator"]),
+      user(11, "per@example.com", ["administrator"]),
+      user(13, "lise@example.com", ["project_manager"]),
+      // Inactive people are only fetched for the history they logged.
+      { ...user(12, "ola@example.com"), is_active: false },
+    ],
+    projects: [project(100, "KUN1001"), { ...project(101, "KUN1002"), is_active: false }],
+    userAssignments: [assignment(11, 100), assignment(11, 101), assignment(12, 100)],
+    taskAssignments: [taskAssignment(100, "Utvikling", null)],
+    timeEntries: [],
+  };
+  const { plan, problems } = planImport([today], known);
+
+  expect(problems).toEqual([]);
+  expect(plan.users.map((u) => [u.email, u.manager])).toEqual([
+    ["Kari@example.com", true],
+    ["per@example.com", true],
+    ["lise@example.com", true],
+    ["ola@example.com", false],
+  ]);
+  expect(plan.assignments.map((a) => [a.project, a.email])).toEqual([
+    ["KUN1001", "per@example.com"],
+  ]);
+  expect(plan.tasks).toEqual([{ project: "KUN1001", name: "Utvikling" }]);
+
+  await rebuildDatabase(database);
+  await writePlan(database, plan);
+  const managers = await database
+    .select({ email: users.email })
+    .from(userRoles)
+    .innerJoin(users, eq(users.id, userRoles.userId));
+  expect(managers).toEqual([
+    { email: "Kari@example.com" },
+    { email: "per@example.com" },
+    { email: "lise@example.com" },
+  ]);
 });

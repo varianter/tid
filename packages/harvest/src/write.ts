@@ -8,6 +8,7 @@ import {
   projects,
   tasks,
   timeEntries,
+  userRoles,
   users,
 } from "@tid/db/schema";
 import type { ImportPlan } from "./plan";
@@ -46,6 +47,16 @@ export function writePlan(database: Database, plan: ImportPlan) {
     );
     const userByEmail = new Map(userRows.map((row) => [row.email.toLowerCase(), row]));
     const userFor = (email: string) => lookup(userByEmail, email.toLowerCase());
+    await inChunks(
+      plan.users.filter((user) => user.manager),
+      (chunk) =>
+        transaction
+          .insert(userRoles)
+          .values(
+            chunk.map((user) => ({ userId: userFor(user.email).id, role: "manager" as const })),
+          )
+          .returning(),
+    );
 
     const clientRows = await inChunks(plan.clients, (chunk) =>
       transaction

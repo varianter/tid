@@ -51,15 +51,31 @@ async function fetchAccount(
   )) as HarvestExport["timeEntries"];
   const loggingUserIds = new Set(timeEntries.map((entry) => entry.user.id));
   const loggedProjectIds = new Set(timeEntries.map((entry) => entry.project.id));
-  // Time entries only carry user names; emails are how users are matched.
+  // Active ones are needed from day one; inactive ones only for the history they logged.
   const users = ((await client.getAllPages("users", account.id)) as HarvestExport["users"]).filter(
-    (user) => loggingUserIds.has(user.id),
+    (user) => user.is_active || loggingUserIds.has(user.id),
   );
-  // Time entries lack the project's billing type and dates.
   const projects = (
     (await client.getAllPages("projects", account.id)) as HarvestExport["projects"]
-  ).filter((project) => loggedProjectIds.has(project.id));
-  return { account: { id: account.id, name: account.name }, users, projects, timeEntries };
+  ).filter((project) => project.is_active || loggedProjectIds.has(project.id));
+  const userAssignments = (await client.getAllPages(
+    "user_assignments",
+    account.id,
+    "&is_active=true",
+  )) as HarvestExport["userAssignments"];
+  const taskAssignments = (await client.getAllPages(
+    "task_assignments",
+    account.id,
+    "&is_active=true",
+  )) as HarvestExport["taskAssignments"];
+  return {
+    account: { id: account.id, name: account.name },
+    users,
+    projects,
+    userAssignments,
+    taskAssignments,
+    timeEntries,
+  };
 }
 
 // Every account the tokens can reach, once each, since several tokens may share an account.
