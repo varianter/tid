@@ -37,35 +37,60 @@ export function Layout({
         <title>{title}</title>
         <link rel="stylesheet" href="https://varde.variant.dev/v/1.0.0/styles.css" />
         <script type="module" src={elementsSrc} />
+        <style>{`
+          @media (min-width: 768px) {
+            #nav-popover { display: contents; }
+            .menu-toggle { display: none; }
+          }
+        `}</style>
       </head>
       <body class="stack-h nowrap items-stretch">
-        <nav
-          class="stack-v gap-4xs b-all m-s br-xl bc-subtle p-2xs w-max-4 w-full "
-          aria-label="Main"
+        <div
+          id="nav-popover"
+          data-type="drawer"
+          data-position="left"
+          popover="auto"
+          class="v-popover"
         >
-          <span class="fs-l fw-bold px-xs py-2xs mb-xs">Tid</span>
-          {navigation.map(({ href, label }) => {
-            const active = isActive(href, currentPath);
-            return (
-              <a
-                href={href}
-                aria-current={active ? "page" : undefined}
-                class={`px-xs py-2xs br-m ${active ? "surface-tinted fw-medium" : "ink-subtle bg-wash:hover"}`}
-              >
-                {label}
-              </a>
-            );
-          })}
-          {user && (
-            <div class="stack-v mt-auto px-xs py-2xs">
-              <span class="fw-medium">{user.name}</span>
-              <a href={logoutUrl} class="fs-s ink-subtle">
-                Log out
-              </a>
-            </div>
-          )}
-        </nav>
-        <div class="flex-1 w-min-0">{children}</div>
+          <nav
+            class="stack-v gap-4xs b-all m-s br-xl bc-subtle p-2xs w-max-4 w-full surface-base"
+            aria-label="Main"
+          >
+            <span class="fs-l fw-bold px-xs py-2xs mb-xs">Tid</span>
+            {navigation.map(({ href, label }) => {
+              const active = isActive(href, currentPath);
+              return (
+                <a
+                  href={href}
+                  aria-current={active ? "page" : undefined}
+                  class={`px-xs py-2xs br-m ${active ? "surface-tinted fw-medium" : "ink-subtle bg-wash:hover"}`}
+                >
+                  {label}
+                </a>
+              );
+            })}
+            {user && (
+              <div class="stack-v mt-auto px-xs py-2xs">
+                <span class="fw-medium">{user.name}</span>
+                <a href={logoutUrl} class="fs-s ink-subtle">
+                  Log out
+                </a>
+              </div>
+            )}
+          </nav>
+        </div>
+        <div class="flex-1 w-min-0">
+          <button
+            type="button"
+            data-size="small"
+            popovertarget="nav-popover"
+            class="v-button menu-toggle m-s"
+            aria-label="Toggle navigation menu"
+          >
+            <span aria-hidden="true">☰</span> Menu
+          </button>
+          {children}
+        </div>
       </body>
     </html>
   );
