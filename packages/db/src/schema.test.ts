@@ -376,6 +376,32 @@ test("a locked month rejects changes to its entries until it's unlocked", async 
   await database.update(timeEntries).set({ minutes: 90 }).where(eq(timeEntries.id, october.id));
 });
 
+test("a locked month still lets an entry's rate be corrected, but nothing else with it", async () => {
+  const { organization, user, task } = await insertRatedAssignment();
+  const entry = onlyRow(
+    await database
+      .insert(timeEntries)
+      .values({ userId: user.id, taskId: task.id, spentOn: "2026-10-01", minutes: 60 })
+      .returning(),
+  );
+  await database
+    .insert(monthLocks)
+    .values({ orgId: organization.id, month: "2026-10-01", lockedBy: user.id });
+
+  await database
+    .update(timeEntries)
+    .set({ rate: 130000, currency: "NOK" })
+    .where(eq(timeEntries.id, entry.id));
+  expect(
+    await rejection(
+      database
+        .update(timeEntries)
+        .set({ rate: 140000, currency: "NOK", minutes: 90 })
+        .where(eq(timeEntries.id, entry.id)),
+    ),
+  ).toBe("Time entries in 2026-10 are locked");
+});
+
 test("a month has at most one active lock per organization", async () => {
   const { organization, user } = await insertRatedAssignment();
   const lock = { orgId: organization.id, month: "2026-10-01", lockedBy: user.id };

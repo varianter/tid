@@ -12,7 +12,8 @@ import { z } from "zod";
 import { database } from "../database";
 import { isIsoDate, todayInOslo } from "../dates/dates";
 import { formAction } from "../form/formAction";
-import { RatesPage } from "./assignments.views";
+import { RatesPage, RepricePage } from "./assignments.views";
+import { addRateAndReprice, entriesToReprice } from "./repricing";
 
 // Mounted under /projects/:projectId/assignments.
 export const assignments = new Hono();
@@ -85,6 +86,23 @@ const newRateForm = z.object({
   validFrom: z.string().refine(isIsoDate, "Pick a date"),
 });
 
+async function loadConsultant(ids: AssignmentIds) {
+  const [consultant] = await database
+    .select({
+      projectId: projectAssignments.projectId,
+      userId: projectAssignments.userId,
+      name: users.name,
+      projectName: projects.name,
+      currency: organizations.currency,
+    })
+    .from(projectAssignments)
+    .innerJoin(users, eq(users.id, projectAssignments.userId))
+    .innerJoin(projects, eq(projects.id, projectAssignments.projectId))
+    .innerJoin(organizations, eq(organizations.id, projectAssignments.orgId))
+    .where(assignment(ids));
+  return consultant;
+}
+
 assignments.on(
   ["GET", "POST"],
   "/:userId/rates",
@@ -93,19 +111,7 @@ assignments.on(
     loader: async (c) => {
       const ids = idParams(c.req.param());
       if (!ids) return c.notFound();
-      const [consultant] = await database
-        .select({
-          projectId: projectAssignments.projectId,
-          userId: projectAssignments.userId,
-          name: users.name,
-          projectName: projects.name,
-          currency: organizations.currency,
-        })
-        .from(projectAssignments)
-        .innerJoin(users, eq(users.id, projectAssignments.userId))
-        .innerJoin(projects, eq(projects.id, projectAssignments.projectId))
-        .innerJoin(organizations, eq(organizations.id, projectAssignments.orgId))
-        .where(assignment(ids));
+      const consultant = await loadConsultant(ids);
       if (!consultant) return c.notFound();
       const rates = await database
         .select({ validFrom: assignmentRates.validFrom, rate: assignmentRates.rate })
@@ -114,25 +120,55 @@ assignments.on(
         .orderBy(desc(assignmentRates.validFrom));
       return { consultant, rates, today: todayInOslo() };
     },
-    // A rate with the same start date replaces the old one, which is how a rate is edited.
+    // A rate that changes logged time is confirmed on its own page first.
     onSubmit: async (_c, form, { consultant }) => {
-      await database
-        .insert(assignmentRates)
-        .values({ projectId: consultant.projectId, userId: consultant.userId, ...form })
-        .onConflictDoUpdate({
-          target: [assignmentRates.projectId, assignmentRates.userId, assignmentRates.validFrom],
-          set: { rate: form.rate },
-        });
+      const newRate = { ...form, currency: consultant.currency };
+      if ((await entriesToReprice(consultant, newRate)).length > 0) {
+        const query = new URLSearchParams({ validFrom: form.validFrom, rate: String(form.rate) });
+        return { redirect: `${ratesPath(consultant)}/reprice?${query}` };
+      }
+      await addRateAndReprice(consultant, newRate);
       return { redirect: ratesPath(consultant) };
     },
     view: RatesPage,
   }),
 );
 
+// The rate in minor units, as the rates form passes it on.
+const repriceQuery = z.object({
+  rate: z.coerce.number().int().min(0),
+  validFrom: z.string().refine(isIsoDate),
+});
+
+assignments.on(
+  ["GET", "POST"],
+  "/:userId/rates/reprice",
+  formAction({
+    schema: z.object({}),
+    loader: async (c) => {
+      const ids = idParams(c.req.param());
+      const query = repriceQuery.safeParse(c.req.query());
+      if (!ids || !query.success) return c.notFound();
+      const consultant = await loadConsultant(ids);
+      if (!consultant) return c.notFound();
+      const newRate = { ...query.data, currency: consultant.currency };
+      return { consultant, newRate, entries: await entriesToReprice(ids, newRate) };
+    },
+    onSubmit: async (_c, _form, { consultant, newRate }) => {
+      await addRateAndReprice(consultant, newRate);
+      return { redirect: ratesPath(consultant) };
+    },
+    view: RepricePage,
+  }),
+);
+
+// Only a rate that hasn't started can go. A started one has priced logged time, so it's
+// corrected by adding a rate on the same day instead.
 assignments.post("/:userId/rates/:validFrom/delete", async (c) => {
   const ids = idParams(c.req.param());
   const validFrom = c.req.param("validFrom");
   if (!ids || !isIsoDate(validFrom)) return c.notFound();
+  if (validFrom <= todayInOslo()) return c.text("A rate that has started can't be deleted", 403);
   await database
     .delete(assignmentRates)
     .where(and(ratesOf(ids), eq(assignmentRates.validFrom, validFrom)));

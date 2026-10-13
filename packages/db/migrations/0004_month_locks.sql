@@ -20,6 +20,12 @@ as $$
 declare
   entry time_entries;
 begin
+  -- Re-pricing passes, since the lock guards what was logged and a corrected rate is invoiced
+  -- separately. Comparing whole rows keeps new columns locked without touching this.
+  if tg_op = 'UPDATE'
+    and to_jsonb(new) - 'rate' - 'currency' = to_jsonb(old) - 'rate' - 'currency' then
+    return new;
+  end if;
   foreach entry in array array[old, new] loop
     continue when entry is null;
     if month_locked((select org_id from users where id = entry.user_id), entry.spent_on) then

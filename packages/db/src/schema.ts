@@ -206,8 +206,9 @@ export const assignmentRates = pgTable(
 // One row per user, task and day, with one note for the day.
 // Users must be assigned to the project unless it's open to everyone. The app enforces
 // this rather than the database, so it can tell the user why an entry was rejected.
-// The rate is locked when the entry is created, so later changes to assignment_rates don't
-// reprice logged time. See time_entry_rates.sql for how it's picked.
+// The rate is locked when the entry is created, so a rate that's later added for the future
+// doesn't reprice logged time. See time_entry_rates.sql for how it's picked. A backdated rate
+// does reprice its period; the app does that when it adds the rate.
 export const timeEntries = pgTable(
   "time_entries",
   {
@@ -230,8 +231,9 @@ export const timeEntries = pgTable(
   ],
 );
 
-// A locked month stops an organization's time entries in it from changing, so invoiced hours and
-// their rates stay put. Unlocking keeps the row as history; month_locks.sql enforces the lock.
+// A locked month stops an organization's time entries in it from changing, so invoiced hours stay
+// put. Their rates can still be corrected. Unlocking keeps the row as history; month_locks.sql
+// enforces the lock.
 export const monthLocks = pgTable(
   "month_locks",
   {

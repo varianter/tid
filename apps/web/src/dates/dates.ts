@@ -3,7 +3,7 @@
 
 const dayInMilliseconds = 86_400_000;
 
-// Every date reads one way, from these three formats. Pick one of them over adding a fourth.
+// Every date reads one way, from these four formats. Pick one of them over adding a fifth.
 const dateFormat = new Intl.DateTimeFormat("en-GB", { dateStyle: "long", timeZone: "UTC" });
 const dayInMonthFormat = new Intl.DateTimeFormat("en-GB", {
   weekday: "short",
@@ -56,6 +56,11 @@ export function isWeekend(isoDate: string) {
 /** Like "3 October 2026". */
 export function formatDate(isoDate: string) {
   return dateFormat.format(parseIsoDate(isoDate));
+}
+
+/** Like "2026.10.03", for table columns, where dates line up and sort by eye. */
+export function formatTableDate(isoDate: string) {
+  return isoDate.replaceAll("-", ".");
 }
 
 /** Like "Sat 3", for where the month is already shown. */
