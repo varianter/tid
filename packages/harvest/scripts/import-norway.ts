@@ -1,12 +1,17 @@
-// Rebuilds the dev database from the Norwegian Harvest accounts, so the app can be checked
-// against real data.
+// Fills a database from the Norwegian Harvest accounts, so the app can be checked against
+// real data. Without DATABASE_URL it rebuilds the local dev database; with it, it imports
+// into that database, which must be empty.
 // Usage: bun run harvest:import:norway <from-month> [to-month] --tokens <token>,<token> [--save]
 // Each token is a Harvest personal access token; every account they reach is imported.
 
 import { parseArgs } from "node:util";
-import { closeOtherConnections, createDatabase, rebuildDatabase } from "@tid/db/client";
-import { startDevelopmentDatabase } from "@tid/db/container";
-import { organizations, timeEntries } from "@tid/db/schema";
+import {
+  closeOtherConnections,
+  createDatabase,
+  migrateDatabase,
+  rebuildDatabase,
+} from "@tid/db/client";
+import { clients, organizations, projects, timeEntries, users } from "@tid/db/schema";
 import { sql } from "drizzle-orm";
 import { fetchHarvestAccounts } from "../src/fetch";
 import { planImport } from "../src/plan";
@@ -65,12 +70,37 @@ if (options.save) {
   console.log(`Saved to ${directory}`);
 }
 
-// Rebuilt first, since accounts are matched to the organizations the migrations add, and
-// migrating a database built from older migrations fails.
-const container = await startDevelopmentDatabase();
-const database = createDatabase(container.getConnectionUri());
-await closeOtherConnections(database);
-await rebuildDatabase(database);
+// A remote database's schema isn't ours to drop, so it's emptied beforehand by the
+// infrastructure's reset script, and only migrated here.
+async function openRemoteDatabase(url: string) {
+  const database = createDatabase(url);
+  await closeOtherConnections(database);
+  await migrateDatabase(database);
+  const rowCounts = await Promise.all(
+    [users, clients, projects, timeEntries].map((table) => database.$count(table)),
+  );
+  if (rowCounts.some((count) => count > 0)) {
+    await database.$client.close();
+    exitWith("The database isn't empty. Reset its schema first, then import again.");
+  }
+  return database;
+}
+
+// Rebuilt, since migrating a database built from older migrations fails. The container
+// module needs Testcontainers, which only development installs, so it's loaded here.
+async function openDevelopmentDatabase() {
+  const { startDevelopmentDatabase } = await import("@tid/db/container");
+  const container = await startDevelopmentDatabase();
+  const database = createDatabase(container.getConnectionUri());
+  await closeOtherConnections(database);
+  await rebuildDatabase(database);
+  return database;
+}
+
+// Opened before planning, since accounts are matched to the organizations the migrations add.
+const database = process.env.DATABASE_URL
+  ? await openRemoteDatabase(process.env.DATABASE_URL)
+  : await openDevelopmentDatabase();
 const { plan, problems, warnings } = planImport(
   harvestExports,
   await database.select().from(organizations),
@@ -82,7 +112,7 @@ if (warnings.length > 0) {
 if (problems.length > 0) {
   console.error(`\n${problems.length} problems:`);
   for (const problem of problems) console.error(`  ✗ ${problem}`);
-  exitWith("Nothing was imported; the dev database is now empty.");
+  exitWith("Nothing was imported; the database is now empty.");
 }
 
 // Drizzle wraps the driver's error, which holds what Postgres said and why.
@@ -98,7 +128,7 @@ function describeDatabaseError(error: unknown) {
 
 await writePlan(database, plan).catch((error) =>
   exitWith(
-    `Postgres rejected the import, so the dev database is now empty:\n  ${describeDatabaseError(error)}`,
+    `Postgres rejected the import, so the database is now empty:\n  ${describeDatabaseError(error)}`,
   ),
 );
 

@@ -1,6 +1,6 @@
 # Harvest import
 
-Rebuilds the dev database from Harvest, so the app can be checked against real data. It's only needed while we move off Harvest, so it lives in its own package that can be deleted.
+Fills a database from Harvest, so the app can be checked against real data. It's only needed while we move off Harvest, so it lives in its own package that can be deleted.
 
 Each country's Harvest accounts are organized differently, so each country has its own import.
 
@@ -11,6 +11,10 @@ bun run harvest:import:norway <from-month> [to-month] --tokens <token>,<token> [
 ```
 
 Pass one Harvest personal access token per account, with months as `YYYY-MM`. It lists every problem it finds before importing anything, but the dev database is emptied either way. `--save` keeps the raw Harvest data in `packages/harvest/harvest-export`, which is gitignored.
+
+### Importing into a deployed database
+
+With `DATABASE_URL` set, the import targets that database instead of the local one. It doesn't drop the schema, since a deployed database's schema isn't the app's to drop, so the database must be emptied beforehand. The import migrates it, then stops if it holds any users, clients, projects or time entries. Each environment's infrastructure provides the scripts that reset the schema and run the import.
 
 ## Norwegian import rules
 

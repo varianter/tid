@@ -44,9 +44,11 @@ export function migrateDatabase(database: Database) {
 
 // A running dev server's prepared statements refer to types by id, which a rebuild changes.
 // Ending its connections makes it reconnect instead of failing with "cache lookup failed".
+// Only the app's own role is ended, since ending another role's connection, such as a hosted
+// provider's maintenance, is refused with an error.
 export function closeOtherConnections(database: Database) {
   return database.execute(
-    sql`select pg_terminate_backend(pid) from pg_stat_activity where datname = current_database() and pid <> pg_backend_pid()`,
+    sql`select pg_terminate_backend(pid) from pg_stat_activity where datname = current_database() and usename = current_user and pid <> pg_backend_pid()`,
   );
 }
 
