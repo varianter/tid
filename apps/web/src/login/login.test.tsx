@@ -86,6 +86,18 @@ test("sign-up offers only the organizations in the country of the email domain",
   expect(page).not.toContain("Variant Oslo AS");
 });
 
+test("sign-up prefills the name from the Entra ID token", async () => {
+  const claims = Buffer.from(JSON.stringify({ name: "Ola Martin Nordmann" })).toString("base64url");
+  const ola = {
+    "x-auth-request-user": "ola-sub",
+    "x-auth-request-email": "ola@variant.no",
+    authorization: `Bearer header.${claims}.signature`,
+  };
+  const page = await (await requestAs(ola, "/signup")).text();
+  expect(page).toContain('value="Ola Martin"');
+  expect(page).toContain('value="Nordmann"');
+});
+
 test("sign-up turns away email domains that aren't Variant's", async () => {
   const guest = { "x-auth-request-user": "guest-sub", "x-auth-request-email": "guest@example.com" };
   expect((await requestAs(guest, "/signup")).status).toBe(403);

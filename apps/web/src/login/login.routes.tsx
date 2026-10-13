@@ -17,10 +17,11 @@ import type { PublicEnv } from "./user";
 type SignupProps = {
   subject: string;
   email: string;
+  name?: string;
   organizations: { id: number; name: string }[];
 };
 
-type Identity = { subject: string; email: string };
+type Identity = { subject: string; email: string; name?: string };
 
 // Lets people who log in for the first time become users, by choosing their organization.
 export function signup(

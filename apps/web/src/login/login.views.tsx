@@ -3,12 +3,22 @@ import type { FormProps } from "../form/formAction";
 
 type OrganizationOption = { id: number; name: string };
 
+// Entra only has the display name. It's a guess people can correct, so the last word being the
+// last name is good enough.
+function splitName(name = "") {
+  const words = name.split(/\s+/).filter(Boolean);
+  if (words.length < 2) return { firstName: name, lastName: "" };
+  return { firstName: words.slice(0, -1).join(" "), lastName: words.at(-1) };
+}
+
 export function SignupPage({
   email,
+  name,
   organizations,
   values,
   fieldErrors,
-}: { email: string; organizations: OrganizationOption[] } & FormProps) {
+}: { email: string; name?: string; organizations: OrganizationOption[] } & FormProps) {
+  const nameFromEntra = splitName(name);
   return (
     <Page title="Welcome to Tid">
       <p class="w-max-5">
@@ -19,7 +29,7 @@ export function SignupPage({
         <FormField
           name="firstName"
           label="First name"
-          value={values?.firstName}
+          value={values?.firstName ?? nameFromEntra.firstName}
           errors={fieldErrors?.firstName}
           autocomplete="given-name"
           required
@@ -27,7 +37,7 @@ export function SignupPage({
         <FormField
           name="lastName"
           label="Last name"
-          value={values?.lastName}
+          value={values?.lastName ?? nameFromEntra.lastName}
           errors={fieldErrors?.lastName}
           autocomplete="family-name"
           required

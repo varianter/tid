@@ -2,6 +2,7 @@ import { userIdentities, users } from "@tid/db/schema";
 import { and, eq, getTableColumns, sql } from "drizzle-orm";
 import type { Context } from "hono";
 import { createMiddleware } from "hono/factory";
+import { z } from "zod";
 import { database } from "../database";
 import type { PublicEnv, User } from "./user";
 
@@ -15,7 +16,28 @@ export const signupPath = "/signup";
 export function readProxyIdentity(c: Context) {
   const subject = c.req.header(subjectHeader);
   const email = c.req.header(emailHeader);
-  return subject && email ? { subject, email } : undefined;
+  return subject && email ? { subject, email, name: readDisplayName(c) } : undefined;
+}
+
+const idTokenClaims = z.object({ name: z.string().trim().min(1) });
+
+// oauth2-proxy forwards the ID token, the only place Entra puts the display name. nginx
+// overwrites it like the headers above, so the signature isn't checked again. Neither is
+// expiry: the token can outlive it briefly between oauth2-proxy's session refreshes.
+function readDisplayName(c: Context) {
+  const payload = c.req
+    .header("authorization")
+    ?.replace(/^Bearer /, "")
+    .split(".")[1];
+  if (!payload) return undefined;
+  try {
+    const claims = idTokenClaims.safeParse(
+      JSON.parse(Buffer.from(payload, "base64url").toString()),
+    );
+    return claims.data?.name;
+  } catch {
+    return undefined;
+  }
 }
 
 export async function findUserByIdentity(tenantId: string, subject: string) {
