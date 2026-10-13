@@ -1,4 +1,11 @@
-import { projectAssignments, projects, tasks, timeEntries } from "@tid/db/schema";
+import {
+  projectAssignments,
+  projectOrganizations,
+  projects,
+  tasks,
+  timeEntries,
+  users,
+} from "@tid/db/schema";
 import { and, between, eq, exists, or, sql } from "drizzle-orm";
 import { type Context, Hono } from "hono";
 import { database } from "../database";
@@ -17,10 +24,19 @@ import { type MonthError, MonthPage, TimesheetCell } from "./timesheet.views";
 
 export const timesheet = new Hono<UserEnv>();
 
-/** Tasks the user may log on: open projects, assigned ones, and any they already have time on. */
+/** Tasks the user may log on: open projects of their organization, assigned ones, and any they already have time on. */
 const loggableBy = (userId: number) =>
   or(
-    eq(projects.openToEveryone, true),
+    and(
+      eq(projects.openToEveryone, true),
+      exists(
+        database
+          .select()
+          .from(projectOrganizations)
+          .innerJoin(users, eq(users.orgId, projectOrganizations.orgId))
+          .where(and(eq(projectOrganizations.projectId, projects.id), eq(users.id, userId))),
+      ),
+    ),
     exists(
       database
         .select()

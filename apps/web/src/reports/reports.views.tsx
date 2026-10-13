@@ -1,5 +1,5 @@
 import { formatHours } from "@tid/elements/hours";
-import { Button, EmptyState, Page, PeriodNavigation } from "@tid/ui";
+import { Button, EmptyState, Page, PeriodNavigation, Tabs } from "@tid/ui";
 import type { Child } from "hono/jsx";
 import { formatAmount } from "../currency/currency";
 import { formatMonth } from "../dates/dates";
@@ -71,21 +71,14 @@ export function ReportPage({
     >
       <Summary {...total} currency={currency} />
       <section>
-        <nav aria-label="Group by" class="stack-h gap-4xs" style="margin-bottom: -1px;">
+        <Tabs aria-label="Group by">
           {tabs.map((tabName) => (
-            <Button
-              as="a"
-              href={tabHref(tabName)}
-              aria-current={tabName === report.tab ? "page" : undefined}
-              class="br-bl-none br-br-none"
-              data-size="small"
-              data-variant={tabName === report.tab ? undefined : "plain"}
-            >
+            <Tabs.Link href={tabHref(tabName)} active={tabName === report.tab}>
               {tabLabels[tabName]}
-            </Button>
+            </Tabs.Link>
           ))}
-        </nav>
-        <div class="b-all bc-subtle br-l br-tl-none p-m">
+        </Tabs>
+        <div class="b-all bc-subtle br-l p-m">
           {table.rows.length === 0 ? (
             <EmptyState emoji="🗓️" title="No hours logged">
               No time was logged in {formatMonth(month)}.

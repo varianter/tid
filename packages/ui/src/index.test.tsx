@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { Button, FormField, Page } from "./index";
+import { Button, FormField, Page, Tabs } from "./index";
 
 test("Button renders a button by default and a link with as='a'", () => {
   expect(
@@ -58,4 +58,19 @@ test("FormField links its errors to the input, and shows nothing without errors"
   const valid = String(<FormField name="name" label="Name" errors={[]} />);
   expect(valid).not.toContain("aria-");
   expect(valid).not.toContain("color-mode");
+});
+
+test("Tabs.Link marks only the active tab as the current page", () => {
+  const html = String(
+    <Tabs aria-label="Group by">
+      <Tabs.Link href="/a" active>
+        A
+      </Tabs.Link>
+      <Tabs.Link href="/b" active={false}>
+        B
+      </Tabs.Link>
+    </Tabs>,
+  );
+  expect(html).toContain('aria-label="Group by"');
+  expect(html.match(/aria-current="page"/g)).toHaveLength(1);
 });
