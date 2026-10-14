@@ -1,6 +1,6 @@
 import { beforeAll, expect, test } from "bun:test";
 import { rebuildDatabase } from "@tid/db/client";
-import { organizations, users } from "@tid/db/schema";
+import { organizations, userRoles, users } from "@tid/db/schema";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { database } from "../database";
@@ -119,4 +119,20 @@ test("sign-up creates the user in the chosen organization, who is then logged in
   expect(user).toMatchObject({ name: "Anna Svensson", orgId: stockholm });
   expect(await (await requestAs(anna)).text()).toBe(String(user?.id));
   expect((await requestAs(anna, "/signup")).status).toBe(302);
+});
+
+test("sign-up makes the bootstrap managers managers, and no one else", async () => {
+  process.env.BOOTSTRAP_MANAGER_EMAILS = "someone@variant.se, Erik@Variant.se";
+  const stockholm = String(await organizationId("stockholm"));
+  const erik = { "x-auth-request-user": "erik-sub", "x-auth-request-email": "erik@variant.se" };
+  const lisa = { "x-auth-request-user": "lisa-sub", "x-auth-request-email": "lisa@variant.se" };
+  await signUp(erik, { name: "Erik", organizationId: stockholm });
+  await signUp(lisa, { name: "Lisa", organizationId: stockholm });
+  delete process.env.BOOTSTRAP_MANAGER_EMAILS;
+
+  const managers = await database
+    .select({ email: users.email })
+    .from(userRoles)
+    .innerJoin(users, eq(users.id, userRoles.userId));
+  expect(managers).toEqual([{ email: "erik@variant.se" }]);
 });

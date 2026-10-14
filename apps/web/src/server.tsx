@@ -17,6 +17,7 @@ import type { PublicEnv } from "./login/user";
 import { projects } from "./projects/projects.routes";
 import { reports } from "./reports/reports.routes";
 import { timesheet } from "./timesheet/timesheet.routes";
+import { users } from "./users/users.routes";
 
 const isDevLoginEnabled = process.env.DEV_LOGIN === "true";
 
@@ -94,6 +95,7 @@ app.route("/projects", projects);
 app.route("/projects/:projectId/assignments", assignments);
 app.route("/reports", reports);
 app.route("/end-of-the-month", endOfTheMonth);
+app.route("/users", users);
 // Only needed until Tid takes over from Harvest.
 app.route("/harvest-import", harvestImport);
 

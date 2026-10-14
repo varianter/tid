@@ -15,6 +15,7 @@ const navigation = [
   { href: "/projects", label: "Projects" },
   { href: "/reports", label: "Reports" },
   { href: "/end-of-the-month", label: "End of the month" },
+  { href: "/users", label: "Users" },
 ];
 
 function isActive(href: string, currentPath: string) {
@@ -38,7 +39,7 @@ export function Layout({
         <link rel="stylesheet" href="https://varde.variant.dev/v/1.0.0/styles.css" />
         <script type="module" src={elementsSrc} />
         <style>{`
-          @media (min-width: 768px) {
+          @media (min-width: 900px) {
             #nav-popover { display: contents; }
             .menu-toggle { display: none; }
           }

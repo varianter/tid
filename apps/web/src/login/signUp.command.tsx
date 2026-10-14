@@ -1,4 +1,4 @@
-import { organizations, userIdentities, users } from "@tid/db/schema";
+import { organizations, userIdentities, userRoles, users } from "@tid/db/schema";
 import { Button, Field, FormField, fieldErrorAttributes, Page, Select } from "@tid/ui";
 import { eq } from "drizzle-orm";
 import type { Context } from "hono";
@@ -28,6 +28,13 @@ type SignUpProps = {
 };
 
 type Identity = { subject: string; email: string; name?: string };
+
+// Importing from Harvest needs a manager, and it assigns everyone else's role. Only granted on
+// sign-up, so removing the role later sticks.
+function isBootstrapManager(email: string) {
+  const emails = process.env.BOOTSTRAP_MANAGER_EMAILS?.split(",") ?? [];
+  return emails.some((manager) => manager.trim().toLowerCase() === email.toLowerCase());
+}
 
 // Lets people who log in for the first time become users, by choosing their organization.
 export const signUp = (
@@ -75,6 +82,9 @@ export const signUp = (
           tenantId,
           subject: props.subject,
         });
+        if (isBootstrapManager(user.email)) {
+          await transaction.insert(userRoles).values({ userId: user.id, role: "manager" });
+        }
       });
       return { redirect: "/" };
     },
