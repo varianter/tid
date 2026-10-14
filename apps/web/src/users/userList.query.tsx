@@ -1,11 +1,16 @@
-import { organizations, userRoles, users } from "@tid/db/schema";
-import { Badge, Button, Label, Page } from "@tid/ui";
+import { userRoles, users } from "@tid/db/schema";
+import { Badge, Page } from "@tid/ui";
 import { and, eq, exists } from "drizzle-orm";
 import type { Context } from "hono";
 import { database } from "../database";
 import { formatDate } from "../dates/dateDisplay";
 import type { UserEnv } from "../login/user";
 import { findOrganizationSlug } from "../organizations/organization";
+import {
+  listOrganizations,
+  type OrganizationOption,
+  OrganizationSelect,
+} from "../organizations/organizationSelect";
 import { MakeManagerForm } from "./makeManager.command";
 import { RemoveManagerForm } from "./removeManager.command";
 import { usersPath } from "./usersUrl";
@@ -17,10 +22,7 @@ export const userList = async (c: Context<UserEnv>) => {
     if (!ownSlug) return c.notFound();
     return c.redirect(usersPath(ownSlug));
   }
-  const organizationOptions = await database
-    .select({ id: organizations.id, slug: organizations.slug, name: organizations.name })
-    .from(organizations)
-    .orderBy(organizations.name);
+  const organizationOptions = await listOrganizations();
   const organization = organizationOptions.find((option) => option.slug === slug);
   if (!organization) return c.notFound();
 
@@ -52,41 +54,6 @@ type UserRow = {
   endsOn: string | null;
   isManager: boolean;
 };
-
-type OrganizationOption = { slug: string; name: string };
-
-function OrganizationSelect({
-  organizationSlug,
-  organizations,
-}: {
-  organizationSlug: string;
-  organizations: OrganizationOption[];
-}) {
-  return (
-    <form method="get" class="stack-h nowrap items-center gap-2xs">
-      <Label for="organization">Organization</Label>
-      {/* A plain select, since Select's props don't allow an inline handler. */}
-      <select
-        class="v-select"
-        id="organization"
-        name="organization"
-        data-size="small"
-        onchange="this.form.requestSubmit()"
-      >
-        {organizations.map((organization) => (
-          <option value={organization.slug} selected={organization.slug === organizationSlug}>
-            {organization.name}
-          </option>
-        ))}
-      </select>
-      <noscript>
-        <Button type="submit" data-size="small">
-          Show
-        </Button>
-      </noscript>
-    </form>
-  );
-}
 
 function UserListPage({
   users,

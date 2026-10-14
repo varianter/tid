@@ -9,6 +9,11 @@ import { addMonths, daysOfMonth, isIsoMonth } from "../dates/isoDate";
 import { isoDateInOslo, todayInOslo } from "../dates/osloClock";
 import type { UserEnv } from "../login/user";
 import { findOrganizationSlug } from "../organizations/organization";
+import {
+  listOrganizations,
+  type OrganizationOption,
+  OrganizationSelect,
+} from "../organizations/organizationSelect";
 import { capacityMinutes } from "../reports/capacity";
 import { formatShare } from "../share/share";
 import { managesOrganization } from "../users/manager";
@@ -18,12 +23,13 @@ import { findOrganization, monthPath } from "./monthUrl";
 import { UnlockMonthForm } from "./unlockMonth.command";
 
 // The month being closed: last month until it's locked, then this one.
-// Without an organization in the URL, it's the user's own.
+// Without an organization in the URL, it's the one picked, or else the user's own.
 export const monthDetailsRedirect = async (c: Context<UserEnv>) => {
   if (!c.req.param("organization")) {
-    const slug = await findOrganizationSlug(c.get("user").orgId);
+    const slug = c.req.query("organization") || (await findOrganizationSlug(c.get("user").orgId));
     if (!slug) return c.notFound();
-    return c.redirect(`/end-of-the-month/${slug}`);
+    const month = c.req.query("month") ?? "";
+    return c.redirect(isIsoMonth(month) ? monthPath(slug, month) : `/end-of-the-month/${slug}`);
   }
   const organization = await findOrganization(c);
   if (!organization) return c.notFound();
@@ -80,13 +86,14 @@ export const monthDetails = async (c: Context<UserEnv>) => {
     };
   });
 
-  const [activeLock, canChangeLock] = await Promise.all([
+  const [activeLock, canChangeLock, organizationOptions] = await Promise.all([
     findActiveLock(organization.id, month),
     managesOrganization(c.get("user"), organization.id),
+    listOrganizations(),
   ]);
   return c.render(
     <MonthDetailsPage
-      organizationName={organization.name}
+      organizations={organizationOptions}
       organizationSlug={organization.slug}
       month={month}
       rows={rows}
@@ -107,7 +114,7 @@ type ConsultantRow = {
 };
 
 function MonthDetailsPage({
-  organizationName,
+  organizations,
   organizationSlug,
   month,
   rows,
@@ -116,7 +123,7 @@ function MonthDetailsPage({
   previousHref,
   nextHref,
 }: {
-  organizationName: string;
+  organizations: OrganizationOption[];
   organizationSlug: string;
   month: string;
   rows: ConsultantRow[];
@@ -127,16 +134,24 @@ function MonthDetailsPage({
 }) {
   return (
     <Page
-      title={`End of the month · ${organizationName}`}
+      title="End of the month"
       actions={
-        <PeriodNavigation
-          previousHref={previousHref}
-          nextHref={nextHref}
-          previousLabel="Previous month"
-          nextLabel="Next month"
-        >
-          {formatMonth(month)}
-        </PeriodNavigation>
+        <>
+          <OrganizationSelect
+            organizationSlug={organizationSlug}
+            organizations={organizations}
+            action="/end-of-the-month"
+            keep={{ month }}
+          />
+          <PeriodNavigation
+            previousHref={previousHref}
+            nextHref={nextHref}
+            previousLabel="Previous month"
+            nextLabel="Next month"
+          >
+            {formatMonth(month)}
+          </PeriodNavigation>
+        </>
       }
     >
       <section class="stack-h items-center gap-m b-all bc-default br-l py-xs px-m">

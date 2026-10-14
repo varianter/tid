@@ -11,6 +11,7 @@ import { addMonths } from "../dates/isoDate";
 import { todayInOslo } from "../dates/osloClock";
 import type { UserEnv } from "../login/user";
 import { findOrganizationBySlug, findOrganizationSlug } from "../organizations/organization";
+import { listOrganizations, OrganizationSelect } from "../organizations/organizationSelect";
 import { formatShare } from "../share/share";
 import { capacityMinutes } from "./capacity";
 import { reportQuery, type Tab, tabs } from "./period";
@@ -18,8 +19,9 @@ import { reportQuery, type Tab, tabs } from "./period";
 const reportPath = (organizationSlug: string, query: URLSearchParams) =>
   `/reports/${organizationSlug}?${query}`;
 
+// Without an organization picked, it's the user's own.
 export const monthlyReportRedirect = async (c: Context<UserEnv>) => {
-  const slug = await findOrganizationSlug(c.get("user").orgId);
+  const slug = c.req.query("organization") || (await findOrganizationSlug(c.get("user").orgId));
   if (!slug) return c.notFound();
   return c.redirect(
     reportPath(slug, reportQuery(c.req.query("from"), c.req.query("tab"), todayInOslo())),
@@ -31,6 +33,7 @@ export const monthlyReport = async (c: Context<UserEnv, "/:organization">) => {
   const query = reportQuery(c.req.query("from"), c.req.query("tab"), todayInOslo());
   if (new URL(c.req.url).search !== `?${query}`) return c.redirect(reportPath(slug, query));
 
+  const organizationOptions = await listOrganizations();
   const organization = await findOrganizationBySlug(slug);
   if (!organization) return c.notFound();
 
@@ -121,6 +124,14 @@ export const monthlyReport = async (c: Context<UserEnv, "/:organization">) => {
 
   return c.render(
     <ReportPage
+      organizationSelect={
+        <OrganizationSelect
+          organizationSlug={slug}
+          organizations={organizationOptions}
+          action="/reports"
+          keep={{ from, tab }}
+        />
+      }
       month={month}
       report={report}
       total={total}
@@ -158,6 +169,7 @@ const tabLabels: Record<Tab, string> = {
 };
 
 function ReportPage({
+  organizationSelect,
   month,
   report,
   total,
@@ -167,6 +179,7 @@ function ReportPage({
   nextHref,
   tabHref,
 }: {
+  organizationSelect: Child;
   month: string;
   report: ReportRows;
   total: Totals;
@@ -182,6 +195,7 @@ function ReportPage({
       title="Reports"
       actions={
         <>
+          {organizationSelect}
           <Button type="button" data-variant="tinted">
             New report
           </Button>
