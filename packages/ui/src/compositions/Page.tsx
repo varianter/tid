@@ -10,7 +10,7 @@ type PageProps = PropsWithChildren<{
 export function Page({ title, back, actions, children }: PageProps) {
   const heading = <h1 class="fs-m">{title}</h1>;
   return (
-    <main class="p-xl stack-v nowrap gap-xl">
+    <main class="py-xl px-s stack-v nowrap gap-xl">
       <header class="stack-v gap-2xs">
         {/* The actions share the top row, which is the back link when there is one. */}
         <div class="stack-h items-center gap-m">

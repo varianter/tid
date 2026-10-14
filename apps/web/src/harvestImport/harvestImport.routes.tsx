@@ -1,6 +1,6 @@
 import { Hono } from "hono";
-import { managesOrganization } from "../endOfTheMonth/manager";
 import type { UserEnv } from "../login/user";
+import { managesOrganization } from "../users/manager";
 import { enterHarvestTokens } from "./enterHarvestTokens.command";
 import { forgetHarvestTokens } from "./forgetHarvestTokens.command";
 import { importFromHarvest } from "./importFromHarvest.command";
