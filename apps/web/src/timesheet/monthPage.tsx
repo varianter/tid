@@ -1,17 +1,77 @@
+import { timeEntries } from "@tid/db/schema";
 import { formatHours } from "@tid/elements/hours";
-import { Button, Input, Label, Page, PeriodNavigation, Popover } from "@tid/ui";
+import { Button, Input, Label, Page, PeriodNavigation } from "@tid/ui";
+import { and, between, eq } from "drizzle-orm";
+import type { Context } from "hono";
 import type { PropsWithChildren } from "hono/jsx";
-import { formatDate, formatDayInMonth, formatMonth, mondayOf, todayInOslo } from "../dates/dates";
+import { database } from "../database";
+import { formatDayInMonth, formatMonth } from "../dates/dateDisplay";
+import { addMonths, daysOfMonth, isWeekend, mondayOf } from "../dates/isoDate";
+import { todayInOslo } from "../dates/osloClock";
+import { isLockedOn } from "../endOfTheMonth/monthLock";
+import type { UserEnv } from "../login/user";
+import { loggableBy, type Task, userTasks } from "./loggableTasks";
+import { type CellError, inputWidth, TimesheetCell } from "./timesheetCell";
 
-type Task = { id: number; name: string; projectName: string };
 type TimeEntry = { taskId: number; spentOn: string; minutes: number };
-/** A save that failed, shown on its cell with what the user typed. */
-type CellError = { typed: string; message: string };
 /** A failed save on the month, naming the cell to show it on. */
 export type MonthError = CellError & { taskId: number; day: string };
 
-// Caps the inputs, which in turn size the day columns.
-const inputWidth = "8ch";
+/** The user's entries between from and till, and every task they may log on. */
+async function loadTimesheet(userId: number, from: string, till: string) {
+  const entries = await database
+    .select({
+      taskId: timeEntries.taskId,
+      spentOn: timeEntries.spentOn,
+      minutes: timeEntries.minutes,
+    })
+    .from(timeEntries)
+    .where(and(eq(timeEntries.userId, userId), between(timeEntries.spentOn, from, till)));
+  return { tasks: await userTasks().where(loggableBy(userId)), entries };
+}
+const addedTaskIdsOf = (queries: string[] | undefined) => (queries ?? []).map(Number);
+
+export const monthPath = (month: string, showWeekends: boolean) =>
+  `/timesheet/month/${month}${showWeekends ? "?weekends=on" : ""}`;
+
+// The query rides along, so a save can return to the same view.
+export const cellsActionOf = (month: string, search: string) =>
+  `/timesheet/month/${month}/cells${search}`;
+
+/** Renders the month the request names, with one cell showing an error if a save failed. */
+export async function renderMonth(c: Context<UserEnv>, month: string, error?: MonthError) {
+  const showWeekends = c.req.query("weekends") === "on";
+  const addedTaskIds = addedTaskIdsOf(c.req.queries("add"));
+  const monthDays = daysOfMonth(month);
+  const { tasks, entries } = await loadTimesheet(
+    c.get("user").id,
+    monthDays[0] ?? "",
+    monthDays.at(-1) ?? "",
+  );
+  // A weekend with hours stays visible, so hiding weekends never hides time.
+  const days = monthDays.filter(
+    (day) => showWeekends || !isWeekend(day) || entries.some((entry) => entry.spentOn === day),
+  );
+  const search = new URL(c.req.url).search;
+
+  return c.render(
+    <MonthPage
+      month={month}
+      locked={await isLockedOn(c.get("user").orgId, `${month}-01`)}
+      showWeekends={showWeekends}
+      previousHref={monthPath(addMonths(month, -1), showWeekends)}
+      nextHref={monthPath(addMonths(month, 1), showWeekends)}
+      days={days}
+      tasks={tasks}
+      entries={entries}
+      cellsAction={cellsActionOf(month, search)}
+      cellAction={`/timesheet/month/${month}/cell${search}`}
+      addedTaskIds={addedTaskIds}
+      search={search}
+      error={error}
+    />,
+  );
+}
 
 type TimesheetGridProps = {
   days: string[];
@@ -28,7 +88,7 @@ type TimesheetGridProps = {
 
 type PeriodLinks = { previousHref: string; nextHref: string };
 
-export function MonthPage({
+function MonthPage({
   month,
   showWeekends,
   previousHref,
@@ -249,98 +309,6 @@ function TimesheetGrid({
         </div>
       )}
     </div>
-  );
-}
-
-/**
- * One day of one task: the unit a save swaps. `data-minutes` holds what's stored,
- * so totals can be summed without parsing the typed text.
- */
-export function TimesheetCell({
-  task,
-  day,
-  minutes,
-  action,
-  error,
-  locked = false,
-}: {
-  task: Task;
-  day: string;
-  minutes: number;
-  action: string;
-  error?: CellError;
-  locked?: boolean;
-}) {
-  const errorId = `cell-error-${task.id}-${day}`;
-  const input = (
-    <Input
-      name="hours"
-      type="text"
-      value={error ? error.typed : formatHours(minutes)}
-      class="ta-right w-min-0 w-full"
-      data-size="small"
-      style={`max-width: ${inputWidth}`}
-      inputmode="decimal"
-      aria-label={`${task.projectName}, ${task.name}, ${formatDate(day)}`}
-      aria-invalid={error ? "true" : undefined}
-      aria-describedby={error ? errorId : undefined}
-      pattern="[0-9]+([.,:][0-9]+)?"
-      disabled={locked}
-    />
-  );
-  return (
-    <form
-      method="post"
-      action={action}
-      class="d-block"
-      data-cell={`${task.id}:${day}`}
-      data-task={task.id}
-      data-day={day}
-      data-minutes={minutes}
-    >
-      <input type="hidden" name="taskId" value={task.id} />
-      <input type="hidden" name="date" value={day} />
-      {error ? (
-        <color-mode palette="coral" class="pos-relative stack-h nowrap items-center gap-3xs">
-          {input}
-          <button
-            type="button"
-            popovertarget={errorId}
-            aria-label="Show error"
-            class="m-2xs pos-absolute"
-          >
-            <ErrorIcon />
-          </button>
-          <Popover id={errorId} data-type="tooltip" class="px-2xs py-2xs">
-            <div class="b-all bc-subtle px-xs py-2xs surface-base br-m shadow-mid fs-s">
-              {error.message}
-            </div>
-          </Popover>
-        </color-mode>
-      ) : (
-        input
-      )}
-    </form>
-  );
-}
-
-function ErrorIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      aria-hidden="true"
-    >
-      <circle cx="12" cy="12" r="10" />
-      <line x1="12" y1="8" x2="12" y2="12" />
-      <line x1="12" y1="16" x2="12.01" y2="16" />
-    </svg>
   );
 }
 

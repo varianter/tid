@@ -7,11 +7,11 @@ import { assignments } from "./assignments/assignments.routes";
 import { clients } from "./clients/clients.routes";
 import { dev, devLogoutUrl, devTenantId, readDevIdentity, requireDevUser } from "./dev/dev.routes";
 import { endOfTheMonth } from "./endOfTheMonth/endOfTheMonth.routes";
+import { ErrorPage } from "./errors/errorPage";
 import { errorReport } from "./errors/errorReport";
-import { ErrorPage } from "./errors/errors.views";
 import { Layout } from "./layout";
 import { proxyLogoutUrl, requireProxyUser, signupPath } from "./login/login.middleware";
-import { signup } from "./login/login.routes";
+import { signupRouter } from "./login/login.routes";
 import type { PublicEnv } from "./login/user";
 import { projects } from "./projects/projects.routes";
 import { reports } from "./reports/reports.routes";
@@ -24,7 +24,7 @@ function chooseLogin() {
     return {
       requireUser: requireDevUser,
       logoutUrl: devLogoutUrl,
-      signup: signup(devTenantId, readDevIdentity),
+      signup: signupRouter(devTenantId, readDevIdentity),
     };
   }
   const tenantId = process.env.ENTRA_TENANT_ID;
@@ -33,7 +33,7 @@ function chooseLogin() {
   return {
     requireUser: requireProxyUser(tenantId),
     logoutUrl: proxyLogoutUrl(tenantId),
-    signup: signup(tenantId),
+    signup: signupRouter(tenantId),
   };
 }
 const login = chooseLogin();
