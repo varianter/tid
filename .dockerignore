@@ -6,3 +6,4 @@ docs
 testdist
 **/.env*
 packages/harvest/harvest-export
+.claude
