@@ -18,6 +18,7 @@
     "db:reset": "bun --filter @tid/db reset",
     "db:studio": "bun --filter @tid/db studio",
     "test": "bun test",
+    "e2e": "bun test ./apps/web/e2e/*.e2e.ts",
     "typecheck": "bun check --no-pretty && bun --filter @tid/elements typecheck",
     "lint": "biome check .",
     "knip": "knip",
