@@ -6,7 +6,7 @@
     "build": "bun build src/server.tsx --outfile dist/server.js --target bun",
     "start": "bun dist/server.js",
     "test": "bun test",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "bun check --no-pretty",
     "lint": "biome check .",
     "check": "bun run typecheck && bun run lint && bun run test"
   },
@@ -22,7 +22,6 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.14",
-    "@types/bun": "1.4.2",
-    "typescript": "7.0.2"
+    "@types/bun": "1.4.2"
   }
 }

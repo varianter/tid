@@ -2,6 +2,9 @@
   "name": "@tid/elements",
   "private": true,
   "type": "module",
+  "scripts": {
+    "typecheck": "bun check --no-pretty"
+  },
   "exports": {
     "./bundle": "./src/bundle.ts",
     "./hours": "./src/hours.ts"

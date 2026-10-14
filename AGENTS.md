@@ -61,8 +61,8 @@ Docs that drift are worse than no docs, so write them to stay true as the code c
 
 ## Tooling
 
-- **Bun doesn't type-check.** Run `tsc --noEmit` (`bun run typecheck`) — CI does, and so should you.
-- Keep typecheck, lint and tests green (`bun run check`).
+- **Bun does not type-check when running code.** Run `bun check` (`bun run typecheck`) — CI does, and so should you.
+- Keep typecheck, lint and tests green (`bun run verify`).
 - Pin exact versions (no `^`).
 
 ## CSS
