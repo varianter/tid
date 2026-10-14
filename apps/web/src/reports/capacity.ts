@@ -1,4 +1,4 @@
-import { daysOfMonth, isWeekend } from "../dates/dates";
+import { daysOfMonth, isWeekend } from "../dates/isoDate";
 
 /** Minutes a consultant is expected to work in the month, up to and including `until`. */
 // ponytail: every weekday counts as a full day; subtract holidays and leave once we store them.

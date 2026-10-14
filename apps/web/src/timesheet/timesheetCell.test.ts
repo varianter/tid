@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { cellHours } from "./timesheet.validation";
+import { cellHours } from "./timesheetCell";
 
 const minutesOf = (text: string) => cellHours.parse(text);
 const errorOf = (text: string) => cellHours.safeParse(text).error?.issues[0]?.message;

@@ -333,11 +333,11 @@ export async function writePlan(
       );
     }
 
+    // The web import never plans entries, so it shouldn't read every entry ever logged.
+    const existingEntries =
+      plan.entries.length === 0 ? [] : await transaction.select().from(timeEntries);
     const entryRows = new Map(
-      (await transaction.select().from(timeEntries)).map((row) => [
-        `${row.userId}|${row.taskId}|${row.spentOn}`,
-        row,
-      ]),
+      existingEntries.map((row) => [`${row.userId}|${row.taskId}|${row.spentOn}`, row]),
     );
     const priced = (rate: number | null, currency: string | null) =>
       rate === null ? null : `${rate / 100} ${currency}`;

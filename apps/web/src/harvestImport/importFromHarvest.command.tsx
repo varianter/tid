@@ -1,34 +1,85 @@
-import type { Warning } from "@tid/harvest/plan";
-import type { Difference } from "@tid/harvest/write";
-import { Button, Checkbox, FormField, Page } from "@tid/ui";
+import { organizations } from "@tid/db/schema";
+import { fetchHarvestAccounts } from "@tid/harvest/fetch";
+import { type ImportPlan, planImport, type Warning } from "@tid/harvest/plan";
+import { type Difference, describeRejection, writePlan } from "@tid/harvest/write";
+import { Button, Checkbox, Page } from "@tid/ui";
+import type { Context } from "hono";
 import type { Child } from "hono/jsx";
-import { formatAmount } from "../currency/currency";
-import { formatDate, isIsoDate } from "../dates/dates";
-import type { groupPreview } from "./importPreview";
+import { z } from "zod";
+import { formatAmount } from "../amount/amount";
+import { database } from "../database";
+import { formatDate } from "../dates/dateDisplay";
+import { isIsoDate } from "../dates/isoDate";
+import { type FormProps, formAction } from "../form/formAction";
+import { ForgetHarvestTokensForm } from "./forgetHarvestTokens.command";
+import { importPath, readHarvestTokens } from "./harvestTokens";
+import { groupPreview } from "./importPreview";
 
-export function HarvestTokensPage({ error }: { error?: string }) {
-  return (
-    <Page title="Harvest import">
-      <form method="post" action="/harvest-import/tokens" class="stack-v nowrap gap-m w-max-5">
-        <p class="ink-subtle">
-          Paste a Harvest personal access token for each account, separated by commas. They're kept
-          in this browser for an hour, and only sent to this page.
-        </p>
-        <FormField
-          name="tokens"
-          label="Tokens"
-          type="password"
-          autocomplete="off"
-          errors={error ? [error] : undefined}
-          required
-        />
-        <Button type="submit" class="w-max-content">
-          Preview import
-        </Button>
-      </form>
-    </Page>
+const importFromHarvestForm = z.object({
+  fingerprint: z.string(),
+  // One ticked box posts a string, several post an array.
+  accept: z
+    .union([z.string(), z.array(z.string())])
+    .default([])
+    .transform((accepted) => new Set([accepted].flat())),
+});
+
+// Ties an import to the plan that was previewed, so Harvest changing in between isn't imported unseen.
+const fingerprint = (plan: ImportPlan) => Bun.hash(JSON.stringify(plan)).toString(36);
+
+async function planFromHarvest(tokens: string) {
+  // Named by position, so errors can say which token failed without showing it.
+  const namedTokens = Object.fromEntries(
+    tokens.split(",").map((token, index) => [`token ${index + 1}`, token]),
   );
+  const harvestExports = await fetchHarvestAccounts(namedTokens);
+  const known = await database.select().from(organizations);
+  const currencies = new Map(
+    known.map((organization) => [organization.slug, organization.currency]),
+  );
+  return { ...planImport(harvestExports, known), currencies };
 }
+
+async function preview(tokens: string) {
+  try {
+    const { plan, problems, warnings, currencies } = await planFromHarvest(tokens);
+    if (problems.length > 0) return { problems, warnings };
+    const { added, differences } = await writePlan(database, plan, { preview: true });
+    return {
+      problems,
+      warnings,
+      plan,
+      additions: groupPreview(plan, added, currencies),
+      differences,
+      fingerprint: fingerprint(plan),
+    };
+  } catch (error) {
+    return { error: describeRejection(error) };
+  }
+}
+
+const isNotice = (value?: string): value is Notice => value === "applied" || value === "changed";
+
+export const importFromHarvest = formAction({
+  schema: importFromHarvestForm,
+  loader: async (c: Context) => {
+    const tokens = readHarvestTokens(c);
+    if (!tokens) return c.redirect(`${importPath}/tokens`);
+    const notice = c.req.query("notice");
+    return { ...(await preview(tokens)), notice: isNotice(notice) ? notice : undefined };
+  },
+  onSubmit: async (_c, { fingerprint, accept }, { plan, fingerprint: previewed, error }) => {
+    if (error) return { formError: error };
+    if (!plan || fingerprint !== previewed) return { redirect: `${importPath}?notice=changed` };
+    try {
+      await writePlan(database, plan, { accepted: accept });
+    } catch (rejection) {
+      return { formError: describeRejection(rejection) };
+    }
+    return { redirect: `${importPath}?notice=applied` };
+  },
+  view: HarvestImportPage,
+});
 
 type Palette = "green" | "yellow" | "coral";
 
@@ -43,11 +94,13 @@ const notices = {
   },
 } satisfies Record<string, { palette: Palette; message: string }>;
 
-export type Notice = keyof typeof notices;
+type Notice = keyof typeof notices;
 
-export function HarvestImportPage({
+type Additions = ReturnType<typeof groupPreview>;
+
+function HarvestImportPage({
   notice,
-  applyError,
+  formError,
   error,
   problems = [],
   warnings = [],
@@ -56,30 +109,21 @@ export function HarvestImportPage({
   fingerprint,
 }: {
   notice?: Notice;
-  applyError?: string;
+  plan?: ImportPlan;
   error?: string;
   problems?: string[];
   warnings?: Warning[];
-  additions?: ReturnType<typeof groupPreview>;
+  additions?: Additions;
   differences?: Difference[];
   fingerprint?: string;
-}) {
+} & FormProps) {
   const hasAdditions = additions && (additions.users.length > 0 || additions.clients.length > 0);
   return (
-    <Page
-      title="Harvest import"
-      actions={
-        <form method="post" action="/harvest-import/forget">
-          <Button type="submit" data-variant="plain">
-            Forget tokens
-          </Button>
-        </form>
-      }
-    >
+    <Page title="Harvest import" actions={<ForgetHarvestTokensForm />}>
       {notice && <Banner palette={notices[notice].palette}>{notices[notice].message}</Banner>}
-      {applyError && (
+      {formError && (
         <Banner palette="coral" title="Nothing was imported">
-          <Preformatted text={applyError} />
+          <Preformatted text={formError} />
         </Banner>
       )}
       {error && (
@@ -95,7 +139,7 @@ export function HarvestImportPage({
       {warnings.length > 0 && <Warnings warnings={warnings} />}
 
       {fingerprint && additions && (
-        <form method="post" action="/harvest-import/apply" class="stack-v nowrap gap-xl">
+        <form method="post" action={importPath} class="stack-v nowrap gap-xl">
           <input type="hidden" name="fingerprint" value={fingerprint} />
           {!hasAdditions && differences.length === 0 && (
             <p class="ink-subtle">Tid already has everything in Harvest.</p>
@@ -204,8 +248,6 @@ function Warnings({ warnings }: { warnings: Warning[] }) {
     </section>
   );
 }
-
-type Additions = ReturnType<typeof groupPreview>;
 
 function NewUsers({ groups }: { groups: Additions["users"] }) {
   const users = groups.flatMap(([, users]) => users);

@@ -1,15 +1,15 @@
-import { afterAll, beforeAll, expect, test } from "bun:test";
+import { beforeAll, expect, test } from "bun:test";
 import { rebuildDatabase } from "@tid/db/client";
 import { organizations, users } from "@tid/db/schema";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { database } from "../database";
 import { requireProxyUser } from "./login.middleware";
-import { signup } from "./login.routes";
+import { signupRouter } from "./login.routes";
 import type { PublicEnv } from "./user";
 
 const app = new Hono<PublicEnv>()
-  .route("/signup", signup("tenant"))
+  .route("/signup", signupRouter("tenant"))
   .use(requireProxyUser("tenant"))
   .get("/", (c) => c.text(String(c.get("user")?.id)));
 
@@ -42,7 +42,6 @@ beforeAll(async () => {
   if (!kari) throw new Error("Expected a user");
   kariId = kari.id;
 });
-afterAll(() => database.$client.close());
 
 test("rejects requests without the proxy headers", async () => {
   expect((await requestAs({})).status).toBe(401);

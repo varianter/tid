@@ -1,13 +1,5 @@
 import { expect, test } from "bun:test";
-import {
-  addMonths,
-  daysOfMonth,
-  formatDate,
-  formatDayInMonth,
-  isIsoDate,
-  isWeekend,
-  mondayOf,
-} from "./dates";
+import { addMonths, daysOfMonth, isIsoDate, isWeekend, mondayOf } from "./isoDate";
 
 test("mondayOf snaps any day, Sunday included, to the Monday before it", () => {
   expect(mondayOf("2026-09-28")).toBe("2026-09-28");
@@ -36,9 +28,4 @@ test("addMonths crosses years", () => {
 
 test("isWeekend is true for Saturday and Sunday only", () => {
   expect(["2026-10-02", "2026-10-03", "2026-10-04"].map(isWeekend)).toEqual([false, true, true]);
-});
-
-test("dates read the same everywhere, whatever the ICU version", () => {
-  expect(formatDate("2026-09-03")).toBe("3 September 2026");
-  expect(formatDayInMonth("2026-10-03")).toBe("Sat 3");
 });
