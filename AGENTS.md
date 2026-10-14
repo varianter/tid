@@ -28,8 +28,11 @@ Group code by reason to change. Code that changes for the same reason belongs in
 A module should be describable in one sentence without "and". If it isn't, split it.
 
 - **Bad:** `format.ts` with `formatDate`, `formatCurrency` and `formatFileSize`. They share a verb, but each changes for its own reason.
-- **Good:** `date.ts`, `currency.ts` and `file-size.ts`.
-- **Good:** `date.ts` with both `formatDate` and `parseDate`. A change to the date format changes both.
+- **Bad:** `dates.ts` with date arithmetic, today's date and display formats. A data type isn't a reason to change, so a file named after one collects everything that touches it.
+- **Good:** `isoDate.ts` with both `parseIsoDate` and `formatIsoDate`. A change to the ISO format changes both.
+- **Good:** `dateDisplay.ts` with every way the app shows a date. A change to how dates look changes only it.
+
+Name a file after what its exports are about. They should read well together: `isoDate.addDays`, `dateDisplay.formatMonth`. One that reads oddly belongs elsewhere.
 
 Before adding a function, check whether one already exists. Extend it rather than writing a second.
 

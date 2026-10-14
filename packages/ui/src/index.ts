@@ -1,3 +1,4 @@
+export { Detail } from "./compositions/Detail";
 export { EmptyState } from "./compositions/EmptyState";
 export { Field, fieldErrorAttributes } from "./compositions/forms/Field";
 export { FormError } from "./compositions/forms/FormError";
@@ -5,6 +6,7 @@ export { FormField } from "./compositions/forms/FormField";
 export { Page } from "./compositions/Page";
 export { PeriodNavigation } from "./compositions/PeriodNavigation";
 export { Tabs } from "./compositions/Tabs";
+export { Badge } from "./primitives/Badge";
 export { Button, type ButtonProps } from "./primitives/Button";
 export { Checkbox } from "./primitives/Checkbox";
 export { Input } from "./primitives/Input";
