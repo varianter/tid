@@ -2,6 +2,11 @@
   "name": "@tid/harvest",
   "private": true,
   "type": "module",
+  "exports": {
+    "./fetch": "./src/fetch.ts",
+    "./plan": "./src/plan.ts",
+    "./write": "./src/write.ts"
+  },
   "scripts": {
     "import:norway": "bun scripts/import-norway.ts"
   },

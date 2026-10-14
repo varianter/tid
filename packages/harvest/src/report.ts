@@ -1,7 +1,7 @@
 // Lays out an import plan as tables, so a person can check what Harvest becomes before it's written.
 
 import { styleText } from "node:util";
-import type { ImportPlan } from "./plan";
+import type { ImportPlan, Warning } from "./plan";
 
 type Cell = string | number;
 
@@ -130,4 +130,24 @@ export function describePlan(plan: ImportPlan) {
   );
 
   return [users, clients, projects, assignments, entries].join("\n\n");
+}
+
+export function describeWarning(warning: Warning) {
+  switch (warning.kind) {
+    case "noRate":
+    case "noRatePricedByTask":
+      return `${warning.email} has no rate on project ${warning.project}, so their hours export without an amount.`;
+    case "ratesNotRising":
+      return `${warning.email} was billed at ${warning.rates.join(", ")} on project ${warning.project}, not as a price increase; they keep the last, ${warning.kept}.`;
+    case "severalOrganizations":
+      return `${warning.email} is in ${warning.organizations.join(" and ")}; placed in ${warning.placedIn}, where they work the most.`;
+    case "fixedFee":
+      return `Project ${warning.project} is fixed fee, so its hours export without an amount.`;
+    case "sharedName":
+      return `${warning.client} has several projects named "${warning.name}" (${warning.projects.join(", ")}); each gets its code added to the name.`;
+    case "nonBillableEntries":
+      return `Project ${warning.project} has ${warning.entries} non-billable entries, which export as billable.`;
+    case "mixedRatedEntries":
+      return `${warning.email} on ${warning.project} / ${warning.task} on ${warning.day} mixes rated and unrated entries; the merged entry is rated.`;
+  }
 }
