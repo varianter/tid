@@ -1,7 +1,8 @@
 // Rebuilds the dev database from the Norwegian Harvest accounts, so the app can be checked
 // against real data.
-// Usage: bun run harvest:import:norway <from-month> [to-month] --tokens <token>,<token> [--save] [--verbose]
-// Each token is a Harvest personal access token; every account they reach is imported.
+// Usage: bun run harvest:import:norway [from-month [to-month]] --tokens <token>,<token> [--save] [--verbose]
+// Each token is a Harvest personal access token; every account they reach is imported. Without
+// months, only today's state is imported, without time entries.
 
 import { parseArgs } from "node:util";
 import { closeOtherConnections, createDatabase, rebuildDatabase } from "@tid/db/client";
@@ -29,14 +30,22 @@ const { values: options, positionals } = parseArgs({
 });
 const [fromMonth, toMonth = fromMonth] = positionals;
 const isMonth = (value?: string) => value !== undefined && /^\d{4}-(0[1-9]|1[0-2])$/.test(value);
-if (!isMonth(fromMonth) || !isMonth(toMonth) || (toMonth as string) < (fromMonth as string)) {
+if (
+  fromMonth !== undefined &&
+  (!isMonth(fromMonth) || !isMonth(toMonth) || (toMonth as string) < fromMonth)
+) {
   exitWith(
-    "Usage: bun run harvest:import:norway <from-month> [to-month] --tokens <token>,<token> [--save] [--verbose], with months as YYYY-MM.",
+    "Usage: bun run harvest:import:norway [from-month [to-month]] --tokens <token>,<token> [--save] [--verbose], with months as YYYY-MM.",
   );
 }
-const [toYear, toMonthNumber] = (toMonth as string).split("-").map(Number) as [number, number];
-const from = `${fromMonth}-01`;
-const to = `${toMonth}-${new Date(Date.UTC(toYear, toMonthNumber, 0)).getUTCDate()}`;
+const lastDayOf = (month: string) => {
+  const [year, monthNumber] = month.split("-").map(Number) as [number, number];
+  return `${month}-${new Date(Date.UTC(year, monthNumber, 0)).getUTCDate()}`;
+};
+const period =
+  fromMonth === undefined
+    ? undefined
+    : { from: `${fromMonth}-01`, to: lastDayOf(toMonth as string) };
 
 // Named by position, so errors can say which token failed without printing it.
 const tokens = Object.fromEntries(
@@ -50,8 +59,10 @@ if (Object.keys(tokens).length === 0) {
   exitWith("No Harvest tokens. Pass one per organization, like --tokens <token>,<token>.");
 }
 
-console.log(`Fetching ${from} to ${to} with ${Object.keys(tokens).length} tokens`);
-const harvestExports = await fetchHarvestAccounts(tokens, from, to).catch((error: Error) =>
+console.log(
+  `Fetching ${period ? `${period.from} to ${period.to}` : "today's state"} with ${Object.keys(tokens).length} tokens`,
+);
+const harvestExports = await fetchHarvestAccounts(tokens, period).catch((error: Error) =>
   exitWith(error.message),
 );
 for (const { account, timeEntries, users, projects } of harvestExports) {
@@ -60,7 +71,7 @@ for (const { account, timeEntries, users, projects } of harvestExports) {
   );
 }
 if (options.save) {
-  const directory = `${import.meta.dir}/../harvest-export/${fromMonth}..${toMonth}`;
+  const directory = `${import.meta.dir}/../harvest-export/${fromMonth ? `${fromMonth}..${toMonth}` : "today"}`;
   for (const harvestExport of harvestExports) {
     await Bun.write(
       `${directory}/${harvestExport.account.id}.json`,

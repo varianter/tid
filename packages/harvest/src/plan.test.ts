@@ -2,7 +2,9 @@ import { afterAll, beforeAll, expect, test } from "bun:test";
 import { createDatabase, rebuildDatabase } from "@tid/db/client";
 import { organizations, timeEntriesExport, userRoles, users } from "@tid/db/schema";
 import { eq } from "drizzle-orm";
-import { type HarvestExport, type KnownOrganization, planImport } from "./plan";
+import type { HarvestExport } from "./harvestExport";
+import type { KnownOrganization } from "./organizations";
+import { planImport } from "./plan";
 import { writePlan } from "./write";
 
 // The test preload points DATABASE_URL at a throwaway container.

@@ -1,6 +1,7 @@
-import type { HarvestExport } from "./plan";
+import type { HarvestExport } from "./harvestExport";
 
 type HarvestAccount = { id: number; name: string; product: string };
+type Period = { from: string; to: string };
 
 class HarvestClient {
   constructor(
@@ -41,14 +42,15 @@ class HarvestClient {
 async function fetchAccount(
   client: HarvestClient,
   account: HarvestAccount,
-  from: string,
-  to: string,
+  period?: Period,
 ): Promise<HarvestExport> {
-  const timeEntries = (await client.getAllPages(
-    "time_entries",
-    account.id,
-    `&from=${from}&to=${to}`,
-  )) as HarvestExport["timeEntries"];
+  const timeEntries = period
+    ? ((await client.getAllPages(
+        "time_entries",
+        account.id,
+        `&from=${period.from}&to=${period.to}`,
+      )) as HarvestExport["timeEntries"])
+    : [];
   const loggingUserIds = new Set(timeEntries.map((entry) => entry.user.id));
   const loggedProjectIds = new Set(timeEntries.map((entry) => entry.project.id));
   // Active ones are needed from day one; inactive ones only for the history they logged.
@@ -79,11 +81,8 @@ async function fetchAccount(
 }
 
 // Every account the tokens can reach, once each, since several tokens may share an account.
-export async function fetchHarvestAccounts(
-  tokens: Record<string, string>,
-  from: string,
-  to: string,
-) {
+// Without a period, only today's state is fetched.
+export async function fetchHarvestAccounts(tokens: Record<string, string>, period?: Period) {
   const accounts = new Map<number, { client: HarvestClient; account: HarvestAccount }>();
   for (const [tokenName, token] of Object.entries(tokens)) {
     const client = new HarvestClient(tokenName, token);
@@ -95,6 +94,6 @@ export async function fetchHarvestAccounts(
     }
   }
   return Promise.all(
-    [...accounts.values()].map(({ client, account }) => fetchAccount(client, account, from, to)),
+    [...accounts.values()].map(({ client, account }) => fetchAccount(client, account, period)),
   );
 }
