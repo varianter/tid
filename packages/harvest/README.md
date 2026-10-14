@@ -81,6 +81,10 @@ A client in another country is a different client, so a client never has more th
 
 **Rows are matched by what identifies them in Tid:** users by email, clients by name, projects by code and tasks by project and name. Harvest IDs aren't stored, since they'd outlive Harvest. A rename in Harvest therefore looks like one row gone and a new one.
 
+**An import adds what's missing and changes nothing without asking.** The database also holds what was entered in Tid, so where a row differs from Harvest, the difference is reported, and only changed when someone accepts it. A preview writes everything and rolls it back, so it finds what Postgres would reject too. Nothing is deleted.
+
+**An accepted rate applies from today,** so time already logged in Tid keeps the rate it got.
+
 ### Open
 
 - **Fixed fee projects.** Harvest stores the fee and budget, but we only store that the project is billable, so these hours export without an amount. To be discussed with stakeholders.
