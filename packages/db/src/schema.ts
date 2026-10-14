@@ -14,6 +14,14 @@
 // Add new ones with drizzle-kit generate. Delete this comment, time_entry_rates.sql,
 // time_entries_export.sql, organizations.sql and month_locks.sql.
 
+// Where a rule lives is a choice, not a default. Enforce an invariant in the
+// database when every writer must obey it or a violation corrupts data — a
+// uniqueness, a range, referential integrity, "at most one active lock". Those
+// hold for the app, the Harvest import, and any future writer, so no one code
+// path can be trusted to keep them. Keep policy and feedback in the app: rules
+// that change often, or that need a message the user can act on. When the two
+// overlap, keep the invariant in the database and the message in the app.
+
 import { sql } from "drizzle-orm";
 import {
   bigint,
