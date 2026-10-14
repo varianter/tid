@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, expect, test } from "bun:test";
+import { beforeAll, expect, test } from "bun:test";
 import { rebuildDatabase } from "@tid/db/client";
 import { organizations, users } from "@tid/db/schema";
 import { eq } from "drizzle-orm";
@@ -42,7 +42,6 @@ beforeAll(async () => {
   if (!kari) throw new Error("Expected a user");
   kariId = kari.id;
 });
-afterAll(() => database.$client.close());
 
 test("rejects requests without the proxy headers", async () => {
   expect((await requestAs({})).status).toBe(401);
