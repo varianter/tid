@@ -19,7 +19,7 @@ export async function findActiveLock(orgId: number, month: string) {
   return lock;
 }
 
-export async function lockMonth(orgId: number, month: string, userId: number) {
+export async function addLock(orgId: number, month: string, userId: number) {
   await database
     .insert(monthLocks)
     .values({ orgId, month: `${month}-01`, lockedBy: userId })
@@ -27,7 +27,7 @@ export async function lockMonth(orgId: number, month: string, userId: number) {
     .onConflictDoNothing();
 }
 
-export async function unlockMonth(orgId: number, month: string, userId: number) {
+export async function liftLock(orgId: number, month: string, userId: number) {
   await database
     .update(monthLocks)
     .set({ unlockedBy: userId, unlockedAt: sql`now()` })
