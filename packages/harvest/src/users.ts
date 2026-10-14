@@ -53,10 +53,12 @@ export function placeUsers(
     if (!chosen) continue;
     organizationByEmail.set(key, chosen.slug);
     if (bySlug.length > 1) {
-      warnings.push(
-        `${person.email} is in ${bySlug.map(({ slug }) => slug).join(" and ")}; ` +
-          `placed in ${chosen.slug}, where they work the most.`,
-      );
+      warnings.push({
+        kind: "severalOrganizations",
+        email: person.email,
+        organizations: bySlug.map(({ slug }) => slug),
+        placedIn: chosen.slug,
+      });
     }
     users.push({
       email: person.email,

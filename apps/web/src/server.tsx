@@ -9,6 +9,7 @@ import { dev, devLogoutUrl, devTenantId, readDevIdentity, requireDevUser } from 
 import { endOfTheMonth } from "./endOfTheMonth/endOfTheMonth.routes";
 import { errorReport } from "./errors/errorReport";
 import { ErrorPage } from "./errors/errors.views";
+import { harvestImport } from "./harvestImport/harvestImport.routes";
 import { Layout } from "./layout";
 import { proxyLogoutUrl, requireProxyUser, signupPath } from "./login/login.middleware";
 import { signup } from "./login/login.routes";
@@ -93,6 +94,8 @@ app.route("/projects", projects);
 app.route("/projects/:projectId/assignments", assignments);
 app.route("/reports", reports);
 app.route("/end-of-the-month", endOfTheMonth);
+// Only needed until Tid takes over from Harvest.
+app.route("/harvest-import", harvestImport);
 
 // Dev login lets anyone act as any user, so it must not be reachable from the network.
 // Otherwise listen on all interfaces, which the Docker container needs.

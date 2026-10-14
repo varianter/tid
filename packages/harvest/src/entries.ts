@@ -36,9 +36,11 @@ export function planEntries(
   for (const project of projects) {
     const nonBillable = entries.filter((entry) => entry.code === project.code && !entry.billable);
     if (project.billable && nonBillable.length > 0) {
-      warnings.push(
-        `Project ${project.code} has ${nonBillable.length} non-billable entries, which export as billable.`,
-      );
+      warnings.push({
+        kind: "nonBillableEntries",
+        project: project.code,
+        entries: nonBillable.length,
+      });
     }
   }
 
@@ -71,7 +73,13 @@ export function planEntries(
       );
     }
     if (rated.length > 0 && rated.length < sameDay.length) {
-      warnings.push(`${describeDay()} mixes rated and unrated entries; the merged entry is rated.`);
+      warnings.push({
+        kind: "mixedRatedEntries",
+        email,
+        project: first.code,
+        task: first.task.name,
+        day: first.spent_date,
+      });
     }
     const [price] = rated;
     return {

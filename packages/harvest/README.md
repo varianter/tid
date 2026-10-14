@@ -1,6 +1,8 @@
 # Harvest import
 
-Rebuilds the dev database from Harvest, so the app can be checked against real data. It's only needed while we move off Harvest, so it lives in its own package that can be deleted.
+Brings Harvest's data into Tid. It's only needed while we move off Harvest, so it lives in its own package that can be deleted, along with the app's `harvestImport` feature.
+
+Managers import today's state at `/harvest-import` in the app. It previews what would be added and what Tid has differently, and imports once someone has picked which differences to take from Harvest. The command below rebuilds the dev database instead, so the app can be checked against real data.
 
 Each country's Harvest accounts are organized differently, so each country has its own import.
 

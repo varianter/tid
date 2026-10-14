@@ -11,8 +11,8 @@ import { organizations, timeEntries } from "@tid/db/schema";
 import { sql } from "drizzle-orm";
 import { fetchHarvestAccounts } from "../src/fetch";
 import { planImport } from "../src/plan";
-import { describePlan } from "../src/report";
-import { writePlan } from "../src/write";
+import { describePlan, describeWarning } from "../src/report";
+import { describeRejection, writePlan } from "../src/write";
 
 function exitWith(message: string): never {
   console.error(`\n✗ ${message}`);
@@ -94,7 +94,7 @@ const { plan, problems, warnings } = planImport(
 if (options.verbose) console.log(`\n${describePlan(plan)}`);
 if (warnings.length > 0) {
   console.log(`\n${warnings.length} warnings:`);
-  for (const warning of warnings) console.log(`  ! ${warning}`);
+  for (const warning of warnings) console.log(`  ! ${describeWarning(warning)}`);
 }
 if (problems.length > 0) {
   console.error(`\n${problems.length} problems:`);
@@ -102,20 +102,9 @@ if (problems.length > 0) {
   exitWith("Nothing was imported; the dev database is now empty.");
 }
 
-// Drizzle wraps the driver's error, which holds what Postgres said and why.
-function describeDatabaseError(error: unknown) {
-  const cause = (error as { cause?: Record<string, unknown> }).cause ?? {};
-  const details = [
-    cause.message,
-    cause.detail,
-    cause.constraint && `constraint ${cause.constraint}`,
-  ];
-  return details.filter(Boolean).join("\n  ") || String(error);
-}
-
 await writePlan(database, plan).catch((error) =>
   exitWith(
-    `Postgres rejected the import, so the dev database is now empty:\n  ${describeDatabaseError(error)}`,
+    `Postgres rejected the import, so the dev database is now empty:\n  ${describeRejection(error)}`,
   ),
 );
 

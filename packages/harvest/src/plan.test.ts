@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import type { HarvestExport } from "./harvestExport";
 import type { KnownOrganization } from "./organizations";
 import { planImport } from "./plan";
+import { describeWarning } from "./report";
 import { writePlan } from "./write";
 
 // The test preload points DATABASE_URL at a throwaway container.
@@ -126,7 +127,7 @@ test("merges people and projects across accounts, and keeps each entry's own rat
   const { plan, problems, warnings } = planImport([trondheim, oslo], known);
 
   expect(problems).toEqual([]);
-  expect(warnings).toEqual([
+  expect(warnings.map(describeWarning)).toEqual([
     "Kari@example.com is in trondheim and oslo; placed in trondheim, where they work the most.",
   ]);
   expect(plan.users).toEqual([
@@ -277,7 +278,7 @@ test("projects sharing a name under one client get their codes added, so Postgre
   const { plan, problems, warnings } = planImport([twoCodes], known);
 
   expect(problems).toEqual([]);
-  expect(warnings).toContain(
+  expect(warnings.map(describeWarning)).toContain(
     'Kunde AS has several projects named "Kvalitetssystem" (KUN1001, KUN1002); each gets its code added to the name.',
   );
   expect(plan.projects.map((p) => p.name)).toEqual([
@@ -336,11 +337,20 @@ test("an assignment's rate comes from wherever Harvest bills the project", () =>
   const { plan, problems, warnings } = planImport([billing], known);
 
   expect(problems).toEqual([]);
-  expect(warnings).toEqual([
+  expect(warnings.map(describeWarning)).toEqual([
     "Project KUN1005 is fixed fee, so its hours export without an amount.",
     "ola@example.com was billed at 1270, 1000 on project KUN1007, not as a price increase; they keep the last, 1000.",
     "Kari@example.com has no rate on project KUN1006, so their hours export without an amount.",
     "per@example.com has no rate on project KUN1007, so their hours export without an amount.",
+  ]);
+  // Only the project priced per task gets the advice to bill per consultant instead.
+  expect(
+    warnings.flatMap((w) =>
+      w.kind.startsWith("noRate") && "project" in w ? [[w.kind, w.project]] : [],
+    ),
+  ).toEqual([
+    ["noRate", "KUN1006"],
+    ["noRatePricedByTask", "KUN1007"],
   ]);
   expect(
     Object.fromEntries(

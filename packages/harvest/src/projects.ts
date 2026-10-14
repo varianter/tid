@@ -66,7 +66,7 @@ export function planProjects(
     }
     if (sameCode.some(({ project }) => project.is_fixed_fee)) {
       fixedFeeCodes.add(code);
-      warnings.push(`Project ${code} is fixed fee, so its hours export without an amount.`);
+      warnings.push({ kind: "fixedFee", project: code });
     }
     const startDates = sameCode.map(({ project }) => project.starts_on);
     const endDates = sameCode.map(({ project }) => project.ends_on);
@@ -102,9 +102,7 @@ export function nameProjectsApart(projects: ImportPlan["projects"], { warnings }
   for (const sameName of [...projectsByName.values()].filter((projects) => projects.length > 1)) {
     const [{ client, name }] = sameName as [ImportPlan["projects"][number]];
     const codes = sameName.map((project) => project.code);
-    warnings.push(
-      `${client} has several projects named "${name}" (${codes.join(", ")}); each gets its code added to the name.`,
-    );
+    warnings.push({ kind: "sharedName", client, name, projects: codes });
     for (const project of sameName) project.name = `${name} (${project.code})`;
   }
 }

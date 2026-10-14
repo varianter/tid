@@ -26,10 +26,11 @@ export function readAssignments(
         const rate = assignment.use_default_rates
           ? user.default_hourly_rate
           : assignment.hourly_rate;
-        return [{ email, code, slug, rate, since }];
+        return [{ email, code, slug, rate, since, pricedByTask: false }];
       }
       if (!rates.pricedByTask.has(project.id)) {
-        return [{ email, code, slug, rate: rates.byProject.get(project.id) ?? null, since }];
+        const rate = rates.byProject.get(project.id) ?? null;
+        return [{ email, code, slug, rate, since, pricedByTask: false }];
       }
 
       // A person's task is their level or the year's price, so they keep the rate they were last
@@ -55,12 +56,15 @@ export function readAssignments(
       });
       if (!risesOnly) {
         const billedRates = [...new Set(billed.map((entry) => entry.billable_rate))];
-        warnings.push(
-          `${user.email} was billed at ${billedRates.join(", ")} on project ${code}, not as a price ` +
-            `increase; they keep the last, ${rate}.`,
-        );
+        warnings.push({
+          kind: "ratesNotRising",
+          email: user.email,
+          project: code,
+          rates: billedRates as number[],
+          kept: rate as number,
+        });
       }
-      return [{ email, code, slug, rate, since }];
+      return [{ email, code, slug, rate, since, pricedByTask: true }];
     });
   });
 }
@@ -110,9 +114,14 @@ export function planAssignments(
       }
       const [rate] = rates;
       if (rate === undefined && project.billable && !fixedFeeCodes.has(code)) {
-        warnings.push(
-          `${person.email} has no rate on project ${code}, so their hours export without an amount.`,
-        );
+        warnings.push({
+          kind: sameAssignment.some((assignment) => assignment.pricedByTask)
+            ? "noRatePricedByTask"
+            : "noRate",
+          email: person.email,
+          client: project.client,
+          project: code,
+        });
       }
       const validFrom = sameAssignment.map(({ since }) => since).toSorted()[0] as string;
       return [

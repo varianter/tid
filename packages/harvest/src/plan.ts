@@ -46,8 +46,21 @@ export type ImportPlan = {
   }[];
 };
 
-// Problems stop the import; warnings are for the person running it.
-export type Findings = { problems: string[]; warnings: string[] };
+// Things the import works around, for the person running it to check. Rates are Harvest's, in
+// major units.
+export type Warning =
+  | { kind: "noRate"; email: string; client: string; project: string }
+  // Priced per task, where each task's price stands for a level, so nobody has a rate of their own.
+  | { kind: "noRatePricedByTask"; email: string; client: string; project: string }
+  | { kind: "ratesNotRising"; email: string; project: string; rates: number[]; kept: number }
+  | { kind: "severalOrganizations"; email: string; organizations: string[]; placedIn: string }
+  | { kind: "fixedFee"; project: string }
+  | { kind: "sharedName"; client: string; name: string; projects: string[] }
+  | { kind: "nonBillableEntries"; project: string; entries: number }
+  | { kind: "mixedRatedEntries"; email: string; project: string; task: string; day: string };
+
+// Problems stop the import; warnings don't.
+export type Findings = { problems: string[]; warnings: Warning[] };
 
 // Exports without time entries plan today's state; with them, history too.
 export function planImport(harvestExports: HarvestExport[], organizations: KnownOrganization[]) {
@@ -111,6 +124,8 @@ export function planImport(harvestExports: HarvestExport[], organizations: Known
   return {
     plan,
     problems: [...new Set(findings.problems)],
-    warnings: [...new Set(findings.warnings)],
+    warnings: [
+      ...new Map(findings.warnings.map((warning) => [JSON.stringify(warning), warning])).values(),
+    ],
   };
 }

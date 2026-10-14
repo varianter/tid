@@ -49,6 +49,17 @@ const describe = (value: unknown) => (value === null || value === undefined ? nu
 // A changed rate applies from today, so time already logged in Tid keeps the rate it got.
 const osloToday = () => new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Oslo" });
 
+// Drizzle wraps the driver's error, which holds what Postgres said and why.
+export function describeRejection(error: unknown) {
+  const cause = (error as { cause?: Record<string, unknown> }).cause ?? {};
+  const details = [
+    cause.message,
+    cause.detail,
+    cause.constraint && `constraint ${cause.constraint}`,
+  ];
+  return details.filter(Boolean).join("\n  ") || String(error);
+}
+
 // A preview writes everything and rolls it back, so it finds what Postgres would reject too.
 export async function writePlan(
   database: Database,
