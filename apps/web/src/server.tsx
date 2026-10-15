@@ -14,6 +14,7 @@ import { Layout } from "./layout";
 import { proxyLogoutUrl, requireProxyUser, signupPath } from "./login/login.middleware";
 import { signupRouter } from "./login/login.routes";
 import type { PublicEnv } from "./login/user";
+import { organizations } from "./organizations/organizations.routes";
 import { projects } from "./projects/projects.routes";
 import { reports } from "./reports/reports.routes";
 import { timesheet } from "./timesheet/timesheet.routes";
@@ -96,6 +97,7 @@ app.route("/projects/:projectId/assignments", assignments);
 app.route("/reports", reports);
 app.route("/end-of-the-month", endOfTheMonth);
 app.route("/users", users);
+app.route("/organizations", organizations);
 // Only needed until Tid takes over from Harvest.
 app.route("/harvest-import", harvestImport);
 

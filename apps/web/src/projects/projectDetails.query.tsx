@@ -1,5 +1,6 @@
 import {
   clients,
+  organizations,
   projectAssignments,
   projectOrganizations,
   projects,
@@ -7,17 +8,18 @@ import {
   timeEntries,
   users,
 } from "@tid/db/schema";
-import { Button, Detail, Page } from "@tid/ui";
-import { and, eq, notExists, sql } from "drizzle-orm";
+import { Badge, Button, Detail, Page } from "@tid/ui";
+import { and, desc, eq, notExists, sql } from "drizzle-orm";
 import type { Context } from "hono";
-import { inProjectOrganization } from "../assignments/assignable";
 import { AssignConsultantForm } from "../assignments/assignConsultant.command";
 import { RemoveConsultantForm } from "../assignments/removeConsultant.command";
 import { database } from "../database";
+import type { UserEnv } from "../login/user";
+import { isManager } from "../users/manager";
 import { AddTaskForm } from "./addTask.command";
 import { formatSpent, type ProjectSummary, projectSummary } from "./projectSummary";
 
-export const projectDetails = async (c: Context) => {
+export const projectDetails = async (c: Context<UserEnv>) => {
   const id = Number(c.req.param("id"));
   if (!Number.isSafeInteger(id)) return c.notFound();
   const [project] = await database
@@ -45,10 +47,22 @@ export const projectDetails = async (c: Context) => {
     .where(eq(projectAssignments.projectId, id))
     .orderBy(users.name);
 
+  const participations = await database
+    .select({
+      name: organizations.name,
+      slug: organizations.slug,
+      isContractOwner: projectOrganizations.isContractOwner,
+      openToMembers: projectOrganizations.openToMembers,
+    })
+    .from(projectOrganizations)
+    .innerJoin(organizations, eq(organizations.id, projectOrganizations.orgId))
+    .where(eq(projectOrganizations.projectId, id))
+    .orderBy(desc(projectOrganizations.isContractOwner), organizations.name);
+
   const assignablePeople = await database
-    .select({ id: users.id, name: users.name })
+    .select({ id: users.id, name: users.name, orgName: organizations.name })
     .from(users)
-    .innerJoin(projectOrganizations, inProjectOrganization(id))
+    .innerJoin(organizations, eq(organizations.id, users.orgId))
     .where(
       notExists(
         database
@@ -59,7 +73,7 @@ export const projectDetails = async (c: Context) => {
           ),
       ),
     )
-    .orderBy(users.name);
+    .orderBy(organizations.name, users.name);
 
   return c.render(
     <ProjectDetailsPage
@@ -67,6 +81,8 @@ export const projectDetails = async (c: Context) => {
       tasks={projectTasks}
       assignedPeople={assignedPeople}
       assignablePeople={assignablePeople}
+      participations={participations}
+      isManager={await isManager(c.get("user"))}
     />,
   );
 };
@@ -75,12 +91,22 @@ type TaskTotal = { name: string; spentMinutes: number };
 
 type Person = { id: number; name: string };
 
+type Participation = {
+  name: string;
+  slug: string;
+  isContractOwner: boolean;
+  openToMembers: boolean;
+};
+
 type ProjectDetailsPageProps = {
   project: ProjectSummary;
   tasks: TaskTotal[];
   assignedPeople: Person[];
-  /** People from the project's organizations who aren't assigned yet. */
-  assignablePeople: Person[];
+  /** Everyone not assigned yet, sorted by organization so the picker can group them. */
+  assignablePeople: (Person & { orgName: string })[];
+  /** The contract owner first, so it reads as the lead organization. */
+  participations: Participation[];
+  isManager: boolean;
 };
 
 function ProjectDetailsPage({
@@ -88,15 +114,20 @@ function ProjectDetailsPage({
   tasks,
   assignedPeople,
   assignablePeople,
+  participations,
+  isManager,
 }: ProjectDetailsPageProps) {
+  const contractOwner = participations.find((participation) => participation.isContractOwner);
   return (
     <Page
       title={project.name}
       back={{ href: "/projects", label: "Back to projects" }}
       actions={
-        <Button as="a" href={`/projects/${project.id}/edit`} data-variant="tinted">
-          Edit
-        </Button>
+        isManager && (
+          <Button as="a" href={`/projects/${project.id}/edit`} data-variant="tinted">
+            Edit
+          </Button>
+        )
       }
     >
       <dl class="stack-h items-start gap-xl gap-row-s b-all bc-default br-l p-m">
@@ -105,13 +136,35 @@ function ProjectDetailsPage({
         </Detail>
         <Detail label="Code">{project.code}</Detail>
         <Detail label="Billable">{project.billable ? "Yes" : "No"}</Detail>
-        <Detail label="Organizations">{project.organizations.join(", ") || "None"}</Detail>
+        <Detail label="Contract owner">{contractOwner?.name ?? "None"}</Detail>
+        <Detail label="Organizations">
+          {participations.length === 0 ? (
+            "None"
+          ) : (
+            // One flex item per organization, so a line never breaks between a name and its badge.
+            <span class="stack-h wrap items-center gap-s gap-row-3xs">
+              {participations.map((participation, index) => (
+                <span>
+                  {participation.name}
+                  {participation.openToMembers && (
+                    <a href={`/organizations/${participation.slug}/projects`}>
+                      <Badge class="ml-xs" title="Everyone in the organization may log time here">
+                        Open
+                      </Badge>
+                    </a>
+                  )}
+                  {index < participations.length - 1 && ","}
+                </span>
+              ))}
+            </span>
+          )}
+        </Detail>
         <Detail label="Spent">{formatSpent(project.spentMinutes)}</Detail>
       </dl>
       <section class="stack-v gap-s">
         <div class="stack-h items-center justify-between gap-m wrap">
           <h2 class="fs-l fw-bold">Tasks</h2>
-          <AddTaskForm projectId={project.id} />
+          {isManager && <AddTaskForm projectId={project.id} />}
         </div>
         {tasks.length === 0 ? (
           <p class="ink-subtle">No tasks yet.</p>
@@ -129,7 +182,7 @@ function ProjectDetailsPage({
       <section class="stack-v gap-s">
         <div class="stack-h items-center justify-between gap-m wrap">
           <h2 class="fs-l fw-bold">Consultants</h2>
-          {assignablePeople.length > 0 && (
+          {isManager && assignablePeople.length > 0 && (
             <AssignConsultantForm projectId={project.id} assignablePeople={assignablePeople} />
           )}
         </div>
@@ -140,17 +193,19 @@ function ProjectDetailsPage({
             {assignedPeople.map((person) => (
               <li class="stack-h items-center justify-between gap-xs p-xs px-m surface-tinted">
                 {person.name}
-                <span class="stack-h gap-xs">
-                  <Button
-                    as="a"
-                    href={`/projects/${project.id}/assignments/${person.id}/rates`}
-                    data-variant="plain"
-                    data-size="small"
-                  >
-                    Edit rate
-                  </Button>
-                  <RemoveConsultantForm projectId={project.id} userId={person.id} />
-                </span>
+                {isManager && (
+                  <span class="stack-h gap-xs">
+                    <Button
+                      as="a"
+                      href={`/projects/${project.id}/assignments/${person.id}/rates`}
+                      data-variant="plain"
+                      data-size="small"
+                    >
+                      Edit rate
+                    </Button>
+                    <RemoveConsultantForm projectId={project.id} userId={person.id} />
+                  </span>
+                )}
               </li>
             ))}
           </ul>

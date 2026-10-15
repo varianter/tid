@@ -6,3 +6,5 @@ harvest-export
 .env.local
 
 .idea
+.claude/worktrees
+.claude/worktrees/

@@ -1,6 +1,6 @@
 import { timeEntriesExport } from "@tid/db/schema";
 import { formatHours } from "@tid/elements/hours";
-import { Button, EmptyState, Page, PeriodNavigation, Tabs } from "@tid/ui";
+import { EmptyState, Page, PeriodNavigation, Tabs } from "@tid/ui";
 import { and, between, eq, sql } from "drizzle-orm";
 import type { Context } from "hono";
 import type { Child } from "hono/jsx";
@@ -196,9 +196,6 @@ function ReportPage({
       actions={
         <>
           {organizationSelect}
-          <Button type="button" data-variant="tinted">
-            New report
-          </Button>
           <PeriodNavigation
             previousHref={previousHref}
             nextHref={nextHref}

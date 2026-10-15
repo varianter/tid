@@ -1,8 +1,14 @@
-import { clients, projects } from "@tid/db/schema";
+import { clients, projectOrganizations, projects } from "@tid/db/schema";
 import { and, eq, ne } from "drizzle-orm";
 import { database } from "../database";
 import { formAction } from "../form/formAction";
+import { listOrganizations } from "../organizations/organizationSelect";
 import { billableCountsTowardBase, ProjectFormPage, projectFields } from "./projectForm";
+import {
+  ensureParticipation,
+  participation,
+  removeUnneededParticipation,
+} from "./projectParticipation";
 
 // The client is fixed once the project exists.
 const editProjectForm = billableCountsTowardBase(projectFields);
@@ -20,19 +26,59 @@ export const editProject = formAction({
         client: clients.name,
         billable: projects.billable,
         countsTowardBillableBase: projects.countsTowardBillableBase,
-        openToEveryone: projects.openToEveryone,
+        contractOwnerId: projectOrganizations.orgId,
       })
       .from(projects)
       .innerJoin(clients, eq(clients.id, projects.clientId))
+      .innerJoin(
+        projectOrganizations,
+        and(
+          eq(projectOrganizations.projectId, projects.id),
+          eq(projectOrganizations.isContractOwner, true),
+        ),
+      )
       .where(eq(projects.id, id));
-    return project ? { project } : c.notFound();
+    if (!project) return c.notFound();
+    return {
+      project,
+      organizations: await listOrganizations(),
+      contractOwnerId: project.contractOwnerId,
+    };
   },
-  onSubmit: async (_c, form, { project }) => {
-    if (form.billable && project.openToEveryone) {
-      return { formError: "Projects open to everyone can't be billable" };
+  onSubmit: async (_c, { contractOwnerId, ...form }, { project, organizations }) => {
+    if (!organizations.some((organization) => organization.id === contractOwnerId)) {
+      return { fieldErrors: { contractOwnerId: ["Pick an organization"] } };
+    }
+    const openToMembers = await database.$count(
+      projectOrganizations,
+      and(
+        eq(projectOrganizations.projectId, project.id),
+        eq(projectOrganizations.openToMembers, true),
+      ),
+    );
+    if (form.billable && openToMembers) {
+      return { formError: "Projects open to an organization's members can't be billable" };
     }
     try {
-      await database.update(projects).set(form).where(eq(projects.id, project.id));
+      await database.transaction(async (transaction) => {
+        await transaction.update(projects).set(form).where(eq(projects.id, project.id));
+        if (contractOwnerId === project.contractOwnerId) return;
+        // Cleared first: the unique index allows one contract owner per project.
+        await transaction
+          .update(projectOrganizations)
+          .set({ isContractOwner: false })
+          .where(participation(project.id, project.contractOwnerId));
+        const newOwner = { projectId: project.id, orgId: contractOwnerId };
+        await ensureParticipation(transaction, newOwner);
+        await transaction
+          .update(projectOrganizations)
+          .set({ isContractOwner: true })
+          .where(participation(project.id, contractOwnerId));
+        await removeUnneededParticipation(transaction, {
+          projectId: project.id,
+          orgId: project.contractOwnerId,
+        });
+      });
     } catch {
       // ponytail: assumes a unique violation; any other failure reads as a name clash.
       const codeTaken = await database.$count(

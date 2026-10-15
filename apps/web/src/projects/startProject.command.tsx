@@ -4,6 +4,7 @@ import { z } from "zod";
 import { database } from "../database";
 import { formAction } from "../form/formAction";
 import type { User } from "../login/user";
+import { listOrganizations } from "../organizations/organizationSelect";
 import { suggestProjectCode } from "./projectCode";
 import { billableCountsTowardBase, ProjectFormPage, projectFields } from "./projectForm";
 
@@ -14,6 +15,7 @@ const startProjectForm = billableCountsTowardBase(
 export const startProject = formAction({
   schema: startProjectForm,
   loader: async (c) => {
+    const user: User = c.get("user");
     const codes = await database
       .select({ clientId: projects.clientId, code: projects.code })
       .from(projects);
@@ -29,13 +31,17 @@ export const startProject = formAction({
         ),
       })),
       suggestedClientId: c.req.query("client"),
+      organizations: await listOrganizations(),
+      contractOwnerId: user.orgId,
     };
   },
-  onSubmit: async (c, project, { clients }) => {
+  onSubmit: async (_c, { contractOwnerId, ...project }, { clients, organizations }) => {
     if (!clients.some((client) => client.id === project.clientId)) {
       return { fieldErrors: { clientId: ["Pick a client"] } };
     }
-    const user: User = c.get("user");
+    if (!organizations.some((organization) => organization.id === contractOwnerId)) {
+      return { fieldErrors: { contractOwnerId: ["Pick an organization"] } };
+    }
     const [inserted] = await database.transaction(async (transaction) => {
       const rows = await transaction
         .insert(projects)
@@ -45,7 +51,7 @@ export const startProject = formAction({
       if (rows[0]) {
         await transaction
           .insert(projectOrganizations)
-          .values({ projectId: rows[0].id, orgId: user.orgId, isOwner: true });
+          .values({ projectId: rows[0].id, orgId: contractOwnerId, isContractOwner: true });
       }
       return rows;
     });

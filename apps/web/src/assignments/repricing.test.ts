@@ -14,13 +14,8 @@ import {
 } from "@tid/db/schema";
 import { asc, eq } from "drizzle-orm";
 import { database } from "../database";
+import { onlyRow } from "../testing/rows";
 import { addRateAndReprice, entriesToReprice } from "./repricing";
-
-function onlyRow<Row>(rows: Row[]) {
-  const [row] = rows;
-  if (!row) throw new Error("Expected a row");
-  return row;
-}
 
 let ids: { projectId: number; userId: number };
 
@@ -47,7 +42,7 @@ beforeAll(async () => {
   );
   await database
     .insert(projectOrganizations)
-    .values({ projectId: project.id, orgId: organization.id, isOwner: true });
+    .values({ projectId: project.id, orgId: organization.id, isContractOwner: true });
   ids = { projectId: project.id, userId: user.id };
   await database.insert(projectAssignments).values({ ...ids, orgId: organization.id });
   await database.insert(assignmentRates).values([

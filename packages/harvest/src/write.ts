@@ -185,7 +185,7 @@ export async function writePlan(
       transaction
         .insert(projects)
         .values(
-          chunk.map(({ client, organizations: _, ...project }) => ({
+          chunk.map(({ client, organizations: _, openToEveryone: __, ...project }) => ({
             ...project,
             clientId: clientFor(client).id,
           })),
@@ -215,7 +215,6 @@ export async function writePlan(
       for (const field of [
         "name",
         "billable",
-        "openToEveryone",
         "countsTowardBillableBase",
         "startsOn",
         "endsOn",
@@ -232,21 +231,46 @@ export async function writePlan(
 
     // The import doesn't decide who owns a project; that's set by hand. Assignments go through the
     // user's organization as Tid has it, which must take part in the project too.
-    const participations = new Set(
-      (await transaction.select().from(projectOrganizations)).map(
-        (row) => `${row.projectId}|${row.orgId}`,
-      ),
+    const participations = new Map(
+      (await transaction.select().from(projectOrganizations)).map((row) => [
+        `${row.projectId}|${row.orgId}`,
+        row,
+      ]),
     );
-    const newParticipations = new Map<string, { projectId: number; orgId: number }>();
-    const takePart = (code: string, orgId: number) => {
+    const newParticipations = new Map<
+      string,
+      { projectId: number; orgId: number; openToMembers: boolean }
+    >();
+    const takePart = (code: string, orgId: number, openToMembers = false) => {
       const key = `${projectId(code)}|${orgId}`;
       if (participations.has(key) || newParticipations.has(key)) return;
-      newParticipations.set(key, { projectId: projectId(code), orgId });
+      newParticipations.set(key, { projectId: projectId(code), orgId, openToMembers });
       added.participations.push(`${code} ${organizationSlugs.get(orgId)}`);
     };
+    // Harvest opens a project to everyone, which Tid stores on each of the project's organizations.
     for (const project of plan.projects) {
       for (const slug of project.organizations) {
-        takePart(project.code, lookup(organizationIds, slug));
+        const orgId = lookup(organizationIds, slug);
+        const existing = participations.get(`${projectId(project.code)}|${orgId}`);
+        if (!existing) {
+          takePart(project.code, orgId, project.openToEveryone);
+          continue;
+        }
+        await compare(
+          { kind: "project", row: `${project.code} ${slug}`, field: "openToMembers" },
+          existing.openToMembers,
+          project.openToEveryone,
+          () =>
+            transaction
+              .update(projectOrganizations)
+              .set({ openToMembers: project.openToEveryone })
+              .where(
+                and(
+                  eq(projectOrganizations.projectId, existing.projectId),
+                  eq(projectOrganizations.orgId, orgId),
+                ),
+              ),
+        );
       }
     }
     for (const assignment of plan.assignments) {

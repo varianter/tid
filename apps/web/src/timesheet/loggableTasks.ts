@@ -11,18 +11,21 @@ import { database } from "../database";
 
 export type Task = { id: number; name: string; projectName: string };
 
-/** Tasks the user may log on: open projects of their organization, assigned ones, and any they already have time on. */
+/** Tasks the user may log on: projects open to their organization's members, assigned ones, and any they already have time on. */
 export const loggableBy = (userId: number) =>
   or(
-    and(
-      eq(projects.openToEveryone, true),
-      exists(
-        database
-          .select()
-          .from(projectOrganizations)
-          .innerJoin(users, eq(users.orgId, projectOrganizations.orgId))
-          .where(and(eq(projectOrganizations.projectId, projects.id), eq(users.id, userId))),
-      ),
+    exists(
+      database
+        .select()
+        .from(projectOrganizations)
+        .innerJoin(users, eq(users.orgId, projectOrganizations.orgId))
+        .where(
+          and(
+            eq(projectOrganizations.projectId, projects.id),
+            eq(projectOrganizations.openToMembers, true),
+            eq(users.id, userId),
+          ),
+        ),
     ),
     exists(
       database

@@ -1,7 +1,8 @@
 import { userRoles } from "@tid/db/schema";
 import { and, eq } from "drizzle-orm";
+import { createMiddleware } from "hono/factory";
 import { database } from "../database";
-import type { User } from "../login/user";
+import type { User, UserEnv } from "../login/user";
 
 export async function isManager(user: User) {
   const roles = await database
@@ -15,3 +16,10 @@ export async function isManager(user: User) {
 export async function managesOrganization(user: User, orgId: number) {
   return user.orgId === orgId && isManager(user);
 }
+
+// Any manager, since users and projects span organizations. What belongs to one organization,
+// like its month locks or open projects, checks managesOrganization instead.
+export const managersOnly = createMiddleware<UserEnv>(async (c, next) => {
+  if (!(await isManager(c.get("user")))) return c.text("Only managers can do this", 403);
+  await next();
+});

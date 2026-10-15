@@ -12,6 +12,7 @@ import {
 } from "@tid/ui";
 import { z } from "zod";
 import type { FormProps } from "../form/formAction";
+import type { OrganizationOption } from "../organizations/organizationSelect";
 
 const checkbox = z
   .literal("on")
@@ -24,6 +25,7 @@ export const projectFields = z.object({
   code: z.string().trim().min(1, "Enter a code").max(16, "At most 16 characters"),
   billable: checkbox,
   countsTowardBillableBase: checkbox,
+  contractOwnerId: z.coerce.number().int(),
 });
 
 export const billableCountsTowardBase = <S extends typeof projectFields>(schema: S) =>
@@ -45,12 +47,17 @@ type ProjectFormPageProps = {
   };
   clients?: ClientOption[];
   suggestedClientId?: string;
+  organizations: OrganizationOption[];
+  /** The organization that invoices the client, selected until the user picks another. */
+  contractOwnerId: number;
 } & FormProps;
 
 export function ProjectFormPage({
   project,
   clients = [],
   suggestedClientId,
+  organizations,
+  contractOwnerId,
   values,
   fieldErrors,
   formError,
@@ -95,6 +102,25 @@ export function ProjectFormPage({
             </Select>
           </Field>
         )}
+        <Field name="contractOwnerId" label="Contract owner" errors={fieldErrors?.contractOwnerId}>
+          <Select
+            id="contractOwnerId"
+            name="contractOwnerId"
+            required
+            {...fieldErrorAttributes("contractOwnerId", fieldErrors?.contractOwnerId)}
+          >
+            {organizations.map((organization) => (
+              <option
+                value={organization.id}
+                selected={
+                  String(organization.id) === (values?.contractOwnerId ?? String(contractOwnerId))
+                }
+              >
+                {organization.name}
+              </option>
+            ))}
+          </Select>
+        </Field>
         <FormField
           name="name"
           label="Name"

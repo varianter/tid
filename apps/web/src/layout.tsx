@@ -54,7 +54,7 @@ export function Layout({
           class="v-popover"
         >
           <nav
-            class="stack-v gap-4xs b-all m-s br-xl bc-subtle p-2xs w-max-4 w-full surface-base"
+            class="stack-v gap-4xs b-all m-s br-xl bc-subtle p-2xs w-max-4 w-full surface-tinted"
             aria-label="Main"
           >
             <span class="fs-l fw-bold px-xs py-2xs mb-xs">Tid</span>

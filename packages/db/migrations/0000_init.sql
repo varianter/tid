@@ -50,7 +50,8 @@ CREATE TABLE "project_assignments" (
 CREATE TABLE "project_organizations" (
 	"project_id" bigint NOT NULL,
 	"org_id" bigint NOT NULL,
-	"is_owner" boolean DEFAULT false NOT NULL,
+	"is_contract_owner" boolean DEFAULT false NOT NULL,
+	"open_to_members" boolean DEFAULT false NOT NULL,
 	CONSTRAINT "project_organizations_project_id_org_id_pk" PRIMARY KEY("project_id","org_id")
 );
 --> statement-breakpoint
@@ -60,14 +61,12 @@ CREATE TABLE "projects" (
 	"code" text NOT NULL,
 	"name" text NOT NULL,
 	"billable" boolean NOT NULL,
-	"open_to_everyone" boolean DEFAULT false NOT NULL,
 	"counts_toward_billable_base" boolean DEFAULT true NOT NULL,
 	"starts_on" date,
 	"ends_on" date,
 	CONSTRAINT "projects_code_unique" UNIQUE("code"),
 	CONSTRAINT "projects_clientId_name_unique" UNIQUE("client_id","name"),
 	CONSTRAINT "code_length" CHECK (length("projects"."code") <= 16),
-	CONSTRAINT "open_projects_not_billable" CHECK (not ("projects"."open_to_everyone" and "projects"."billable")),
 	CONSTRAINT "billable_projects_count_toward_base" CHECK (not "projects"."billable" or "projects"."counts_toward_billable_base"),
 	CONSTRAINT "ends_after_start" CHECK ("projects"."ends_on" >= "projects"."starts_on")
 );
@@ -138,7 +137,7 @@ ALTER TABLE "user_roles" ADD CONSTRAINT "user_roles_user_id_users_id_fk" FOREIGN
 ALTER TABLE "users" ADD CONSTRAINT "users_org_id_organizations_id_fk" FOREIGN KEY ("org_id") REFERENCES "public"."organizations"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 CREATE UNIQUE INDEX "month_locks_one_active" ON "month_locks" USING btree ("org_id","month") WHERE "month_locks"."unlocked_at" is null;--> statement-breakpoint
 CREATE INDEX "project_assignments_user_id" ON "project_assignments" USING btree ("user_id");--> statement-breakpoint
-CREATE UNIQUE INDEX "project_organizations_one_owner" ON "project_organizations" USING btree ("project_id") WHERE "project_organizations"."is_owner";--> statement-breakpoint
+CREATE UNIQUE INDEX "project_organizations_one_contract_owner" ON "project_organizations" USING btree ("project_id") WHERE "project_organizations"."is_contract_owner";--> statement-breakpoint
 CREATE INDEX "time_entries_task_id" ON "time_entries" USING btree ("task_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "users_email_unique" ON "users" USING btree (lower("email"));--> statement-breakpoint
 CREATE INDEX "users_org_id" ON "users" USING btree ("org_id");

@@ -359,7 +359,6 @@ export function seedDatabase(database: Database) {
           code,
           name: project.name,
           billable: project.billable,
-          openToEveryone: !project.billable,
           countsTowardBillableBase: project.countsTowardBillableBase ?? true,
           endsOn: project.endsWeek === undefined ? null : dayOf(project.endsWeek, 5),
         })),
@@ -368,8 +367,9 @@ export function seedDatabase(database: Database) {
     const projectIds = byKey(projectRows, (row) => row.code);
     const projectId = (code: ProjectCode) => lookup(projectIds, code).id;
 
-    // Internal projects are shared by every organization; customer projects by the owner and
-    // the organizations of the people assigned to them.
+    // Internal projects are open to the members of the owner's country, since countries don't
+    // share them. Customer projects are shared by the contract owner and the organizations of
+    // the people assigned to them.
     const participants = projectEntries.flatMap(([code, project]) => {
       const slugs = project.billable
         ? new Set([
@@ -378,11 +378,14 @@ export function seedDatabase(database: Database) {
               .filter((person) => person.assignments?.some((a) => a.project === code))
               .map((person) => person.organization),
           ])
-        : organizationRows.map((row) => row.slug);
+        : organizationRows
+            .filter((row) => row.country === lookup(organizationIds, project.owner).country)
+            .map((row) => row.slug);
       return [...slugs].map((slug) => ({
         projectId: projectId(code),
         orgId: organizationId(slug),
-        isOwner: slug === project.owner,
+        isContractOwner: slug === project.owner,
+        openToMembers: !project.billable,
       }));
     });
     await transaction.insert(projectOrganizations).values(participants);

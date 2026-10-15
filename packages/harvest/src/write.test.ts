@@ -1,6 +1,12 @@
 import { afterAll, beforeAll, beforeEach, expect, test } from "bun:test";
 import { createDatabase, rebuildDatabase } from "@tid/db/client";
-import { assignmentRates, organizations, projects, users } from "@tid/db/schema";
+import {
+  assignmentRates,
+  organizations,
+  projectOrganizations,
+  projects,
+  users,
+} from "@tid/db/schema";
 import { eq, sql } from "drizzle-orm";
 import type { ImportPlan } from "./plan";
 import { writePlan } from "./write";
@@ -133,4 +139,31 @@ test("a user's organization in Tid is kept, and their assignments go through it"
     "user|kari@example.com|organization",
   ]);
   expect(added.participations).toEqual(["KUN1001 oslo"]);
+});
+
+test("opening a project in Harvest is a difference on each of its organizations", async () => {
+  const stable = { ...plan, assignments: [], entries: [] };
+  await writePlan(database, stable);
+  const opened = {
+    ...stable,
+    projects: stable.projects.map((project) => ({
+      ...project,
+      billable: false,
+      openToEveryone: true,
+    })),
+  };
+
+  const { differences } = await writePlan(database, opened);
+  expect(differences.map((difference) => difference.id)).toEqual([
+    "project|KUN1001|billable",
+    "project|KUN1001 trondheim|openToMembers",
+  ]);
+
+  await writePlan(database, opened, {
+    accepted: new Set(differences.map((difference) => difference.id)),
+  });
+  const participations = await database
+    .select({ openToMembers: projectOrganizations.openToMembers })
+    .from(projectOrganizations);
+  expect(participations).toEqual([{ openToMembers: true }]);
 });

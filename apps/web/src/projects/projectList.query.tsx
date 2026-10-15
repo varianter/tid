@@ -10,6 +10,7 @@ import {
   type OrganizationOption,
   OrganizationSelect,
 } from "../organizations/organizationSelect";
+import { isManager } from "../users/manager";
 import { listProjects, type ProjectSummary, ProjectTable } from "./projectSummary";
 
 const projectListPath = (organizationSlug: string) =>
@@ -42,6 +43,7 @@ export const projectList = async (c: Context<UserEnv>) => {
       projects={await listProjects(participates)}
       organizationSlug={slug}
       organizations={organizationOptions}
+      canStartProjects={await isManager(c.get("user"))}
     />,
   );
 };
@@ -56,10 +58,12 @@ function ProjectListPage({
   projects,
   organizationSlug,
   organizations,
+  canStartProjects,
 }: {
   projects: ProjectSummary[];
   organizationSlug: string;
   organizations: OrganizationOption[];
+  canStartProjects: boolean;
 }) {
   return (
     <Page
@@ -67,12 +71,16 @@ function ProjectListPage({
       actions={
         <>
           <OrganizationSelect organizationSlug={organizationSlug} organizations={organizations} />
-          {newProjectButton()}
+          {canStartProjects && newProjectButton()}
         </>
       }
     >
       {projects.length === 0 ? (
-        <EmptyState emoji="📁" title="No projects yet" action={newProjectButton()} />
+        <EmptyState
+          emoji="📁"
+          title="No projects yet"
+          action={canStartProjects && newProjectButton()}
+        />
       ) : (
         <ProjectTable projects={projects} />
       )}

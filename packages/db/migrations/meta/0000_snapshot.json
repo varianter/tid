@@ -1,5 +1,5 @@
 {
-  "id": "b2114121-6ba6-4ab9-8e54-4f00d87308b9",
+  "id": "2a131201-7397-456f-af54-5dd9ba352786",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -450,8 +450,15 @@
           "primaryKey": false,
           "notNull": true
         },
-        "is_owner": {
-          "name": "is_owner",
+        "is_contract_owner": {
+          "name": "is_contract_owner",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "open_to_members": {
+          "name": "open_to_members",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,
@@ -459,8 +466,8 @@
         }
       },
       "indexes": {
-        "project_organizations_one_owner": {
-          "name": "project_organizations_one_owner",
+        "project_organizations_one_contract_owner": {
+          "name": "project_organizations_one_contract_owner",
           "columns": [
             {
               "expression": "project_id",
@@ -470,7 +477,7 @@
             }
           ],
           "isUnique": true,
-          "where": "\"project_organizations\".\"is_owner\"",
+          "where": "\"project_organizations\".\"is_contract_owner\"",
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -563,13 +570,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "open_to_everyone": {
-          "name": "open_to_everyone",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
         "counts_toward_billable_base": {
           "name": "counts_toward_billable_base",
           "type": "boolean",
@@ -629,10 +629,6 @@
         "code_length": {
           "name": "code_length",
           "value": "length(\"projects\".\"code\") <= 16"
-        },
-        "open_projects_not_billable": {
-          "name": "open_projects_not_billable",
-          "value": "not (\"projects\".\"open_to_everyone\" and \"projects\".\"billable\")"
         },
         "billable_projects_count_toward_base": {
           "name": "billable_projects_count_toward_base",

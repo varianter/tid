@@ -16,9 +16,9 @@ const spentMinutes = sql<number>`(
   where ${tasks.projectId} = ${projects.id}
 )`.mapWith(Number);
 
-// The owner comes first, so it reads as the lead organization.
+// The contract owner comes first, so it reads as the lead organization.
 const participatingOrganizations = sql<string[]>`(
-  select coalesce(array_agg(${organizations.name} order by ${projectOrganizations.isOwner} desc, ${organizations.name}), '{}')
+  select coalesce(array_agg(${organizations.name} order by ${projectOrganizations.isContractOwner} desc, ${organizations.name}), '{}')
   from ${projectOrganizations} join ${organizations} on ${organizations.id} = ${projectOrganizations.orgId}
   where ${projectOrganizations.projectId} = ${projects.id}
 )`;

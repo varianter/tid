@@ -1,10 +1,10 @@
 import { beforeAll, expect, test } from "bun:test";
 import { rebuildDatabase } from "@tid/db/client";
-import { organizations, userRoles, users as usersTable } from "@tid/db/schema";
-import { eq } from "drizzle-orm";
+import { userRoles, users as usersTable } from "@tid/db/schema";
 import { Hono } from "hono";
 import { database } from "../database";
 import type { User, UserEnv } from "../login/user";
+import { organizationIdBySlug } from "../testing/rows";
 import { users } from "./users.routes";
 
 let manager: User;
@@ -24,21 +24,13 @@ const managerIds = async () => (await database.select().from(userRoles)).map((ro
 
 beforeAll(async () => {
   await rebuildDatabase(database);
-  const organizationId = async (slug: string) => {
-    const [organization] = await database
-      .select()
-      .from(organizations)
-      .where(eq(organizations.slug, slug));
-    if (!organization) throw new Error(`Expected the organization ${slug}`);
-    return organization.id;
-  };
-  const oslo = await organizationId("oslo");
+  const oslo = await organizationIdBySlug("oslo");
   [manager, member] = (await database
     .insert(usersTable)
     .values([
       { name: "Kari", email: "kari@variant.no", orgId: oslo },
       { name: "Ola", email: "ola@variant.no", orgId: oslo },
-      { name: "Bjørn", email: "bjorn@variant.no", orgId: await organizationId("bergen") },
+      { name: "Bjørn", email: "bjorn@variant.no", orgId: await organizationIdBySlug("bergen") },
     ])
     .returning()) as [User, User];
   await database.insert(userRoles).values({ userId: manager.id, role: "manager" });

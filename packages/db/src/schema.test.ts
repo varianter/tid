@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, beforeEach, expect, test } from "bun:test";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { createDatabase, rebuildDatabase } from "./client";
 import {
   assignmentRates,
@@ -55,7 +55,7 @@ async function insertProject() {
   );
   await database
     .insert(projectOrganizations)
-    .values({ projectId: project.id, orgId: organization.id, isOwner: true });
+    .values({ projectId: project.id, orgId: organization.id, isContractOwner: true });
   return { organization, project };
 }
 
@@ -67,7 +67,7 @@ async function violatedConstraint(query: Promise<unknown>) {
   return (error?.cause as { constraint?: string } | undefined)?.constraint;
 }
 
-test("a project has at most one owning organization", async () => {
+test("a project has at most one contract owner", async () => {
   const { project } = await insertProject();
   const other = await insertOrganization("other");
 
@@ -75,9 +75,33 @@ test("a project has at most one owning organization", async () => {
     await violatedConstraint(
       database
         .insert(projectOrganizations)
-        .values({ projectId: project.id, orgId: other.id, isOwner: true }),
+        .values({ projectId: project.id, orgId: other.id, isContractOwner: true }),
     ),
-  ).toBe("project_organizations_one_owner");
+  ).toBe("project_organizations_one_contract_owner");
+});
+
+test("a billable project can't be open to members, whichever side changes", async () => {
+  const { organization, project } = await insertProject();
+  const owner = and(
+    eq(projectOrganizations.projectId, project.id),
+    eq(projectOrganizations.orgId, organization.id),
+  );
+
+  expect(
+    await violatedConstraint(
+      database.update(projectOrganizations).set({ openToMembers: true }).where(owner),
+    ),
+  ).toBe("open_projects_not_billable");
+
+  await database.transaction(async (transaction) => {
+    await transaction.update(projects).set({ billable: false }).where(eq(projects.id, project.id));
+    await transaction.update(projectOrganizations).set({ openToMembers: true }).where(owner);
+  });
+  expect(
+    await violatedConstraint(
+      database.update(projects).set({ billable: true }).where(eq(projects.id, project.id)),
+    ),
+  ).toBe("open_projects_not_billable");
 });
 
 test("only users from one of the project's organizations can be assigned", async () => {

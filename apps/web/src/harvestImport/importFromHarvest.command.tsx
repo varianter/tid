@@ -359,7 +359,7 @@ function ProjectAdditions({
 }
 
 const fieldNames: Record<string, string> = {
-  openToEveryone: "open to everyone",
+  openToMembers: "open to members",
   countsTowardBillableBase: "counts toward billable base",
   startsOn: "starts on",
   endsOn: "ends on",

@@ -1,9 +1,10 @@
 import { beforeAll, expect, test } from "bun:test";
 import { rebuildDatabase } from "@tid/db/client";
-import { organizations, userRoles, users } from "@tid/db/schema";
+import { userRoles, users } from "@tid/db/schema";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { database } from "../database";
+import { organizationIdBySlug } from "../testing/rows";
 import { requireProxyUser } from "./login.middleware";
 import { signupRouter } from "./login.routes";
 import type { PublicEnv } from "./user";
@@ -21,15 +22,6 @@ function signUp(headers: Record<string, string>, form: Record<string, string>) {
   return app.request("/signup", { method: "POST", headers, body: new URLSearchParams(form) });
 }
 
-async function organizationId(slug: string) {
-  const [organization] = await database
-    .select()
-    .from(organizations)
-    .where(eq(organizations.slug, slug));
-  if (!organization) throw new Error(`Expected the organization ${slug}`);
-  return organization.id;
-}
-
 const anna = { "x-auth-request-user": "anna-sub", "x-auth-request-email": "anna@variant.se" };
 let kariId: number;
 
@@ -37,7 +29,7 @@ beforeAll(async () => {
   await rebuildDatabase(database);
   const [kari] = await database
     .insert(users)
-    .values({ name: "Kari", email: "kari@variant.no", orgId: await organizationId("oslo") })
+    .values({ name: "Kari", email: "kari@variant.no", orgId: await organizationIdBySlug("oslo") })
     .returning();
   if (!kari) throw new Error("Expected a user");
   kariId = kari.id;
@@ -102,7 +94,7 @@ test("sign-up turns away email domains that aren't Variant's", async () => {
 });
 
 test("sign-up rejects an organization in another country", async () => {
-  const oslo = String(await organizationId("oslo"));
+  const oslo = String(await organizationIdBySlug("oslo"));
   const response = await signUp(anna, {
     name: "Anna Svensson",
     organizationId: oslo,
@@ -111,7 +103,7 @@ test("sign-up rejects an organization in another country", async () => {
 });
 
 test("sign-up creates the user in the chosen organization, who is then logged in", async () => {
-  const stockholm = await organizationId("stockholm");
+  const stockholm = await organizationIdBySlug("stockholm");
   const form = { name: " Anna Svensson ", organizationId: String(stockholm) };
   expect((await signUp(anna, form)).status).toBe(303);
 
@@ -123,7 +115,7 @@ test("sign-up creates the user in the chosen organization, who is then logged in
 
 test("sign-up makes the bootstrap managers managers, and no one else", async () => {
   process.env.BOOTSTRAP_MANAGER_EMAILS = "someone@variant.se, Erik@Variant.se";
-  const stockholm = String(await organizationId("stockholm"));
+  const stockholm = String(await organizationIdBySlug("stockholm"));
   const erik = { "x-auth-request-user": "erik-sub", "x-auth-request-email": "erik@variant.se" };
   const lisa = { "x-auth-request-user": "lisa-sub", "x-auth-request-email": "lisa@variant.se" };
   await signUp(erik, { name: "Erik", organizationId: stockholm });
