@@ -30,10 +30,12 @@ CREATE TABLE "organizations" (
 	"id" bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "organizations_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 9223372036854775807 START WITH 1 CACHE 1),
 	"slug" text NOT NULL,
 	"name" text NOT NULL,
+	"legal_name" text NOT NULL,
 	"country" char(2) NOT NULL,
 	"currency" char(3) NOT NULL,
 	"full_day_minutes" integer NOT NULL,
 	CONSTRAINT "organizations_slug_unique" UNIQUE("slug"),
+	CONSTRAINT "organizations_legalName_unique" UNIQUE("legal_name"),
 	CONSTRAINT "full_day_minutes_range" CHECK ("organizations"."full_day_minutes" between 1 and 1440)
 );
 --> statement-breakpoint

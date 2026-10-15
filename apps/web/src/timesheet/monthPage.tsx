@@ -3,6 +3,7 @@ import { formatHours } from "@tid/elements/hours";
 import { Button, Input, Label, Page, PeriodNavigation } from "@tid/ui";
 import { and, between, eq } from "drizzle-orm";
 import type { Context } from "hono";
+import { css, cx } from "hono/css";
 import type { PropsWithChildren } from "hono/jsx";
 import { database } from "../database";
 import { formatDayInMonth, formatMonth } from "../dates/dateDisplay";
@@ -166,10 +167,8 @@ function TimesheetGrid({
   const startsWeek = days.map(
     (day, index) => index > 0 && mondayOf(day) !== mondayOf(days[index - 1] ?? day),
   );
-  const weekGap = (index: number) => (startsWeek[index] ? " ml-xs" : "");
-  // Task and Total stay put while the days scroll beneath them; the background hides what's under.
+  // Task stays put while the days scroll beneath it; the background hides what's under.
   const stickyStart = "pos-sticky left-0 surface-base mr-xs pr-2xs";
-  const stickyEnd = "pos-sticky right-0 surface-base pl-xs pr-2xs";
   const minutesOn = (taskId: number, day: string) =>
     entries.find((entry) => entry.taskId === taskId && entry.spentOn === day)?.minutes ?? 0;
   const sumMinutes = (predicate: (entry: (typeof entries)[number]) => boolean) =>
@@ -187,128 +186,161 @@ function TimesheetGrid({
       (task) => task.projectName,
     ),
   );
+  const addable = !locked && addableByProject.length > 0;
   return (
-    <div
-      class="d-grid of-scroll t-tabular my-s"
-      style={`grid-template-columns: minmax(20ch, 1fr) repeat(${days.length}, max-content) max-content;`}
-    >
-      <div class="grid-subgrid grid-all-columns fs-s">
-        <div
-          class={`py-xs ink-subtle  ${stickyStart}`}
-          style="
+    <>
+      <div
+        class={cx("d-grid of-scroll t-tabular my-s", sheetLayout)}
+        style={`--days: ${days.length}; --task-columns: ${rows.length + (addable ? 1 : 0)};`}
+      >
+        <div class="grid-subgrid grid-all-columns fs-s">
+          <div
+            class={`py-xs ink-subtle  ${stickyStart}`}
+            style="
             align-content: end;
         "
-        >
-          Task
-        </div>
-        {days.map((day, index) => (
-          <TodayTint
-            isToday={day === today}
-            class={`ta-right fs-s py-xs px-3xs d-block b-b bc-subtle br-m br-bl-none br-br-none${weekGap(index)}`}
           >
-            {formatDayInMonth(day)}
-          </TodayTint>
-        ))}
-        <div class={`ta-right py-xs ink-subtle ${stickyEnd}`}>Total</div>
-      </div>
-
-      {rows.map((task) => (
-        <div class="grid-subgrid grid-all-columns items-center ">
-          <div class={`py-2xs self-stretch stack-v justify-center ${stickyStart}`}>
-            <p class="fs-s fw-medium lh-snug">{task.name}</p>
-            <p class="fs-xs ink-subtle">{task.projectName}</p>
+            Task
           </div>
           {days.map((day, index) => (
             <TodayTint
               isToday={day === today}
-              class={`self-stretch px-3xs stack-v justify-center ${weekGap(index)}`}
+              weekStart={startsWeek[index]}
+              class={`ta-right fs-s py-xs px-3xs d-block  br-m br-bl-none br-br-none${day === today ? "" : " surface-base"}`}
             >
-              <TimesheetCell
-                task={task}
-                day={day}
-                minutes={minutesOn(task.id, day)}
-                action={cellsAction}
-                error={error?.taskId === task.id && error.day === day ? error : undefined}
-                locked={locked}
-              />
+              {day === today && <span id="today" />}
+              {formatDayInMonth(day)}
             </TodayTint>
           ))}
-          <div
-            class={`ta-right fw-medium self-stretch stack-v justify-center ${stickyEnd} fs-s`}
-            data-task-total={task.id}
-          >
-            {formatHours(sumMinutes((entry) => entry.taskId === task.id))}
-          </div>
         </div>
-      ))}
 
-      {!locked && addableByProject.length > 0 && (
-        // Picking a task adds `add` to the query, like the hidden inputs already there.
-        <form method="get" class="grid-subgrid grid-all-columns items-center">
-          {[...new URLSearchParams(search)].map(([name, value]) => (
-            <input type="hidden" name={name} value={value} />
-          ))}
-          <div class={`py-2xs ${stickyStart}`}>
-            {/* A plain select, since Select's props don't allow an inline handler. */}
-            <select
-              name="add"
-              class="v-select w-full"
-              data-size="small"
-              aria-label="Add task"
-              onchange="this.form.requestSubmit()"
-            >
-              <option value="" selected disabled>
-                Add task…
-              </option>
-              {addableByProject.map(([projectName, projectTasks]) => (
-                <optgroup label={projectName}>
-                  {projectTasks?.map((task) => (
-                    <option value={task.id}>{task.name}</option>
-                  ))}
-                </optgroup>
-              ))}
-            </select>
-            <noscript>
-              <Button type="submit" data-size="small">
-                Add
-              </Button>
-            </noscript>
-          </div>
-          {/* Placeholders so the row reads as part of the sheet; there's no task to log on yet. */}
-          {days.map((day, index) => (
-            <TodayTint
-              isToday={day === today}
-              class={`self-stretch px-3xs stack-v justify-center${weekGap(index)}`}
-            >
-              <Input
-                type="text"
-                disabled
-                tabindex={-1}
-                aria-hidden="true"
-                class="w-min-0 w-full"
-                data-size="small"
-                style={`max-width: ${inputWidth}`}
-              />
-            </TodayTint>
-          ))}
-          <div class={`self-stretch ${stickyEnd}`} />
-        </form>
-      )}
-
-      {rows.length > 0 && (
-        <div class="grid-subgrid grid-all-columns fw-medium ta-right py-s fs-s">
-          <div class={`ta-left ${stickyStart}`}>Total</div>
-          {days.map((day, index) => (
-            <div class={`px-xs${weekGap(index)}`} data-day-total={day}>
-              {formatHours(sumMinutes((entry) => entry.spentOn === day))}
+        {rows.map((task) => (
+          <div class="grid-subgrid grid-all-columns items-center ">
+            <div class={`py-2xs self-stretch stack-v justify-center ${stickyStart}`}>
+              <p class="fs-s fw-medium lh-snug">{task.name}</p>
+              <p class="fs-xs ink-subtle">{task.projectName}</p>
             </div>
-          ))}
-          <div class={stickyEnd} data-grand-total>
-            {formatHours(sumMinutes(() => true))}
+            {days.map((day, index) => (
+              <TodayTint
+                isToday={day === today}
+                weekStart={startsWeek[index]}
+                class="self-stretch px-3xs stack-v justify-center items-end"
+              >
+                <TimesheetCell
+                  task={task}
+                  day={day}
+                  minutes={minutesOn(task.id, day)}
+                  action={cellsAction}
+                  error={error?.taskId === task.id && error.day === day ? error : undefined}
+                  locked={locked}
+                />
+              </TodayTint>
+            ))}
           </div>
-        </div>
-      )}
-    </div>
+        ))}
+
+        {addable && (
+          // Picking a task adds `add` to the query, like the hidden inputs already there.
+          <form method="get" class="grid-subgrid grid-all-columns items-center">
+            {[...new URLSearchParams(search)].map(([name, value]) => (
+              <input type="hidden" name={name} value={value} />
+            ))}
+            <div class={`py-2xs ${stickyStart}`}>
+              {/* A plain select, since Select's props don't allow an inline handler. */}
+              <select
+                name="add"
+                class="v-select w-full"
+                data-size="small"
+                aria-label="Add task"
+                onchange="this.form.requestSubmit()"
+              >
+                <option value="" selected disabled>
+                  Add task…
+                </option>
+                {addableByProject.map(([projectName, projectTasks]) => (
+                  <optgroup label={projectName}>
+                    {projectTasks?.map((task) => (
+                      <option value={task.id}>{task.name}</option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+              <noscript>
+                <Button type="submit" data-size="small">
+                  Add
+                </Button>
+              </noscript>
+            </div>
+            {/* Placeholders so the row reads as part of the sheet; there's no task to log on yet. */}
+            {days.map((day, index) => (
+              <TodayTint
+                isToday={day === today}
+                weekStart={startsWeek[index]}
+                class="self-stretch px-3xs stack-v justify-center items-end"
+              >
+                <Input
+                  type="text"
+                  disabled
+                  tabindex={-1}
+                  aria-hidden="true"
+                  class="w-min-0 w-full"
+                  data-size="small"
+                  style={`max-width: ${inputWidth}`}
+                />
+              </TodayTint>
+            ))}
+          </form>
+        )}
+
+        {rows.length > 0 && (
+          <div class="grid-subgrid grid-all-columns fw-medium ta-right py-s fs-s">
+            <div class={`ta-left ${stickyStart}`} style="align-content: end;">
+              Total
+            </div>
+            {days.map((day, index) => (
+              <div
+                class="px-xs self-stretch stack-v justify-center surface-base"
+                data-week-start={startsWeek[index] || undefined}
+                data-day-total={day}
+              >
+                {formatHours(sumMinutes((entry) => entry.spentOn === day))}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+      {rows.length > 0 && <ProjectTotals rows={rows} sumMinutes={sumMinutes} />}
+    </>
+  );
+}
+
+function ProjectTotals({
+  rows,
+  sumMinutes,
+}: {
+  rows: Task[];
+  sumMinutes: (predicate: (entry: TimeEntry) => boolean) => number;
+}) {
+  const projects = Map.groupBy(rows, (task) => task.projectId);
+  return (
+    <section class="stack-v w-max-5 fs-s t-tabular">
+      <h2 class="fs-m fw-medium mb-2xs">Project totals</h2>
+      {[...projects].map(([projectId, tasks]) => {
+        const taskIds = tasks.map((task) => task.id);
+        return (
+          <div class="stack-h justify-between gap-s py-2xs b-b bc-subtle">
+            <span>{tasks[0]?.projectName}</span>
+            <span data-project-total={projectId}>
+              {formatHours(sumMinutes((entry) => taskIds.includes(entry.taskId)))}
+            </span>
+          </div>
+        );
+      })}
+      <div class="stack-h justify-between gap-s py-2xs fw-medium">
+        <span>Total</span>
+        <span data-grand-total>{formatHours(sumMinutes(() => true))}</span>
+      </div>
+    </section>
   );
 }
 
@@ -318,13 +350,91 @@ function byProjectThenName(a: Task, b: Task) {
 
 function TodayTint({
   isToday,
+  weekStart,
   class: className,
   children,
-}: PropsWithChildren<{ isToday: boolean; class: string }>) {
-  if (!isToday) return <div class={className}>{children}</div>;
+}: PropsWithChildren<{ isToday: boolean; weekStart?: boolean; class: string }>) {
+  const weekStartMark = weekStart || undefined;
+  if (!isToday)
+    return (
+      <div class={className} data-week-start={weekStartMark}>
+        {children}
+      </div>
+    );
   return (
-    <color-mode palette="blue" class={`surface-tinted ${className}`}>
+    <color-mode
+      palette="blue"
+      class={`surface-tinted ${className}`}
+      data-week-start={weekStartMark}
+    >
       {children}
     </color-mode>
   );
 }
+
+/**
+ * Phones log a day at a time, so there the sheet turns: each row becomes a column, with days
+ * running down and tasks across. The markup and its look stay the desktop sheet's, so what sticks
+ * to the start of a row sticks to the top of its column instead.
+ */
+const sheetLayout = css`
+  grid-template-columns: minmax(20ch, 1fr) repeat(var(--days), max-content);
+  & [data-week-start] {
+    margin-inline-start: var(--spacing-xs);
+  }
+  /* A hidden target is no fragment target, so only phones jump to today. */
+  & #today {
+    display: none;
+  }
+
+  @media (width < 40rem) {
+    /* Sticky only holds within the nearest scroll container, so the sheet scrolls both ways itself. */
+    max-height: 85dvh;
+    grid-auto-flow: column;
+    grid-template-rows: auto repeat(var(--days), auto);
+    grid-template-columns: max-content repeat(var(--task-columns), minmax(auto, 1fr)) max-content;
+    & > * {
+      display: contents;
+    }
+    /* Columns fit an input and the longest word of the name, and overflow sideways beyond that. */
+    & > * > :first-child > :is(p:first-child, select) {
+      min-inline-size: 10ch;
+    }
+    & [data-week-start] {
+      margin-inline-start: 0;
+      margin-block-start: var(--spacing-xs);
+    }
+    /* Padding rather than margin, so no gap shows what scrolls beneath. */
+    & > * > :first-child {
+      top: 0;
+      left: auto;
+      margin-inline-end: 0;
+      padding-inline-end: var(--spacing-xs);
+    }
+    /* Days and their totals stay put while wide sheets scroll sideways. */
+    & > :first-child > *,
+    & > :last-child > * {
+      position: sticky;
+    }
+    & > :first-child > * {
+      left: 0;
+    }
+    & > :last-child > * {
+      right: 0;
+    }
+    /* Corners cover the header and total rows, which cover the day columns, which cover cells. */
+    & > :is(:first-child, :last-child) > * {
+      z-index: 1;
+    }
+    & > * > :first-child {
+      z-index: 2;
+    }
+    & > :is(:first-child, :last-child) > :first-child {
+      z-index: 3;
+    }
+    & #today {
+      display: inline;
+      scroll-margin-block-start: 6lh;
+    }
+  }
+`;

@@ -1,5 +1,5 @@
 {
-  "id": "2a131201-7397-456f-af54-5dd9ba352786",
+  "id": "8e3ddf40-9dd7-4db6-9c6d-49f06bc0995d",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -291,6 +291,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "legal_name": {
+          "name": "legal_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
         "country": {
           "name": "country",
           "type": "char(2)",
@@ -319,6 +325,13 @@
           "nullsNotDistinct": false,
           "columns": [
             "slug"
+          ]
+        },
+        "organizations_legalName_unique": {
+          "name": "organizations_legalName_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "legal_name"
           ]
         }
       },

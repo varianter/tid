@@ -1,6 +1,6 @@
 {
-  "id": "5606e742-716e-4d6f-a74c-d6c111df3c50",
-  "prevId": "ff913b95-3dc2-42f9-8d19-aa9281f78092",
+  "id": "5eda4179-bbae-4bd9-93b2-59668c0cf3cf",
+  "prevId": "53fd3174-8389-4d09-bb6b-bc39854d7e17",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -291,6 +291,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "legal_name": {
+          "name": "legal_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
         "country": {
           "name": "country",
           "type": "char(2)",
@@ -318,6 +324,13 @@
           "name": "organizations_slug_unique",
           "columns": [
             "slug"
+          ],
+          "nullsNotDistinct": false
+        },
+        "organizations_legalName_unique": {
+          "name": "organizations_legalName_unique",
+          "columns": [
+            "legal_name"
           ],
           "nullsNotDistinct": false
         }

@@ -43,8 +43,7 @@ export const monthlyReport = async (c: Context<UserEnv, "/:organization">) => {
   const month = from.slice(0, 7);
   const view = timeEntriesExport;
   const inReport = and(
-    // ponytail: the view only exposes the organization's name; add its id if names collide.
-    eq(view.accountName, organization.name),
+    eq(view.accountName, organization.legalName),
     between(view.spentDate, from, till),
   );
 

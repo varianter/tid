@@ -9,7 +9,7 @@ import {
 import { and, eq, exists, or } from "drizzle-orm";
 import { database } from "../database";
 
-export type Task = { id: number; name: string; projectName: string };
+export type Task = { id: number; name: string; projectId: number; projectName: string };
 
 /** Tasks the user may log on: projects open to their organization's members, assigned ones, and any they already have time on. */
 export const loggableBy = (userId: number) =>
@@ -46,6 +46,6 @@ export const loggableBy = (userId: number) =>
 
 export const userTasks = () =>
   database
-    .select({ id: tasks.id, name: tasks.name, projectName: projects.name })
+    .select({ id: tasks.id, name: tasks.name, projectId: projects.id, projectName: projects.name })
     .from(tasks)
     .innerJoin(projects, eq(projects.id, tasks.projectId));

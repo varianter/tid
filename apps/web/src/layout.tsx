@@ -1,3 +1,4 @@
+import { Style } from "hono/css";
 import type { PropsWithChildren } from "hono/jsx";
 
 type LayoutProps = PropsWithChildren<{
@@ -38,6 +39,7 @@ export function Layout({
         <title>{title}</title>
         <link rel="stylesheet" href="https://varde.variant.dev/v/1.0.0/styles.css" />
         <script type="module" src={elementsSrc} />
+        <Style />
         <style>{`
           @media (min-width: 900px) {
             #nav-popover { display: contents; }

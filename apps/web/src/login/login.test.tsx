@@ -73,8 +73,8 @@ test("rejects a new subject that reuses a linked user's email", async () => {
 
 test("sign-up offers only the organizations in the country of the email domain", async () => {
   const page = await (await requestAs(anna, "/signup")).text();
-  expect(page).toContain("Variant Linköping AB");
-  expect(page).not.toContain("Variant Oslo AS");
+  expect(page).toContain("Linköping");
+  expect(page).not.toContain("Oslo");
 });
 
 test("sign-up prefills the name from the Entra ID token", async () => {

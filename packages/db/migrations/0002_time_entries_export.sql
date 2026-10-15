@@ -1,7 +1,7 @@
 -- Shaped like dbo.time_entries in the reporting database.
 create view time_entries_export as
 select
-  organizations.name                                 as account_name,
+  organizations.legal_name                           as account_name,
   entry.spent_on                                     as spent_date,
   extract(year from entry.spent_on)::int             as spent_year,
   extract(month from entry.spent_on)::int            as spent_month,

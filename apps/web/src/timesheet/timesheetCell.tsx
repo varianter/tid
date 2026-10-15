@@ -70,7 +70,7 @@ export function TimesheetCell({
       action={action}
       class="d-block"
       data-cell={`${task.id}:${day}`}
-      data-task={task.id}
+      data-project={task.projectId}
       data-day={day}
       data-minutes={minutes}
     >

@@ -1,10 +1,10 @@
 import type { HarvestExport } from "./harvestExport";
 import type { Findings } from "./plan";
 
-// The organizations in the database, which Harvest accounts are matched to by name.
-export type KnownOrganization = { slug: string; name: string; currency: string };
+// The organizations in the database, which Harvest accounts are matched to by legal name.
+export type KnownOrganization = { slug: string; legalName: string; currency: string };
 
-// Each account belongs to the organization with its name, and bills in its currency.
+// Each account belongs to the organization with its legal name, and bills in its currency.
 export function matchOrganizations(
   harvestExports: HarvestExport[],
   organizations: KnownOrganization[],
@@ -12,7 +12,7 @@ export function matchOrganizations(
 ) {
   const slugByAccount = new Map<number, string>();
   for (const { account, projects } of harvestExports) {
-    const organization = organizations.find((known) => known.name === account.name);
+    const organization = organizations.find((known) => known.legalName === account.name);
     if (!organization) {
       problems.push(`${account.name}: no organization has this name; add it in a migration.`);
       continue;

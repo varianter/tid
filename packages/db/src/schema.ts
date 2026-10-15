@@ -52,7 +52,10 @@ export const organizations = pgTable(
   {
     id: id(),
     slug: text().notNull().unique(),
+    // Inside the app everyone works at Variant, so the short name says enough.
     name: text().notNull(),
+    // Shown wherever someone outside the app sees it. Harvest accounts are matched on it.
+    legalName: text().notNull().unique(),
     // ISO 3166-1 alpha-2, like NO or SE.
     country: char({ length: 2 }).notNull(),
     currency: char({ length: 3 }).notNull(),

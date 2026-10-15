@@ -35,7 +35,14 @@ async function insertOrganization(slug: string) {
   return onlyRow(
     await database
       .insert(organizations)
-      .values({ slug, name: slug, country: "NO", currency: "NOK", fullDayMinutes: 450 })
+      .values({
+        slug,
+        name: slug,
+        legalName: slug,
+        country: "NO",
+        currency: "NOK",
+        fullDayMinutes: 450,
+      })
       .returning(),
   );
 }

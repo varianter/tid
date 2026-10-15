@@ -67,10 +67,10 @@ class TimesheetConductor extends HTMLElement {
       freshInput.focus();
       freshInput.setSelectionRange(input.selectionStart, input.selectionEnd);
     }
-    this.#updateTotals(fresh.dataset.task ?? "", fresh.dataset.day ?? "");
+    this.#updateTotals(fresh.dataset.project ?? "", fresh.dataset.day ?? "");
   }
 
-  #updateTotals(task: string, day: string) {
+  #updateTotals(project: string, day: string) {
     const minutesIn = (selector: string) =>
       [...this.querySelectorAll<HTMLFormElement>(selector)].reduce(
         (total, form) => total + Number(form.dataset.minutes),
@@ -80,7 +80,7 @@ class TimesheetConductor extends HTMLElement {
       const total = this.querySelector(selector);
       if (total) total.textContent = formatHours(minutes);
     };
-    show(`[data-task-total="${task}"]`, minutesIn(`form[data-task="${task}"]`));
+    show(`[data-project-total="${project}"]`, minutesIn(`form[data-project="${project}"]`));
     show(`[data-day-total="${day}"]`, minutesIn(`form[data-day="${day}"]`));
     show("[data-grand-total]", minutesIn("form[data-minutes]"));
   }
