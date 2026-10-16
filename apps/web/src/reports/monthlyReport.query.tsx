@@ -1,5 +1,5 @@
 import { projects, timeEntriesExport } from "@tid/db/schema";
-import { formatHours } from "@tid/elements/hours";
+import { formatTotalHours } from "@tid/elements/hours";
 import { DataGrid, type DataGridColumn, EmptyState, Page, PeriodNavigation, Tabs } from "@tid/ui";
 import { and, between, eq, sql } from "drizzle-orm";
 import type { Context } from "hono";
@@ -15,9 +15,7 @@ import { listOrganizations, OrganizationSelect } from "../organizations/organiza
 import { formatShare } from "../share/share";
 import { capacityMinutes } from "./capacity";
 import { reportQuery, type Tab, tabs } from "./period";
-
-const reportPath = (organizationSlug: string, query: URLSearchParams) =>
-  `/reports/${organizationSlug}?${query}`;
+import { projectTimesheetPath, reportPath } from "./reportsUrl";
 
 // Without an organization picked, it's the user's own.
 export const monthlyReportRedirect = async (c: Context<UserEnv>) => {
@@ -140,6 +138,7 @@ export const monthlyReport = async (c: Context<UserEnv, "/:organization">) => {
       previousHref={monthPath(-1)}
       nextHref={monthPath(1)}
       tabHref={(tabName) => reportPath(slug, reportQuery(from, tabName, todayInOslo()))}
+      projectHref={(code) => projectTimesheetPath(slug, code, month)}
     />,
   );
 };
@@ -155,7 +154,7 @@ export type ReportRows =
 
 type ReportTable = {
   columns: DataGridColumn[];
-  rows: Child[][];
+  rows: { cells: Child[]; href?: string }[];
   footer: Child[];
 };
 
@@ -176,6 +175,7 @@ function ReportPage({
   previousHref,
   nextHref,
   tabHref,
+  projectHref,
 }: {
   organizationSelect: Child;
   month: string;
@@ -186,8 +186,9 @@ function ReportPage({
   previousHref: string;
   nextHref: string;
   tabHref: (tab: Tab) => string;
+  projectHref: (code: string) => string;
 }) {
-  const table = reportTable(report, total, currency, capacityHours);
+  const table = reportTable(report, total, currency, capacityHours, projectHref);
   return (
     <Page
       title="Reports"
@@ -221,8 +222,8 @@ function ReportPage({
             </EmptyState>
           ) : (
             <DataGrid columns={table.columns}>
-              {table.rows.map((cells) => (
-                <DataGrid.Row>{cells}</DataGrid.Row>
+              {table.rows.map((row) => (
+                <DataGrid.Row href={row.href}>{row.cells}</DataGrid.Row>
               ))}
               <DataGrid.Footer>{table.footer}</DataGrid.Footer>
             </DataGrid>
@@ -238,6 +239,7 @@ function reportTable(
   total: Totals,
   currency: string,
   capacityHours: number,
+  projectHref: (code: string) => string,
 ): ReportTable {
   switch (report.tab) {
     case "clients":
@@ -248,16 +250,18 @@ function reportTable(
           { label: "Billable hours", kind: "number" },
           { label: "Billable amount", kind: "number" },
         ],
-        rows: report.rows.map((row) => [
-          <DataGrid.Title>{row.name}</DataGrid.Title>,
-          formatTotal(row.hours),
-          formatTotal(row.billableHours),
-          formatAmount(row.amount, currency),
-        ]),
+        rows: report.rows.map((row) => ({
+          cells: [
+            <DataGrid.Title>{row.name}</DataGrid.Title>,
+            formatTotalHours(row.hours * 60),
+            formatTotalHours(row.billableHours * 60),
+            formatAmount(row.amount, currency),
+          ],
+        })),
         footer: [
           "Total",
-          formatTotal(total.hours),
-          formatTotal(total.billableHours),
+          formatTotalHours(total.hours * 60),
+          formatTotalHours(total.billableHours * 60),
           formatAmount(total.amount, currency),
         ],
       };
@@ -270,18 +274,21 @@ function reportTable(
           { label: "Billable hours", kind: "number" },
           { label: "Billable amount", kind: "number" },
         ],
-        rows: report.rows.map((row) => [
-          <DataGrid.Title secondary={row.code}>{row.name}</DataGrid.Title>,
-          row.client,
-          formatTotal(row.hours),
-          formatTotal(row.billableHours),
-          formatAmount(row.amount, currency),
-        ]),
+        rows: report.rows.map((row) => ({
+          cells: [
+            <DataGrid.Title secondary={row.code}>{row.name}</DataGrid.Title>,
+            row.client,
+            formatTotalHours(row.hours * 60),
+            formatTotalHours(row.billableHours * 60),
+            formatAmount(row.amount, currency),
+          ],
+          href: projectHref(row.code),
+        })),
         footer: [
           "Total",
           "",
-          formatTotal(total.hours),
-          formatTotal(total.billableHours),
+          formatTotalHours(total.hours * 60),
+          formatTotalHours(total.billableHours * 60),
           formatAmount(total.amount, currency),
         ],
       };
@@ -294,17 +301,19 @@ function reportTable(
           { label: "Billable hours", kind: "number" },
           { label: "Billable amount", kind: "number" },
         ],
-        rows: report.rows.map((row) => [
-          <DataGrid.Title>{row.name}</DataGrid.Title>,
-          formatTotal(row.hours),
-          formatShare(row.hours, capacityHours),
-          <BillableHours hours={row.hours} billableHours={row.billableHours} />,
-          formatAmount(row.amount, currency),
-        ]),
+        rows: report.rows.map((row) => ({
+          cells: [
+            <DataGrid.Title>{row.name}</DataGrid.Title>,
+            formatTotalHours(row.hours * 60),
+            formatShare(row.hours, capacityHours),
+            <BillableHours hours={row.hours} billableHours={row.billableHours} />,
+            formatAmount(row.amount, currency),
+          ],
+        })),
         // Utilization has no total, since consultants who started or left mid-month skew any sum.
         footer: [
           "Total",
-          formatTotal(total.hours),
+          formatTotalHours(total.hours * 60),
           "",
           <BillableHours hours={total.hours} billableHours={total.billableHours} />,
           formatAmount(total.amount, currency),
@@ -317,12 +326,18 @@ function reportTable(
           { label: "Billable hours", kind: "number" },
           { label: "Billable amount", kind: "number" },
         ],
-        rows: report.rows.map((row) => [
-          <DataGrid.Title>{row.name}</DataGrid.Title>,
-          formatTotal(row.billableHours),
-          formatAmount(row.amount, currency),
-        ]),
-        footer: ["Total", formatTotal(total.billableHours), formatAmount(total.amount, currency)],
+        rows: report.rows.map((row) => ({
+          cells: [
+            <DataGrid.Title>{row.name}</DataGrid.Title>,
+            formatTotalHours(row.billableHours * 60),
+            formatAmount(row.amount, currency),
+          ],
+        })),
+        footer: [
+          "Total",
+          formatTotalHours(total.billableHours * 60),
+          formatAmount(total.amount, currency),
+        ],
       };
   }
 }
@@ -338,21 +353,25 @@ function Summary({
 
   return (
     <dl class="stack-h items-start gap-xl b-all bc-default br-l p-m t-tabular">
-      <Stat label="Total" value={formatTotal(hours)} />
+      <Stat label="Total" value={formatTotalHours(hours * 60)} />
       <Stat
         label="Billable"
-        value={formatTotal(billableHours)}
+        value={formatTotalHours(billableHours * 60)}
         share={formatShare(billableHours, hours)}
       />
       <Stat
         label="Non-billable"
-        value={formatTotal(nonBillableHours)}
+        value={formatTotalHours(nonBillableHours * 60)}
         share={formatShare(nonBillableHours, hours)}
       />
       <Stat
         label="Billable amount"
         value={formatAmount(amount, currency)}
-        note={unratedHours > 0 ? `${formatTotal(unratedHours)} logged without a rate` : undefined}
+        note={
+          unratedHours > 0
+            ? `${formatTotalHours(unratedHours * 60)} logged without a rate`
+            : undefined
+        }
       />
     </dl>
   );
@@ -384,13 +403,8 @@ function Stat({
 function BillableHours({ hours, billableHours }: { hours: number; billableHours: number }) {
   return (
     <span class="stack-h nowrap justify-end gap-xs">
-      {formatTotal(billableHours)}
+      {formatTotalHours(billableHours * 60)}
       <span class="ink-subtle fw-regular">{formatShare(billableHours, hours)}</span>
     </span>
   );
-}
-
-/** Unlike a timesheet cell, an empty total still reads as zero. */
-function formatTotal(hours: number) {
-  return `${formatHours(Math.round(hours * 60)) || "0"} h`;
 }

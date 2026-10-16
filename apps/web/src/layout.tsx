@@ -1,6 +1,8 @@
 import { css, Style } from "hono/css";
 import type { PropsWithChildren } from "hono/jsx";
 
+export const vardeStylesheet = "https://varde.variant.dev/v/1.0.0/styles.css";
+
 type LayoutProps = PropsWithChildren<{
   title: string;
   currentPath: string;
@@ -37,7 +39,7 @@ export function Layout({
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>{title}</title>
-        <link rel="stylesheet" href="https://varde.variant.dev/v/1.0.0/styles.css" />
+        <link rel="stylesheet" href={vardeStylesheet} />
         <script type="module" src={elementsSrc} />
         <Style />
         <Style>
