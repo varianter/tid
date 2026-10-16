@@ -4,6 +4,7 @@ import { csrf } from "hono/csrf";
 import { HTTPException } from "hono/http-exception";
 import { jsxRenderer } from "hono/jsx-renderer";
 import { secureHeaders } from "hono/secure-headers";
+import { timing } from "hono/timing";
 import { assignments } from "./assignments/assignments.routes";
 import { clients } from "./clients/clients.routes";
 import { dev, devLogoutUrl, devTenantId, readDevIdentity, requireDevUser } from "./dev/dev.routes";
@@ -18,6 +19,7 @@ import type { PublicEnv } from "./login/user";
 import { organizations } from "./organizations/organizations.routes";
 import { projects } from "./projects/projects.routes";
 import { reports } from "./reports/reports.routes";
+import { reportDatabaseTiming, reportRenderTiming, timeMiddleware } from "./serverTiming";
 import { timesheet } from "./timesheet/timesheet.routes";
 import { users } from "./users/users.routes";
 
@@ -45,6 +47,8 @@ const login = chooseLogin();
 const elements = await bundleElements();
 
 const app = new Hono<PublicEnv>();
+
+app.use(timing({ totalDescription: "Total" }), reportDatabaseTiming);
 
 app.use(
   secureHeaders({
@@ -76,6 +80,8 @@ app.use(
   )),
 );
 
+app.use(reportRenderTiming);
+
 app.notFound((c) => {
   c.status(404);
   return c.render(<ErrorPage status={404} message="Page not found" />);
@@ -102,7 +108,7 @@ app.get(elements.path, (c) =>
 // Registered before the middleware, so logging in and signing up don't require a user.
 if (isDevLoginEnabled) app.route("/dev", dev);
 app.route(signupPath, login.signup);
-app.use(login.requireUser);
+app.use(timeMiddleware("auth", login.requireUser));
 
 app.get("/", (c) => c.redirect("/timesheet"));
 app.route("/timesheet", timesheet);
