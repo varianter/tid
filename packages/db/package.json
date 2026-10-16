@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@azure/identity": "4.13.3",
+    "@tid/dates": "workspace:*",
     "drizzle-orm": "catalog:"
   },
   "devDependencies": {

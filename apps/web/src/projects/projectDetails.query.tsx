@@ -1,3 +1,5 @@
+import { addMonths } from "@tid/dates/isoDate";
+import { todayInOslo } from "@tid/dates/osloClock";
 import {
   assignmentRates,
   clients,
@@ -17,8 +19,6 @@ import { formatAmount } from "../amount/amount";
 import { AssignConsultantForm } from "../assignments/assignConsultant.command";
 import { RemoveConsultantForm } from "../assignments/removeConsultant.command";
 import { database } from "../database";
-import { addMonths } from "../dates/isoDate";
-import { todayInOslo } from "../dates/osloClock";
 import type { UserEnv } from "../login/user";
 import { isManager } from "../users/manager";
 import { AddTaskForm } from "./addTask.command";

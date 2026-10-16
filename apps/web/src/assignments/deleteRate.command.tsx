@@ -1,10 +1,10 @@
+import { isIsoDate } from "@tid/dates/isoDate";
+import { todayInOslo } from "@tid/dates/osloClock";
 import { assignmentRates } from "@tid/db/schema";
 import { Button } from "@tid/ui";
 import { and, eq } from "drizzle-orm";
 import type { Context } from "hono";
 import { database } from "../database";
-import { isIsoDate } from "../dates/isoDate";
-import { todayInOslo } from "../dates/osloClock";
 import { type AssignmentIds, idParams, ratesOf, ratesPath } from "./assignment";
 
 // Only a rate that hasn't started can go. A started one has priced logged time, so it's

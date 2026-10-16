@@ -1,3 +1,6 @@
+import { formatDayInMonth, formatMonth } from "@tid/dates/dateDisplay";
+import { addMonths, daysOfMonth, isWeekend, mondayOf } from "@tid/dates/isoDate";
+import { todayInOslo } from "@tid/dates/osloClock";
 import { timeEntries } from "@tid/db/schema";
 import { formatHours } from "@tid/elements/hours";
 import { Button, ColorMode, Input, Label, Page, PeriodNavigation } from "@tid/ui";
@@ -6,9 +9,6 @@ import type { Context } from "hono";
 import { css, cx } from "hono/css";
 import type { PropsWithChildren } from "hono/jsx";
 import { database } from "../database";
-import { formatDayInMonth, formatMonth } from "../dates/dateDisplay";
-import { addMonths, daysOfMonth, isWeekend, mondayOf } from "../dates/isoDate";
-import { todayInOslo } from "../dates/osloClock";
 import { isLockedOn } from "../endOfTheMonth/monthLock";
 import type { UserEnv } from "../login/user";
 import { loggableBy, type Task, userTasks } from "./loggableTasks";

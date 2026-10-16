@@ -2,6 +2,7 @@
 // Rows missing from it are added. Rows that differ from Harvest are reported, and only changed
 // when someone accepted the difference. Nothing is deleted.
 
+import { todayInOslo } from "@tid/dates/osloClock";
 import type { Database } from "@tid/db/client";
 import {
   assignmentRates,
@@ -45,9 +46,6 @@ function lookup<Key, Value>(map: Map<Key, Value>, key: Key) {
 }
 
 const describe = (value: unknown) => (value === null || value === undefined ? null : String(value));
-
-// A changed rate applies from today, so time already logged in Tid keeps the rate it got.
-const osloToday = () => new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Oslo" });
 
 // Drizzle wraps the driver's error, which holds what Postgres said and why.
 export function describeRejection(error: unknown) {
@@ -394,7 +392,8 @@ export async function writePlan(
       await compare({ kind: "rate", row, field: "rate" }, latest.rate / 100, rate.rate / 100, () =>
         transaction
           .insert(assignmentRates)
-          .values({ ...ids, validFrom: osloToday(), rate: rate.rate })
+          // A changed rate applies from today, so time already logged in Tid keeps the rate it got.
+          .values({ ...ids, validFrom: todayInOslo(), rate: rate.rate })
           .onConflictDoUpdate({
             target: [assignmentRates.projectId, assignmentRates.userId, assignmentRates.validFrom],
             set: { rate: rate.rate },

@@ -1,12 +1,12 @@
+import { formatTableDate } from "@tid/dates/dateDisplay";
+import { isIsoDate } from "@tid/dates/isoDate";
+import { todayInOslo } from "@tid/dates/osloClock";
 import { assignmentRates } from "@tid/db/schema";
 import { Badge, Button, DataGrid, EmptyState, FormField, Page } from "@tid/ui";
 import { desc } from "drizzle-orm";
 import { z } from "zod";
 import { formatAmount } from "../amount/amount";
 import { database } from "../database";
-import { formatTableDate } from "../dates/dateDisplay";
-import { isIsoDate } from "../dates/isoDate";
-import { todayInOslo } from "../dates/osloClock";
 import { type FormProps, formAction } from "../form/formAction";
 import { type Consultant, idParams, loadConsultant, ratesOf, ratesPath } from "./assignment";
 import { DeleteRateForm } from "./deleteRate.command";

@@ -1,8 +1,8 @@
+import { formatDate } from "@tid/dates/dateDisplay";
+import { isIsoDate } from "@tid/dates/isoDate";
 import { formatHours } from "@tid/elements/hours";
 import { ColorMode, Input, Popover } from "@tid/ui";
 import { z } from "zod";
-import { formatDate } from "../dates/dateDisplay";
-import { isIsoDate } from "../dates/isoDate";
 import type { Task } from "./loggableTasks";
 
 export const cellFields = z.object({

@@ -1,9 +1,9 @@
+import { formatDate, formatTableDate } from "@tid/dates/dateDisplay";
+import { isIsoDate } from "@tid/dates/isoDate";
 import { formatHours } from "@tid/elements/hours";
 import { Badge, Button, DataGrid, Page } from "@tid/ui";
 import { z } from "zod";
 import { formatAmount } from "../amount/amount";
-import { formatDate, formatTableDate } from "../dates/dateDisplay";
-import { isIsoDate } from "../dates/isoDate";
 import { type FormProps, formAction } from "../form/formAction";
 import { type Consultant, idParams, loadConsultant, ratesPath } from "./assignment";
 import { addRateAndReprice, entriesToReprice, type NewRate } from "./repricing";

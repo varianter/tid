@@ -1,6 +1,6 @@
+import { isIsoMonth } from "@tid/dates/isoDate";
+import { todayInOslo } from "@tid/dates/osloClock";
 import type { Context } from "hono";
-import { isIsoMonth } from "../dates/isoDate";
-import { todayInOslo } from "../dates/osloClock";
 import type { UserEnv } from "../login/user";
 import { monthPath, renderMonth } from "./monthPage";
 

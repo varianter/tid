@@ -1,5 +1,5 @@
+import { isIsoMonth } from "@tid/dates/isoDate";
 import type { Context } from "hono";
-import { isIsoMonth } from "../dates/isoDate";
 import type { UserEnv } from "../login/user";
 import { managesOrganization } from "../users/manager";
 import { findOrganization } from "./monthUrl";

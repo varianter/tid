@@ -1,6 +1,6 @@
+import { todayInOslo } from "@tid/dates/osloClock";
 import { Button } from "@tid/ui";
 import type { Context } from "hono";
-import { todayInOslo } from "../dates/osloClock";
 import type { UserEnv } from "../login/user";
 import { readLockChange } from "./lockChange";
 import { addLock } from "./monthLock";

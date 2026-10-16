@@ -11,6 +11,7 @@
     "check": "bun run typecheck && bun run lint && bun run test"
   },
   "dependencies": {
+    "@tid/dates": "workspace:*",
     "@tid/db": "workspace:*",
     "@tid/elements": "workspace:*",
     "@tid/harvest": "workspace:*",

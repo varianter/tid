@@ -1,0 +1,11 @@
+{
+  "name": "@tid/dates",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./dateDisplay": "./src/dateDisplay.ts",
+    "./isoDate": "./src/isoDate.ts",
+    "./osloClock": "./src/osloClock.ts",
+    "./publicHolidays": "./src/holidays/publicHolidays.ts"
+  }
+}

@@ -1,4 +1,4 @@
-import { daysOfMonth, isIsoDate } from "../dates/isoDate";
+import { daysOfMonth, isIsoDate } from "@tid/dates/isoDate";
 
 export const tabs = ["clients", "projects", "consultants", "tasks"] as const;
 export type Tab = (typeof tabs)[number];
