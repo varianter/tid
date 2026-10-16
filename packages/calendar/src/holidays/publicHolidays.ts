@@ -1,7 +1,7 @@
 import { getNorwegianPublicHolidays } from "./norway";
 import { getSwedishPublicHolidays } from "./sweden";
 
-export type Country = "no" | "se";
+export type Country = "NO" | "SE";
 
 export interface SpecialDay {
   date: string;
@@ -12,12 +12,12 @@ export interface SpecialDay {
 
 export function getPublicHolidays(
   year: number = new Date().getFullYear(),
-  country: Country = "no",
+  country: Country = "NO",
 ): SpecialDay[] {
   switch (country) {
-    case "no":
+    case "NO":
       return getNorwegianPublicHolidays(year);
-    case "se":
+    case "SE":
       return getSwedishPublicHolidays(year);
   }
 }

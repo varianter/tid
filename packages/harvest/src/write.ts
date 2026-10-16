@@ -2,7 +2,7 @@
 // Rows missing from it are added. Rows that differ from Harvest are reported, and only changed
 // when someone accepted the difference. Nothing is deleted.
 
-import { todayInOslo } from "@tid/dates/osloClock";
+import { todayInOslo } from "@tid/calendar/osloClock";
 import type { Database } from "@tid/db/client";
 import {
   assignmentRates,

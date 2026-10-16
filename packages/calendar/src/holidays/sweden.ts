@@ -4,14 +4,12 @@ import { PublicHolidayId } from "./holidayIds";
 import type { SpecialDay } from "./publicHolidays";
 
 export const SwedishHolidayId = {
-  EpiphanyEve: "epiphany-eve",
   Epiphany: "epiphany",
   EasterEve: "easter-eve",
   WhitEve: "whit-eve",
   NationalDay: "national-day",
   MidsummerEve: "midsummer-eve",
   MidsummerDay: "midsummer-day",
-  AllSaintsEve: "all-saints-eve",
   AllSaintsDay: "all-saints-day",
 } as const;
 
@@ -30,12 +28,6 @@ export function getSwedishPublicHolidays(year: number): SpecialDay[] {
       name: "Nyårsdagen",
       type: "public-holiday",
       id: PublicHolidayId.NewYearsDay,
-    },
-    {
-      date: `${year}-01-05`,
-      name: "Trettondagsafton",
-      type: "public-holiday",
-      id: SwedishHolidayId.EpiphanyEve,
     },
     {
       date: `${year}-01-06`,
@@ -114,12 +106,6 @@ export function getSwedishPublicHolidays(year: number): SpecialDay[] {
       name: "Midsommardagen",
       type: "public-holiday",
       id: SwedishHolidayId.MidsummerDay,
-    },
-    {
-      date: addDays(allSaints, -1),
-      name: "Alla helgons afton",
-      type: "public-holiday",
-      id: SwedishHolidayId.AllSaintsEve,
     },
     {
       date: allSaints,

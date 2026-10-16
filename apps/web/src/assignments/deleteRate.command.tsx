@@ -1,5 +1,5 @@
-import { isIsoDate } from "@tid/dates/isoDate";
-import { todayInOslo } from "@tid/dates/osloClock";
+import { isIsoDate } from "@tid/calendar/isoDate";
+import { todayInOslo } from "@tid/calendar/osloClock";
 import { assignmentRates } from "@tid/db/schema";
 import { Button } from "@tid/ui";
 import { and, eq } from "drizzle-orm";

@@ -25,6 +25,7 @@
 // that change often, or that need a message the user can act on. When the two
 // overlap, keep the invariant in the database and the message in the app.
 
+import type { Country } from "@tid/calendar/publicHolidays";
 import { sql } from "drizzle-orm";
 import {
   bigint,
@@ -58,8 +59,8 @@ export const organizations = pgTable(
     name: text().notNull(),
     // Shown wherever someone outside the app sees it. Harvest accounts are matched on it.
     legalName: text().notNull().unique(),
-    // ISO 3166-1 alpha-2, like NO or SE.
-    country: char({ length: 2 }).notNull(),
+    // ISO 3166-1 alpha-2. Only countries the app has a holiday calendar for.
+    country: char({ length: 2 }).$type<Country>().notNull(),
     currency: char({ length: 3 }).notNull(),
     fullDayMinutes: integer().notNull(),
   },

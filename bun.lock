@@ -12,7 +12,7 @@
     "apps/web": {
       "name": "@tid/web",
       "dependencies": {
-        "@tid/dates": "workspace:*",
+        "@tid/calendar": "workspace:*",
         "@tid/db": "workspace:*",
         "@tid/elements": "workspace:*",
         "@tid/harvest": "workspace:*",
@@ -27,14 +27,14 @@
         "@types/bun": "1.4.2",
       },
     },
-    "packages/dates": {
-      "name": "@tid/dates",
+    "packages/calendar": {
+      "name": "@tid/calendar",
     },
     "packages/db": {
       "name": "@tid/db",
       "dependencies": {
         "@azure/identity": "4.13.3",
-        "@tid/dates": "workspace:*",
+        "@tid/calendar": "workspace:*",
         "drizzle-orm": "catalog:",
       },
       "devDependencies": {
@@ -48,7 +48,7 @@
     "packages/harvest": {
       "name": "@tid/harvest",
       "dependencies": {
-        "@tid/dates": "workspace:*",
+        "@tid/calendar": "workspace:*",
         "@tid/db": "workspace:*",
         "drizzle-orm": "catalog:",
       },
@@ -199,7 +199,7 @@
 
     "@testcontainers/postgresql": ["@testcontainers/postgresql@12.2.0", "", { "dependencies": { "testcontainers": "^12.2.0" } }, "sha512-14oNBbKdqIkWTiw8XwP6YqWnuBebiij8m4fF03WTSHvNt5FfvQpGTLwIV3p07UpDnqWRFvY50YFzbiYdB+SWuA=="],
 
-    "@tid/dates": ["@tid/dates@workspace:packages/dates"],
+    "@tid/calendar": ["@tid/calendar@workspace:packages/calendar"],
 
     "@tid/db": ["@tid/db@workspace:packages/db"],
 

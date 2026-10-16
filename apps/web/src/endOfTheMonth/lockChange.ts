@@ -1,4 +1,4 @@
-import { isIsoMonth } from "@tid/dates/isoDate";
+import { isIsoMonth } from "@tid/calendar/isoDate";
 import type { Context } from "hono";
 import type { UserEnv } from "../login/user";
 import { managesOrganization } from "../users/manager";

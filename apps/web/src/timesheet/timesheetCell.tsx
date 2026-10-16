@@ -1,5 +1,5 @@
-import { formatDate } from "@tid/dates/dateDisplay";
-import { isIsoDate } from "@tid/dates/isoDate";
+import { formatDate } from "@tid/calendar/dateDisplay";
+import { isIsoDate } from "@tid/calendar/isoDate";
 import { formatHours } from "@tid/elements/hours";
 import { ColorMode, Input, Popover } from "@tid/ui";
 import { z } from "zod";

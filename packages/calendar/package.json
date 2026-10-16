@@ -1,8 +1,9 @@
 {
-  "name": "@tid/dates",
+  "name": "@tid/calendar",
   "private": true,
   "type": "module",
   "exports": {
+    ".": "./src/calendar.ts",
     "./dateDisplay": "./src/dateDisplay.ts",
     "./isoDate": "./src/isoDate.ts",
     "./osloClock": "./src/osloClock.ts",

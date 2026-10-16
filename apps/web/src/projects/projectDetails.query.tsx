@@ -1,5 +1,5 @@
-import { addMonths } from "@tid/dates/isoDate";
-import { todayInOslo } from "@tid/dates/osloClock";
+import { addMonths } from "@tid/calendar/isoDate";
+import { todayInOslo } from "@tid/calendar/osloClock";
 import {
   assignmentRates,
   clients,

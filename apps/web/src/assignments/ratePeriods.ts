@@ -1,4 +1,4 @@
-import { addDays } from "@tid/dates/isoDate";
+import { addDays } from "@tid/calendar/isoDate";
 
 type Rate = { validFrom: string; rate: number };
 

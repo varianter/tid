@@ -1,6 +1,8 @@
+import type { Country } from "@tid/calendar/publicHolidays";
+
 // Only employees may sign up, and their email domain tells which country's offices they can
 // choose between.
-const countryByDomain = new Map([
+const countryByDomain = new Map<string, Country>([
   ["variant.no", "NO"],
   ["variant.se", "SE"],
 ]);

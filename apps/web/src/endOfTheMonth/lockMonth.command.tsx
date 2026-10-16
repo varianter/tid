@@ -1,4 +1,4 @@
-import { todayInOslo } from "@tid/dates/osloClock";
+import { todayInOslo } from "@tid/calendar/osloClock";
 import { Button } from "@tid/ui";
 import type { Context } from "hono";
 import type { UserEnv } from "../login/user";

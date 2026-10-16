@@ -32,7 +32,7 @@ A module should be describable in one sentence without "and". If it isn't, split
 - **Good:** `isoDate.ts` with both `parseIsoDate` and `formatIsoDate`. A change to the ISO format changes both.
 - **Good:** `dateDisplay.ts` with every way the app shows a date. A change to how dates look changes only it.
 
-Name a file after what its exports are about. They should read well together: `isoDate.addDays`, `dateDisplay.formatMonth`. One that reads oddly belongs elsewhere.
+Name a file after what its exports are about. They should read well together: `isoDate.addDays`, `dateDisplay.formatDate`. One that reads oddly belongs elsewhere.
 
 Before adding a function, check whether one already exists. Extend it rather than writing a second.
 

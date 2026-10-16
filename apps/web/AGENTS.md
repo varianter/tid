@@ -1,6 +1,6 @@
 ## Terms
 
-- **Generic** code knows nothing about this business: `@tid/ui`, or app folders like `dates/`. It never imports from a feature.
+- **Generic** code knows nothing about this business: `@tid/ui` and `@tid/calendar`. It never imports from a feature.
 - **Domain** code knows the business: its rules, queries and components. It lives in a feature, even when several features use it.
 - A **command** is a use case that changes state: a `POST` that redirects when it succeeds.
 - A **query** is a use case that reads state and renders a page: a `GET`.

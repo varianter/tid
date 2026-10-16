@@ -1,6 +1,6 @@
-import { formatTableDate } from "@tid/dates/dateDisplay";
-import { isIsoDate } from "@tid/dates/isoDate";
-import { todayInOslo } from "@tid/dates/osloClock";
+import { formatDate } from "@tid/calendar/dateDisplay";
+import { isIsoDate } from "@tid/calendar/isoDate";
+import { todayInOslo } from "@tid/calendar/osloClock";
 import { assignmentRates } from "@tid/db/schema";
 import { Badge, Button, DataGrid, EmptyState, FormField, Page } from "@tid/ui";
 import { desc } from "drizzle-orm";
@@ -107,8 +107,8 @@ function RatesPage({ consultant, rates, today, values, fieldErrors }: RatesPageP
                 {formatAmount(period.rate / 100, consultant.currency, 2)}
                 {period.isCurrent && <Badge class="ml-xs">Current</Badge>}
               </span>
-              {formatTableDate(period.validFrom)}
-              {period.validUntil ? formatTableDate(period.validUntil) : "All future"}
+              {formatDate(period.validFrom, "numeric")}
+              {period.validUntil ? formatDate(period.validUntil, "numeric") : "All future"}
               {period.validFrom > today ? (
                 <DeleteRateForm ids={consultant} validFrom={period.validFrom} />
               ) : (

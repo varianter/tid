@@ -1,5 +1,5 @@
-import { formatMonth } from "@tid/dates/dateDisplay";
-import { isIsoMonth } from "@tid/dates/isoDate";
+import { formatDate } from "@tid/calendar/dateDisplay";
+import { isIsoMonth } from "@tid/calendar/isoDate";
 import { tasks, timeEntries } from "@tid/db/schema";
 import { and, eq, sql } from "drizzle-orm";
 import type { Context } from "hono";
@@ -67,7 +67,7 @@ async function saveHours(user: User, taskId: number, day: string, hours: unknown
     await saveCell(user.id, taskId, day, minutes.data);
   } catch (error) {
     if (!isMonthLockedError(error)) throw error;
-    return { error: { typed, message: `${formatMonth(day.slice(0, 7))} is locked` } };
+    return { error: { typed, message: `${formatDate(day, "month")} is locked` } };
   }
   return { minutes: minutes.data };
 }

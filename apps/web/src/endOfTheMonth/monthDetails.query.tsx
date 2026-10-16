@@ -1,6 +1,6 @@
-import { formatDate, formatMonth } from "@tid/dates/dateDisplay";
-import { addMonths, daysOfMonth, isIsoMonth } from "@tid/dates/isoDate";
-import { isoDateInOslo, todayInOslo } from "@tid/dates/osloClock";
+import { formatDate } from "@tid/calendar/dateDisplay";
+import { addMonths, daysOfMonth, isIsoMonth } from "@tid/calendar/isoDate";
+import { isoDateInOslo, todayInOslo } from "@tid/calendar/osloClock";
 import { projects, tasks, timeEntries, users } from "@tid/db/schema";
 import { formatHours } from "@tid/elements/hours";
 import { DataGrid, Page, PeriodNavigation } from "@tid/ui";
@@ -76,7 +76,12 @@ export const monthDetails = async (c: Context<UserEnv>) => {
   const rows = consultants.map((consultant) => {
     // Hours not yet due don't count as missing, so the current month only checks up to today.
     const until = consultant.endsOn && consultant.endsOn < today ? consultant.endsOn : today;
-    const expectedMinutes = capacityMinutes(month, organization.fullDayMinutes, until);
+    const expectedMinutes = capacityMinutes(
+      month,
+      organization.country,
+      organization.fullDayMinutes,
+      until,
+    );
     return {
       name: consultant.name,
       minutes: consultant.minutes,
@@ -149,7 +154,7 @@ function MonthDetailsPage({
             previousLabel="Previous month"
             nextLabel="Next month"
           >
-            {formatMonth(month)}
+            {formatDate(month, "month")}
           </PeriodNavigation>
         </>
       }
@@ -158,7 +163,7 @@ function MonthDetailsPage({
         <span class={activeLock ? "fw-medium" : "ink-subtle"}>
           {activeLock
             ? `Locked by ${activeLock.lockedByName}, ${formatDate(isoDateInOslo(activeLock.lockedAt))}`
-            : `${formatMonth(month)} is open`}
+            : `${formatDate(month, "month")} is open`}
         </span>
         {canChangeLock &&
           (activeLock ? (

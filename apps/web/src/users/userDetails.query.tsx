@@ -1,6 +1,6 @@
-import { formatDate, formatMonth } from "@tid/dates/dateDisplay";
-import { addMonths, daysOfMonth, isIsoMonth } from "@tid/dates/isoDate";
-import { todayInOslo } from "@tid/dates/osloClock";
+import { formatDate } from "@tid/calendar/dateDisplay";
+import { addMonths, daysOfMonth, isIsoMonth } from "@tid/calendar/isoDate";
+import { todayInOslo } from "@tid/calendar/osloClock";
 import {
   clients,
   organizations,
@@ -35,6 +35,7 @@ export const userDetails = async (c: Context<UserEnv>) => {
       email: users.email,
       endsOn: users.endsOn,
       organizationSlug: organizations.slug,
+      country: organizations.country,
       fullDayMinutes: organizations.fullDayMinutes,
       isManager: exists(
         database
@@ -97,7 +98,7 @@ export const userDetails = async (c: Context<UserEnv>) => {
           previousLabel="Previous month"
           nextLabel="Next month"
         >
-          {formatMonth(month)}
+          {formatDate(month, "month")}
         </PeriodNavigation>
       }
     >
@@ -110,7 +111,7 @@ export const userDetails = async (c: Context<UserEnv>) => {
         <MonthHours
           minutes={monthTotals?.minutes ?? 0}
           billableMinutes={monthTotals?.billableMinutes ?? 0}
-          capacityMinutes={capacityMinutes(month, user.fullDayMinutes, user.endsOn)}
+          capacityMinutes={capacityMinutes(month, user.country, user.fullDayMinutes, user.endsOn)}
         />
         <MonthEntries month={month} entries={entries} />
       </div>
@@ -194,7 +195,7 @@ function MonthEntries({ month, entries }: { month: string; entries: Entry[] }) {
       <h2 class="fs-m">Entries</h2>
       {days.size === 0 ? (
         <EmptyState emoji="🗓️" title="No hours logged">
-          No time was logged in {formatMonth(month)}.
+          No time was logged in {formatDate(month, "month")}.
         </EmptyState>
       ) : (
         [...days].map(([day, dayEntries]) => (

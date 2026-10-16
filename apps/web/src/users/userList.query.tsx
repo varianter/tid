@@ -1,4 +1,4 @@
-import { formatDate } from "@tid/dates/dateDisplay";
+import { formatDate } from "@tid/calendar/dateDisplay";
 import { userRoles, users } from "@tid/db/schema";
 import { Badge, DataGrid, Page } from "@tid/ui";
 import { and, eq, exists } from "drizzle-orm";

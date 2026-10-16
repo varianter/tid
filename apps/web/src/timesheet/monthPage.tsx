@@ -1,6 +1,6 @@
-import { formatDayInMonth, formatMonth } from "@tid/dates/dateDisplay";
-import { addMonths, daysOfMonth, isWeekend, mondayOf } from "@tid/dates/isoDate";
-import { todayInOslo } from "@tid/dates/osloClock";
+import { formatDate } from "@tid/calendar/dateDisplay";
+import { addMonths, daysOfMonth, isWeekend, mondayOf } from "@tid/calendar/isoDate";
+import { todayInOslo } from "@tid/calendar/osloClock";
 import { timeEntries } from "@tid/db/schema";
 import { formatHours } from "@tid/elements/hours";
 import { Button, ColorMode, Input, Label, Page, PeriodNavigation } from "@tid/ui";
@@ -135,14 +135,15 @@ function MonthPage({
             previousLabel="Previous month"
             nextLabel="Next month"
           >
-            {formatMonth(month)}
+            {formatDate(month, "month")}
           </PeriodNavigation>
         </>
       }
     >
       {grid.locked && (
         <p class="b-all bc-subtle br-l fs-s p-xs surface-tinted">
-          {formatMonth(month)} is locked. Ask a manager to unlock it if something needs changing.
+          {formatDate(month, "month")} is locked. Ask a manager to unlock it if something needs
+          changing.
         </p>
       )}
       <timesheet-conductor cell-action={cellAction}>
@@ -209,7 +210,7 @@ function TimesheetGrid({
               class={`ta-right fs-s py-xs px-3xs d-block  br-m br-bl-none br-br-none${day === today ? "" : " surface-base"}`}
             >
               {day === today && <span id="today" />}
-              {formatDayInMonth(day)}
+              {formatDate(day, "day")}
             </TodayTint>
           ))}
         </div>

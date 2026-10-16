@@ -1,6 +1,6 @@
-import { formatMonth } from "@tid/dates/dateDisplay";
-import { addMonths } from "@tid/dates/isoDate";
-import { todayInOslo } from "@tid/dates/osloClock";
+import { formatDate } from "@tid/calendar/dateDisplay";
+import { addMonths } from "@tid/calendar/isoDate";
+import { todayInOslo } from "@tid/calendar/osloClock";
 import { projects, timeEntriesExport } from "@tid/db/schema";
 import { formatTotalHours } from "@tid/elements/hours";
 import { DataGrid, type DataGridColumn, EmptyState, Page, PeriodNavigation, Tabs } from "@tid/ui";
@@ -56,7 +56,8 @@ export const monthlyReport = async (c: Context<UserEnv, "/:organization">) => {
     ), 0)`.mapWith(Number),
   };
   const currency = organization.currency;
-  const capacityHours = capacityMinutes(month, organization.fullDayMinutes) / 60;
+  const capacityHours =
+    capacityMinutes(month, organization.country, organization.fullDayMinutes) / 60;
 
   const report = await (async (): Promise<ReportRows> => {
     switch (tab) {
@@ -201,7 +202,7 @@ function ReportPage({
             previousLabel="Previous month"
             nextLabel="Next month"
           >
-            {formatMonth(month)}
+            {formatDate(month, "month")}
           </PeriodNavigation>
         </>
       }
@@ -218,7 +219,7 @@ function ReportPage({
         <div class="b-all bc-subtle br-l p-m">
           {table.rows.length === 0 ? (
             <EmptyState emoji="🗓️" title="No hours logged">
-              No time was logged in {formatMonth(month)}.
+              No time was logged in {formatDate(month, "month")}.
             </EmptyState>
           ) : (
             <DataGrid columns={table.columns}>

@@ -1,4 +1,4 @@
-import { addDays, mondayOf } from "@tid/dates/isoDate";
+import { addDays, mondayOf } from "@tid/calendar/isoDate";
 
 // Weekday numbers follow ISO 8601, the convention the fixture's weekdays use:
 // 1 is Monday and 7 is Sunday.

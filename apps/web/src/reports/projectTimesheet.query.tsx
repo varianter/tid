@@ -1,6 +1,7 @@
-import { formatMonth } from "@tid/dates/dateDisplay";
-import { daysOfMonth, isIsoMonth, isWeekend } from "@tid/dates/isoDate";
-import { todayInOslo } from "@tid/dates/osloClock";
+import { type Calendar, calendarFor } from "@tid/calendar";
+import { formatDate } from "@tid/calendar/dateDisplay";
+import { daysOfMonth, isIsoMonth } from "@tid/calendar/isoDate";
+import { todayInOslo } from "@tid/calendar/osloClock";
 import { clients, projects, timeEntriesExport } from "@tid/db/schema";
 import { formatHours, formatTotalHours } from "@tid/elements/hours";
 import { and, between, eq, sql } from "drizzle-orm";
@@ -68,7 +69,7 @@ export const projectTimesheet = async (
     consultants.set(entry.email, consultant);
   }
 
-  const period = formatMonth(month);
+  const period = formatDate(month, "month");
   return renderForPrint(
     c,
     { title: `Timesheet details – ${project.client} – ${period}`, style: timesheetDetailsStyle },
@@ -77,6 +78,7 @@ export const projectTimesheet = async (
       projectName={project.name}
       period={period}
       days={days}
+      calendar={calendarFor(organization.country)}
       consultants={[...consultants.values()]}
       // Fixed fee and non-billable projects have no amount to show.
       amount={
@@ -118,7 +120,7 @@ const timesheetDetailsStyle = css`
   .timesheet-details th + th, .timesheet-details td + td { border-left: 1px solid #cdcdcd; }
   .timesheet-details th:first-child, .timesheet-details td:first-child { text-align: left; padding-left: 4pt; }
   .timesheet-details .day { width: 22pt; }
-  .timesheet-details .weekend { color: #fe6d6d; }
+  .timesheet-details .day-off { color: #fe6d6d; }
   .timesheet-details .sum, .timesheet-details tfoot { font-weight: 600; }
 
   .timesheet-details .amount { display: flex; justify-content: flex-end; gap: 8pt; margin-top: 24pt; }
@@ -134,6 +136,7 @@ function TimesheetDetails({
   projectName,
   period,
   days,
+  calendar,
   consultants,
   amount,
   reportHref,
@@ -142,6 +145,7 @@ function TimesheetDetails({
   projectName: string;
   period: string;
   days: string[];
+  calendar: Calendar;
   consultants: Consultant[];
   amount: string | undefined;
   reportHref: string;
@@ -174,7 +178,9 @@ function TimesheetDetails({
           <tr>
             <th>Name</th>
             {days.map((day) => (
-              <th class={isWeekend(day) ? "day weekend" : "day"}>{Number(day.slice(8))}</th>
+              <th class={calendar.isWorkday(day) ? "day" : "day day-off"}>
+                {Number(day.slice(8))}
+              </th>
             ))}
             <th>Sum</th>
           </tr>

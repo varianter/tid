@@ -1,5 +1,5 @@
-import { formatDate, formatTableDate } from "@tid/dates/dateDisplay";
-import { isIsoDate } from "@tid/dates/isoDate";
+import { formatDate } from "@tid/calendar/dateDisplay";
+import { isIsoDate } from "@tid/calendar/isoDate";
 import { formatHours } from "@tid/elements/hours";
 import { Badge, Button, DataGrid, Page } from "@tid/ui";
 import { z } from "zod";
@@ -73,7 +73,7 @@ function RepricePage({ consultant, newRate, entries }: RepricePageProps) {
         {entries.map((entry) => (
           <DataGrid.Row>
             <DataGrid.Title secondary={entry.task}>
-              {formatTableDate(entry.spentOn)}
+              {formatDate(entry.spentOn, "numeric")}
               {entry.isLocked && <Badge class="ml-xs">Locked</Badge>}
             </DataGrid.Title>
             {formatHours(entry.minutes)}
