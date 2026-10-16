@@ -7,6 +7,7 @@ export interface SpecialDay {
   date: string;
   id: string;
   name: string;
+  emoji: string;
   type: "public-holiday";
 }
 

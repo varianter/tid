@@ -19,3 +19,9 @@ test("workdaysIn lists the month's workdays in order", () => {
   expect(norway.workdaysIn("2026-05")).toHaveLength(18);
   expect(norway.workdaysIn("2026-05").slice(0, 2)).toEqual(["2026-05-04", "2026-05-05"]);
 });
+
+test("holidayOn names the country's holiday on a day, and nothing on other days", () => {
+  expect(norway.holidayOn("2026-05-17")?.name).toBe("Grunnlovsdag (17. mai)");
+  expect(sweden.holidayOn("2026-06-06")?.emoji).toBe("🇸🇪");
+  expect(norway.holidayOn("2026-05-18")).toBeUndefined();
+});

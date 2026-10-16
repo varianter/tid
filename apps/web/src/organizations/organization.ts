@@ -17,3 +17,11 @@ export async function findOrganizationSlug(orgId: number) {
     .where(eq(organizations.id, orgId));
   return organization?.slug;
 }
+
+export async function findOrganizationCountry(orgId: number) {
+  const [organization] = await database
+    .select({ country: organizations.country })
+    .from(organizations)
+    .where(eq(organizations.id, orgId));
+  return organization?.country;
+}

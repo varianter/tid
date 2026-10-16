@@ -1,6 +1,8 @@
+import { type Calendar, calendarFor } from "@tid/calendar";
 import { formatDate } from "@tid/calendar/dateDisplay";
 import { addMonths, daysOfMonth, isWeekend, mondayOf } from "@tid/calendar/isoDate";
 import { todayInOslo } from "@tid/calendar/osloClock";
+import type { SpecialDay } from "@tid/calendar/publicHolidays";
 import { timeEntries } from "@tid/db/schema";
 import { formatHours } from "@tid/elements/hours";
 import { Button, ColorMode, Input, Label, Page, PeriodNavigation } from "@tid/ui";
@@ -11,6 +13,7 @@ import type { PropsWithChildren } from "hono/jsx";
 import { database } from "../database";
 import { isLockedOn } from "../endOfTheMonth/monthLock";
 import type { UserEnv } from "../login/user";
+import { findOrganizationCountry } from "../organizations/organization";
 import { loggableBy, type Task, userTasks } from "./loggableTasks";
 import { type CellError, inputWidth, TimesheetCell } from "./timesheetCell";
 
@@ -54,6 +57,8 @@ export async function renderMonth(c: Context<UserEnv>, month: string, error?: Mo
     (day) => showWeekends || !isWeekend(day) || entries.some((entry) => entry.spentOn === day),
   );
   const search = new URL(c.req.url).search;
+  const country = await findOrganizationCountry(c.get("user").orgId);
+  if (!country) throw new Error("The user's organization is missing");
 
   return c.render(
     <MonthPage
@@ -63,6 +68,7 @@ export async function renderMonth(c: Context<UserEnv>, month: string, error?: Mo
       previousHref={monthPath(addMonths(month, -1), showWeekends)}
       nextHref={monthPath(addMonths(month, 1), showWeekends)}
       days={days}
+      calendar={calendarFor(country)}
       tasks={tasks}
       entries={entries}
       cellsAction={cellsActionOf(month, search)}
@@ -76,6 +82,7 @@ export async function renderMonth(c: Context<UserEnv>, month: string, error?: Mo
 
 type TimesheetGridProps = {
   days: string[];
+  calendar: Calendar;
   tasks: Task[];
   entries: TimeEntry[];
   cellsAction: string;
@@ -155,6 +162,7 @@ function MonthPage({
 
 function TimesheetGrid({
   days,
+  calendar,
   tasks,
   entries,
   cellsAction,
@@ -164,6 +172,10 @@ function TimesheetGrid({
   locked = false,
 }: TimesheetGridProps) {
   const today = todayInOslo();
+  const holidays = days.map(calendar.holidayOn);
+  const tints = days.map((day, index): DayTintKind | undefined =>
+    day === today ? "today" : holidays[index] ? "holiday" : undefined,
+  );
   // A week starts wherever the Monday changes, which still holds with weekends hidden.
   const startsWeek = days.map(
     (day, index) => index > 0 && mondayOf(day) !== mondayOf(days[index - 1] ?? day),
@@ -204,14 +216,15 @@ function TimesheetGrid({
             Task
           </div>
           {days.map((day, index) => (
-            <TodayTint
-              isToday={day === today}
+            <DayTint
+              tint={tints[index]}
               weekStart={startsWeek[index]}
-              class={`ta-right fs-s py-xs px-3xs d-block  br-m br-bl-none br-br-none${day === today ? "" : " surface-base"}`}
+              class={`ta-right fs-s py-xs px-3xs d-block  br-m br-bl-none br-br-none${tints[index] ? "" : " surface-base"}`}
             >
               {day === today && <span id="today" />}
+              <DayLabel isToday={day === today} holiday={holidays[index]} />
               {formatDate(day, "day")}
-            </TodayTint>
+            </DayTint>
           ))}
         </div>
 
@@ -224,8 +237,8 @@ function TimesheetGrid({
               </a>
             </div>
             {days.map((day, index) => (
-              <TodayTint
-                isToday={day === today}
+              <DayTint
+                tint={tints[index]}
                 weekStart={startsWeek[index]}
                 class="self-stretch px-3xs stack-v justify-center items-end"
               >
@@ -237,7 +250,7 @@ function TimesheetGrid({
                   error={error?.taskId === task.id && error.day === day ? error : undefined}
                   locked={locked}
                 />
-              </TodayTint>
+              </DayTint>
             ))}
           </div>
         ))}
@@ -276,8 +289,8 @@ function TimesheetGrid({
             </div>
             {/* Placeholders so the row reads as part of the sheet; there's no task to log on yet. */}
             {days.map((day, index) => (
-              <TodayTint
-                isToday={day === today}
+              <DayTint
+                tint={tints[index]}
                 weekStart={startsWeek[index]}
                 class="self-stretch px-3xs stack-v justify-center items-end"
               >
@@ -290,7 +303,7 @@ function TimesheetGrid({
                   data-size="small"
                   style={`max-width: ${inputWidth}`}
                 />
-              </TodayTint>
+              </DayTint>
             ))}
           </form>
         )}
@@ -351,25 +364,52 @@ function byProjectThenName(a: Task, b: Task) {
   return a.projectName.localeCompare(b.projectName, "nb") || a.name.localeCompare(b.name, "nb");
 }
 
-function TodayTint({
-  isToday,
+type DayTintKind = "today" | "holiday";
+const tintPalettes = { today: "blue", holiday: "orange" } as const;
+
+function DayTint({
+  tint,
   weekStart,
   class: className,
   children,
-}: PropsWithChildren<{ isToday: boolean; weekStart?: boolean; class: string }>) {
+}: PropsWithChildren<{ tint?: DayTintKind; weekStart?: boolean; class: string }>) {
   const weekStartMark = weekStart || undefined;
-  if (!isToday)
+  if (!tint)
     return (
       <div class={className} data-week-start={weekStartMark}>
         {children}
       </div>
     );
   return (
-    <ColorMode palette="blue" class={`surface-tinted ${className}`} data-week-start={weekStartMark}>
+    <ColorMode
+      palette={tintPalettes[tint]}
+      class={`surface-tinted ${className}`}
+      data-week-start={weekStartMark}
+    >
       {children}
     </ColorMode>
   );
 }
+
+function DayLabel({ isToday, holiday }: { isToday: boolean; holiday?: SpecialDay }) {
+  if (!isToday && !holiday) return null;
+  return (
+    // Widens the day's column up to the longest word in a holiday's name, and wraps beyond that.
+    <span class={cx("d-block fs-xs fw-medium lh-snug mb-3xs", dayLabelLayout)}>
+      {isToday && <span class="d-block">Today</span>}
+      {holiday && (
+        <span class="d-block">
+          <span aria-hidden="true">{holiday.emoji}</span> {holiday.name}
+        </span>
+      )}
+    </span>
+  );
+}
+
+const dayLabelLayout = css`
+  max-inline-size: 15ch;
+  margin-inline-start: auto;
+`;
 
 /**
  * Phones log a day at a time, so there the sheet turns: each row becomes a column, with days
