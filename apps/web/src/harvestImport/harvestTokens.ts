@@ -1,7 +1,6 @@
 import type { Context } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
-
-export const importPath = "/harvest-import";
+import { importPath } from "./harvestImportUrl";
 
 // Tokens can do anything their owner can in Harvest, so only this page gets them, scripts can't
 // read them, and they're gone after an hour.

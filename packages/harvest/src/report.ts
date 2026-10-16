@@ -71,18 +71,46 @@ export function describePlan(plan: ImportPlan) {
 
   const projects = table(
     "Projects",
-    ["Code", "Name", "Client", "Billing", "Billable base", "Organizations", "Tasks", "People"],
+    [
+      "Code",
+      "Name",
+      "Client",
+      "Billing",
+      "Suggested owner",
+      "Billable base",
+      "Organizations",
+      "Tasks",
+      "People",
+    ],
     plan.projects
       .toSorted((a, b) => byText(a.code, b.code))
       .map((project) => [
         project.code,
         shorten(project.name),
         shorten(project.client),
-        project.openToEveryone ? "open to all" : project.billable ? "billable" : "non-billable",
+        project.openToEveryone ? "open to all" : project.billing.replace("_", " "),
+        project.suggestedOwner ?? "",
         project.countsTowardBillableBase ? "" : "left out",
         project.organizations.join(", "),
         count(plan.tasks, (task) => task.project === project.code),
         count(plan.assignments, (assignment) => assignment.project === project.code),
+      ]),
+  );
+
+  // Shows where -S marks the account with subcontractors, which the suggested owner relies on.
+  const sharedCodes = table(
+    "Projects in several accounts",
+    ["Code", "Billing", "Harvest codes", "Suggested owner"],
+    plan.projects
+      .filter(
+        (project) => new Set(project.harvestProjects.map((part) => part.organization)).size > 1,
+      )
+      .toSorted((a, b) => byText(a.code, b.code))
+      .map((project) => [
+        project.code,
+        project.billing.replace("_", " "),
+        project.harvestProjects.map((part) => `${part.code} (${part.organization})`).join(", "),
+        project.suggestedOwner ?? "",
       ]),
   );
 
@@ -129,7 +157,7 @@ export function describePlan(plan: ImportPlan) {
       ]),
   );
 
-  return [users, clients, projects, assignments, entries].join("\n\n");
+  return [users, clients, projects, sharedCodes, assignments, entries].join("\n\n");
 }
 
 export function describeWarning(warning: Warning) {
@@ -141,8 +169,6 @@ export function describeWarning(warning: Warning) {
       return `${warning.email} was billed at ${warning.rates.join(", ")} on project ${warning.project}, not as a price increase; they keep the last, ${warning.kept}.`;
     case "severalOrganizations":
       return `${warning.email} is in ${warning.organizations.join(" and ")}; placed in ${warning.placedIn}, where they work the most.`;
-    case "fixedFee":
-      return `Project ${warning.project} is fixed fee, so its hours export without an amount.`;
     case "sharedName":
       return `${warning.client} has several projects named "${warning.name}" (${warning.projects.join(", ")}); each gets its code added to the name.`;
     case "nonBillableEntries":

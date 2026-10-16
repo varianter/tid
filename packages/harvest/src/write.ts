@@ -61,10 +61,15 @@ export function describeRejection(error: unknown) {
 }
 
 // A preview writes everything and rolls it back, so it finds what Postgres would reject too.
+// `owners` maps project codes to the organization slug picked as contract owner.
 export async function writePlan(
   database: Database,
   plan: ImportPlan,
-  { accepted = new Set<string>(), preview = false } = {},
+  {
+    accepted = new Set<string>(),
+    owners = new Map<string, string>(),
+    preview = false,
+  }: { accepted?: Set<string>; owners?: Map<string, string>; preview?: boolean } = {},
 ) {
   const added = {
     users: [] as string[],
@@ -77,6 +82,7 @@ export async function writePlan(
     entries: [] as string[],
   };
   const differences: Difference[] = [];
+  const ownerless: string[] = [];
   const compare = async (
     difference: Omit<Difference, "id" | "tid" | "harvest">,
     tid: unknown,
@@ -185,10 +191,17 @@ export async function writePlan(
       transaction
         .insert(projects)
         .values(
-          chunk.map(({ client, organizations: _, openToEveryone: __, ...project }) => ({
-            ...project,
-            clientId: clientFor(client).id,
-          })),
+          chunk.map(
+            ({ client, code, name, billing, countsTowardBillableBase, startsOn, endsOn }) => ({
+              code,
+              name,
+              billing,
+              countsTowardBillableBase,
+              startsOn,
+              endsOn,
+              clientId: clientFor(client).id,
+            }),
+          ),
         )
         .returning(),
     )) {
@@ -214,7 +227,7 @@ export async function writePlan(
       );
       for (const field of [
         "name",
-        "billable",
+        "billing",
         "countsTowardBillableBase",
         "startsOn",
         "endsOn",
@@ -229,8 +242,8 @@ export async function writePlan(
     }
     const projectId = (code: string) => lookup(projectRows, code).id;
 
-    // The import doesn't decide who owns a project; that's set by hand. Assignments go through the
-    // user's organization as Tid has it, which must take part in the project too.
+    // The import only sets the contract owners someone picked. Assignments go through the user's
+    // organization as Tid has it, which must take part in the project too.
     const participations = new Map(
       (await transaction.select().from(projectOrganizations)).map((row) => [
         `${row.projectId}|${row.orgId}`,
@@ -239,7 +252,7 @@ export async function writePlan(
     );
     const newParticipations = new Map<
       string,
-      { projectId: number; orgId: number; openToMembers: boolean }
+      { projectId: number; orgId: number; openToMembers: boolean; isContractOwner?: boolean }
     >();
     const takePart = (code: string, orgId: number, openToMembers = false) => {
       const key = `${projectId(code)}|${orgId}`;
@@ -276,6 +289,38 @@ export async function writePlan(
     for (const assignment of plan.assignments) {
       takePart(assignment.project, userFor(assignment.email).orgId);
     }
+    // A contract owner set in Tid stays.
+    const ownedProjectIds = new Set(
+      [...participations.values()].filter((row) => row.isContractOwner).map((row) => row.projectId),
+    );
+    for (const [code, slug] of owners) {
+      if (ownedProjectIds.has(projectId(code))) continue;
+      const orgId = lookup(organizationIds, slug);
+      takePart(code, orgId);
+      const pending = newParticipations.get(`${projectId(code)}|${orgId}`);
+      if (pending) pending.isContractOwner = true;
+      else {
+        await transaction
+          .update(projectOrganizations)
+          .set({ isContractOwner: true })
+          .where(
+            and(
+              eq(projectOrganizations.projectId, projectId(code)),
+              eq(projectOrganizations.orgId, orgId),
+            ),
+          );
+      }
+      ownedProjectIds.add(projectId(code));
+    }
+    // Billable projects still without one, for someone to pick.
+    ownerless.push(
+      ...plan.projects
+        .filter(
+          (project) =>
+            project.billing !== "non_billable" && !ownedProjectIds.has(projectId(project.code)),
+        )
+        .map((project) => project.code),
+    );
     await inChunks([...newParticipations.values()], (chunk) =>
       transaction.insert(projectOrganizations).values(chunk).returning(),
     );
@@ -414,5 +459,5 @@ export async function writePlan(
   await write.catch((error) => {
     if (!(error instanceof TransactionRollbackError)) throw error;
   });
-  return { added, differences };
+  return { added, differences, ownerless };
 }

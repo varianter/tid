@@ -94,7 +94,6 @@ function projectRates({ projects, taskAssignments }: HarvestExport) {
 export function planAssignments(
   assignments: ReturnType<typeof readAssignments>,
   projectsByCode: Map<string, ImportPlan["projects"][number]>,
-  fixedFeeCodes: Set<string>,
   people: Map<string, Person>,
   { problems, warnings }: Findings,
 ) {
@@ -113,7 +112,9 @@ export function planAssignments(
         );
       }
       const [rate] = rates;
-      if (rate === undefined && project.billable && !fixedFeeCodes.has(code)) {
+      // Only hourly projects have rates in Tid, so Harvest's budget rates on others are dropped.
+      const isHourly = project.billing === "hourly";
+      if (rate === undefined && isHourly) {
         warnings.push({
           kind: sameAssignment.some((assignment) => assignment.pricedByTask)
             ? "noRatePricedByTask"
@@ -128,7 +129,8 @@ export function planAssignments(
         {
           project: code,
           email: person.email,
-          rates: rate === undefined ? [] : [{ validFrom, rate: Math.round(rate * 100) }],
+          rates:
+            rate === undefined || !isHourly ? [] : [{ validFrom, rate: Math.round(rate * 100) }],
         },
       ];
     },

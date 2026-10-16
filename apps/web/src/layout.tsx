@@ -1,10 +1,10 @@
-import { Style } from "hono/css";
+import { css, Style } from "hono/css";
 import type { PropsWithChildren } from "hono/jsx";
 
 type LayoutProps = PropsWithChildren<{
   title: string;
   currentPath: string;
-  user?: { name: string };
+  user?: { id: number; name: string };
   logoutUrl: string;
   /** The bundled custom elements, loaded on every page. */
   elementsSrc: string;
@@ -40,12 +40,22 @@ export function Layout({
         <link rel="stylesheet" href="https://varde.variant.dev/v/1.0.0/styles.css" />
         <script type="module" src={elementsSrc} />
         <Style />
-        <style>{`
-          @media (min-width: 900px) {
-            #nav-popover { display: contents; }
-            .menu-toggle { display: none; }
-          }
-        `}</style>
+        <Style>
+          {css`
+            @media (min-width: 900px) {
+              #nav-popover { display: contents; }
+              .menu-toggle { display: none; }
+            }
+            :root{
+              --vw-min: 320;
+              --vw-max: 1240;
+              --base-min: 1.15;
+              --base-max: 1.15;
+              --ratio-min: 1.2;
+              --ratio-max: 1.2;
+            }
+          `}
+        </Style>
       </head>
       <body class="stack-h nowrap items-stretch">
         <div
@@ -74,7 +84,9 @@ export function Layout({
             })}
             {user && (
               <div class="stack-v mt-auto px-xs py-2xs">
-                <span class="fw-medium">{user.name}</span>
+                <a href={`/users/${user.id}`} class="fw-medium">
+                  {user.name}
+                </a>
                 <a href={logoutUrl} class="fs-s ink-subtle">
                   Log out
                 </a>

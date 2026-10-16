@@ -3,6 +3,7 @@ import { Hono } from "hono";
 import { csrf } from "hono/csrf";
 import { HTTPException } from "hono/http-exception";
 import { jsxRenderer } from "hono/jsx-renderer";
+import { secureHeaders } from "hono/secure-headers";
 import { assignments } from "./assignments/assignments.routes";
 import { clients } from "./clients/clients.routes";
 import { dev, devLogoutUrl, devTenantId, readDevIdentity, requireDevUser } from "./dev/dev.routes";
@@ -45,6 +46,20 @@ const elements = await bundleElements();
 
 const app = new Hono<PublicEnv>();
 
+app.use(
+  secureHeaders({
+    contentSecurityPolicy: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      // Pages size grids and bars with style attributes.
+      styleSrc: ["'self'", "'unsafe-inline'", "https://varde.variant.dev"],
+      fontSrc: ["https://varde.variant.dev"],
+      imgSrc: ["'self'", "data:"],
+      formAction: ["'self'"],
+      frameAncestors: ["'none'"],
+    },
+  }),
+);
 // Login is a session cookie, so form posts from other sites would otherwise be trusted.
 app.use(csrf());
 app.use(

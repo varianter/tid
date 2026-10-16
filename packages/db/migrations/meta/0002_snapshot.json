@@ -1,6 +1,6 @@
 {
-  "id": "5eda4179-bbae-4bd9-93b2-59668c0cf3cf",
-  "prevId": "53fd3174-8389-4d09-bb6b-bc39854d7e17",
+  "id": "321b8bc5-c0c7-4ce2-9aab-cce7089f7292",
+  "prevId": "6c453232-1dc6-4c22-954a-7441ea8fdd33",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -577,9 +577,10 @@
           "primaryKey": false,
           "notNull": true
         },
-        "billable": {
-          "name": "billable",
-          "type": "boolean",
+        "billing": {
+          "name": "billing",
+          "type": "billing",
+          "typeSchema": "public",
           "primaryKey": false,
           "notNull": true
         },
@@ -645,7 +646,7 @@
         },
         "billable_projects_count_toward_base": {
           "name": "billable_projects_count_toward_base",
-          "value": "not \"projects\".\"billable\" or \"projects\".\"counts_toward_billable_base\""
+          "value": "\"projects\".\"billing\" = 'non_billable' or \"projects\".\"counts_toward_billable_base\""
         },
         "ends_after_start": {
           "name": "ends_after_start",
@@ -1115,6 +1116,15 @@
     }
   },
   "enums": {
+    "public.billing": {
+      "name": "billing",
+      "schema": "public",
+      "values": [
+        "hourly",
+        "fixed_fee",
+        "non_billable"
+      ]
+    },
     "public.user_role": {
       "name": "user_role",
       "schema": "public",

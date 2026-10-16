@@ -266,6 +266,43 @@ test("a -S code is merged into its base code", () => {
   expect(plan.entries.map((e) => e.project)).toEqual(["KUN1001", "KUN1001"]);
 });
 
+test("the contract owner is suggested when one account has the project, or -S marks it", () => {
+  const subcontracted: HarvestExport = {
+    ...oslo,
+    projects: [project(200, "KUN1001-S"), project(201, "KUN1002")],
+  };
+  // Oslo has subcontractors from Trondheim on KUN1001.
+  const suggestions = (exports: HarvestExport[]) =>
+    Object.fromEntries(
+      planImport(exports, known).plan.projects.map((p) => [p.code, p.suggestedOwner]),
+    );
+
+  expect(suggestions([trondheim, oslo])).toEqual({
+    KUN1001: null,
+    VAR1000: null,
+  });
+  expect(suggestions([trondheim, subcontracted])).toEqual({
+    KUN1001: "oslo",
+    KUN1002: "oslo",
+    VAR1000: null,
+  });
+});
+
+test("fixed fee projects are billable, and their time keeps no rate", () => {
+  const fixedFee: HarvestExport = {
+    ...trondheim,
+    projects: [{ ...project(100, "KUN1001"), is_fixed_fee: true }],
+    timeEntries: [entry(10, 100, "2026-08-03", 4, 1500)],
+  };
+  const { plan, problems, warnings } = planImport([fixedFee], known);
+
+  expect(problems).toEqual([]);
+  expect(warnings).toEqual([]);
+  expect(plan.projects).toMatchObject([{ code: "KUN1001", billing: "fixed_fee" }]);
+  expect(plan.assignments).toMatchObject([{ project: "KUN1001", rates: [] }]);
+  expect(plan.entries).toMatchObject([{ project: "KUN1001", rate: null, currency: null }]);
+});
+
 test("projects sharing a name under one client get their codes added, so Postgres accepts them", async () => {
   const twoCodes: HarvestExport = {
     ...trondheim,
@@ -312,7 +349,8 @@ test("an assignment's rate comes from wherever Harvest bills the project", () =>
       assignment(10, 101, null),
       { ...assignment(10, 102, 9999), use_default_rates: true },
       assignment(10, 103, 1700),
-      assignment(10, 104, null),
+      // Harvest's budget rate on a fixed fee project isn't a billing rate, so it's dropped.
+      assignment(10, 104, 1500),
       assignment(10, 105, null),
       assignment(10, 106, null),
       assignment(11, 106, null),
@@ -338,7 +376,6 @@ test("an assignment's rate comes from wherever Harvest bills the project", () =>
 
   expect(problems).toEqual([]);
   expect(warnings.map(describeWarning)).toEqual([
-    "Project KUN1005 is fixed fee, so its hours export without an amount.",
     "ola@example.com was billed at 1270, 1000 on project KUN1007, not as a price increase; they keep the last, 1000.",
     "Kari@example.com has no rate on project KUN1006, so their hours export without an amount.",
     "per@example.com has no rate on project KUN1007, so their hours export without an amount.",

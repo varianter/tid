@@ -3,16 +3,19 @@ import {
   Button,
   Checkbox,
   Field,
+  FormError,
   FormField,
   fieldErrorAttributes,
   Input,
   Label,
   Page,
+  Radio,
   Select,
 } from "@tid/ui";
 import { z } from "zod";
 import type { FormProps } from "../form/formAction";
 import type { OrganizationOption } from "../organizations/organizationSelect";
+import { type Billing, billingLabels, billings } from "./billing";
 
 const checkbox = z
   .literal("on")
@@ -23,15 +26,24 @@ export const projectFields = z.object({
   name: z.string().trim().min(1, "Enter a name"),
   // The reporting database holds at most 16 characters.
   code: z.string().trim().min(1, "Enter a code").max(16, "At most 16 characters"),
-  billable: checkbox,
+  billing: z.enum(billings, { error: "Choose how the project is billed" }),
   countsTowardBillableBase: checkbox,
-  contractOwnerId: z.coerce.number().int(),
+  // Empty when no organization invoices the client.
+  contractOwnerId: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.coerce.number().int().optional(),
+  ),
 });
 
-export const billableCountsTowardBase = <S extends typeof projectFields>(schema: S) =>
-  schema.refine((form) => !form.billable || form.countsTowardBillableBase, {
-    message: "Billable projects count toward the billable base",
-  });
+export const billingRules = <S extends typeof projectFields>(schema: S) =>
+  schema
+    .refine((form) => form.billing === "non_billable" || form.countsTowardBillableBase, {
+      message: "Billable projects count toward the billable base",
+    })
+    .refine((form) => form.billing === "non_billable" || form.contractOwnerId !== undefined, {
+      message: "Pick the organization that invoices the client",
+      path: ["contractOwnerId"],
+    });
 
 type ClientOption = typeof clients.$inferSelect & { codeSuggestion?: string };
 
@@ -42,14 +54,16 @@ type ProjectFormPageProps = {
     name: string;
     code: string;
     client: string;
-    billable: boolean;
+    billing: Billing;
     countsTowardBillableBase: boolean;
+    /** Billing is fixed once time is logged, so a project that bills differently is a new one. */
+    hasLoggedTime: boolean;
   };
   clients?: ClientOption[];
   suggestedClientId?: string;
   organizations: OrganizationOption[];
   /** The organization that invoices the client, selected until the user picks another. */
-  contractOwnerId: number;
+  contractOwnerId: number | null;
 } & FormProps;
 
 export function ProjectFormPage({
@@ -67,8 +81,11 @@ export function ProjectFormPage({
   const codeSuggestion = clients.find(
     (client) => String(client.id) === selectedClientId,
   )?.codeSuggestion;
-  const checked = (name: "billable" | "countsTowardBillableBase") =>
-    values ? values[name] === "on" : (project?.[name] ?? true);
+  const countsTowardBillableBase = values
+    ? values.countsTowardBillableBase === "on"
+    : (project?.countsTowardBillableBase ?? true);
+  const selectedBilling = values?.billing ?? project?.billing;
+  const selectedContractOwnerId = values?.contractOwnerId ?? String(contractOwnerId ?? "");
   return (
     <Page
       title={project ? `Edit ${project.name}` : "New project"}
@@ -106,15 +123,15 @@ export function ProjectFormPage({
           <Select
             id="contractOwnerId"
             name="contractOwnerId"
-            required
             {...fieldErrorAttributes("contractOwnerId", fieldErrors?.contractOwnerId)}
           >
+            <option value="" selected={selectedContractOwnerId === ""}>
+              None
+            </option>
             {organizations.map((organization) => (
               <option
                 value={organization.id}
-                selected={
-                  String(organization.id) === (values?.contractOwnerId ?? String(contractOwnerId))
-                }
+                selected={String(organization.id) === selectedContractOwnerId}
               >
                 {organization.name}
               </option>
@@ -139,12 +156,35 @@ export function ProjectFormPage({
           />
           {codeSuggestion && <p class="fs-s ink-subtle mt-3xs">Suggestion: {codeSuggestion}</p>}
         </Field>
+        {project?.hasLoggedTime ? (
+          <div class="stack-v gap-3xs">
+            <span class="fs-s ink-subtle">Billing</span>
+            <span>{billingLabels[project.billing]}</span>
+            <input type="hidden" name="billing" value={project.billing} />
+            <p class="fs-s ink-subtle">
+              Time is logged on this project. Start a new project to bill it differently.
+            </p>
+          </div>
+        ) : (
+          <fieldset class="stack-v gap-2xs">
+            <legend class="v-form-label">Billing</legend>
+            {billings.map((billing) => (
+              <Label class="stack-h items-center gap-xs">
+                <Radio
+                  name="billing"
+                  value={billing}
+                  required
+                  checked={billing === selectedBilling}
+                  {...fieldErrorAttributes("billing", fieldErrors?.billing)}
+                />
+                {billingLabels[billing]}
+              </Label>
+            ))}
+            {fieldErrors?.billing && <FormError id="billing-error" errors={fieldErrors.billing} />}
+          </fieldset>
+        )}
         <Label class="stack-h items-center gap-xs">
-          <Checkbox name="billable" checked={checked("billable")} />
-          Billable
-        </Label>
-        <Label class="stack-h items-center gap-xs">
-          <Checkbox name="countsTowardBillableBase" checked={checked("countsTowardBillableBase")} />
+          <Checkbox name="countsTowardBillableBase" checked={countsTowardBillableBase} />
           Counts toward billable base
         </Label>
         <Button type="submit" class="w-max-content">

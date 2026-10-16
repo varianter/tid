@@ -1,6 +1,7 @@
 import { Button } from "@tid/ui";
 import type { Context } from "hono";
-import { deleteHarvestTokens, importPath } from "./harvestTokens";
+import { importPath } from "./harvestImportUrl";
+import { deleteHarvestTokens } from "./harvestTokens";
 
 export const forgetHarvestTokens = (c: Context) => {
   deleteHarvestTokens(c);

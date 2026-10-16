@@ -1,6 +1,6 @@
 import { timeEntries } from "@tid/db/schema";
 import { formatHours } from "@tid/elements/hours";
-import { Button, Input, Label, Page, PeriodNavigation } from "@tid/ui";
+import { Button, ColorMode, Input, Label, Page, PeriodNavigation } from "@tid/ui";
 import { and, between, eq } from "drizzle-orm";
 import type { Context } from "hono";
 import { css, cx } from "hono/css";
@@ -217,8 +217,10 @@ function TimesheetGrid({
         {rows.map((task) => (
           <div class="grid-subgrid grid-all-columns items-center ">
             <div class={`py-2xs self-stretch stack-v justify-center ${stickyStart}`}>
-              <p class="fs-s fw-medium lh-snug">{task.name}</p>
-              <p class="fs-xs ink-subtle">{task.projectName}</p>
+              <a href={`/projects/${task.projectId}`} class="stack-v">
+                <span class="fs-s fw-medium lh-snug">{task.name}</span>
+                <span class="fs-xs ink-subtle">{task.projectName}</span>
+              </a>
             </div>
             {days.map((day, index) => (
               <TodayTint
@@ -329,7 +331,7 @@ function ProjectTotals({
         const taskIds = tasks.map((task) => task.id);
         return (
           <div class="stack-h justify-between gap-s py-2xs b-b bc-subtle">
-            <span>{tasks[0]?.projectName}</span>
+            <a href={`/projects/${projectId}`}>{tasks[0]?.projectName}</a>
             <span data-project-total={projectId}>
               {formatHours(sumMinutes((entry) => taskIds.includes(entry.taskId)))}
             </span>
@@ -362,13 +364,9 @@ function TodayTint({
       </div>
     );
   return (
-    <color-mode
-      palette="blue"
-      class={`surface-tinted ${className}`}
-      data-week-start={weekStartMark}
-    >
+    <ColorMode palette="blue" class={`surface-tinted ${className}`} data-week-start={weekStartMark}>
       {children}
-    </color-mode>
+    </ColorMode>
   );
 }
 

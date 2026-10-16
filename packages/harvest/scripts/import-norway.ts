@@ -10,7 +10,7 @@ import { startDevelopmentDatabase } from "@tid/db/container";
 import { organizations, timeEntries } from "@tid/db/schema";
 import { sql } from "drizzle-orm";
 import { fetchHarvestAccounts } from "../src/fetch";
-import { planImport } from "../src/plan";
+import { planImport, suggestedOwners } from "../src/plan";
 import { describePlan, describeWarning } from "../src/report";
 import { describeRejection, writePlan } from "../src/write";
 
@@ -102,7 +102,7 @@ if (problems.length > 0) {
   exitWith("Nothing was imported; the dev database is now empty.");
 }
 
-await writePlan(database, plan).catch((error) =>
+await writePlan(database, plan, { owners: suggestedOwners(plan) }).catch((error) =>
   exitWith(
     `Postgres rejected the import, so the dev database is now empty:\n  ${describeRejection(error)}`,
   ),

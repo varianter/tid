@@ -7,8 +7,10 @@ import {
   timeEntries,
 } from "@tid/db/schema";
 import { formatHours } from "@tid/elements/hours";
+import { DataGrid } from "@tid/ui";
 import { eq, type SQL, sql } from "drizzle-orm";
 import { database } from "../database";
+import type { Billing } from "./billing";
 
 const spentMinutes = sql<number>`(
   select coalesce(sum(${timeEntries.minutes}), 0)
@@ -28,7 +30,7 @@ export const projectSummary = {
   id: projects.id,
   name: projects.name,
   code: projects.code,
-  billable: projects.billable,
+  billing: projects.billing,
   clientId: clients.id,
   client: clients.name,
   spentMinutes,
@@ -39,7 +41,7 @@ export type ProjectSummary = {
   id: number;
   name: string;
   code: string;
-  billable: boolean;
+  billing: Billing;
   clientId: number;
   client: string;
   spentMinutes: number;
@@ -68,41 +70,26 @@ export function ProjectTable({
   groupByClient?: boolean;
 }) {
   return (
-    <div
-      class="d-grid of-scroll gap-column-l lh-snug t-tabular"
-      style="grid-template-columns: minmax(16ch, 1fr) minmax(12ch, 1fr) max-content;"
+    <DataGrid
+      columns={[{ label: "Name" }, { label: "Organizations" }, { label: "Spent", kind: "number" }]}
     >
-      <div class="grid-all-columns grid-subgrid items-center b-b bc-subtle p-xs fs-s ink-subtle fw-bold">
-        <span>Name</span>
-        <span>Organizations</span>
-        <span class="ta-right">Spent</span>
-      </div>
       {/* Rows arrive sorted by client, so each group is contiguous. */}
       {[...Map.groupBy(projects, (project) => project.clientId).values()].map((group) => (
         <>
           {groupByClient && (
-            <a
-              href={`/clients/${group[0]?.clientId}`}
-              class="grid-all-columns b-b bc-subtle surface-tinted p-xs py-2xs fs-xs ink-subtle fw-bold"
-            >
+            <DataGrid.Group href={`/clients/${group[0]?.clientId}`}>
               {group[0]?.client}
-            </a>
+            </DataGrid.Group>
           )}
           {group.map((project) => (
-            <a
-              href={`/projects/${project.id}`}
-              class="grid-all-columns grid-subgrid items-center b-b bc-subtle bg-wash:hover p-xs fs-s"
-            >
-              <span class="stack-v gap-4xs">
-                <span class="fw-medium">{project.name}</span>
-                <span class="fs-xs ink-subtle">{project.code}</span>
-              </span>
-              <span>{project.organizations.join(", ")}</span>
-              <span class="ta-right">{formatSpent(project.spentMinutes)}</span>
-            </a>
+            <DataGrid.Row href={`/projects/${project.id}`}>
+              <DataGrid.Title secondary={project.code}>{project.name}</DataGrid.Title>
+              {project.organizations.join(", ")}
+              {formatSpent(project.spentMinutes)}
+            </DataGrid.Row>
           ))}
         </>
       ))}
-    </div>
+    </DataGrid>
   );
 }

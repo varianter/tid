@@ -1,3 +1,4 @@
+CREATE TYPE "public"."billing" AS ENUM('hourly', 'fixed_fee', 'non_billable');--> statement-breakpoint
 CREATE TYPE "public"."user_role" AS ENUM('manager');--> statement-breakpoint
 CREATE TABLE "assignment_rates" (
 	"project_id" bigint NOT NULL,
@@ -62,14 +63,14 @@ CREATE TABLE "projects" (
 	"client_id" bigint NOT NULL,
 	"code" text NOT NULL,
 	"name" text NOT NULL,
-	"billable" boolean NOT NULL,
+	"billing" "billing" NOT NULL,
 	"counts_toward_billable_base" boolean DEFAULT true NOT NULL,
 	"starts_on" date,
 	"ends_on" date,
 	CONSTRAINT "projects_code_unique" UNIQUE("code"),
 	CONSTRAINT "projects_clientId_name_unique" UNIQUE("client_id","name"),
 	CONSTRAINT "code_length" CHECK (length("projects"."code") <= 16),
-	CONSTRAINT "billable_projects_count_toward_base" CHECK (not "projects"."billable" or "projects"."counts_toward_billable_base"),
+	CONSTRAINT "billable_projects_count_toward_base" CHECK ("projects"."billing" = 'non_billable' or "projects"."counts_toward_billable_base"),
 	CONSTRAINT "ends_after_start" CHECK ("projects"."ends_on" >= "projects"."starts_on")
 );
 --> statement-breakpoint

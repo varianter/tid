@@ -1,9 +1,9 @@
-import { clients, projectOrganizations, projects } from "@tid/db/schema";
-import { and, eq, ne } from "drizzle-orm";
+import { clients, projectOrganizations, projects, tasks, timeEntries } from "@tid/db/schema";
+import { and, eq, exists, ne } from "drizzle-orm";
 import { database } from "../database";
 import { formAction } from "../form/formAction";
 import { listOrganizations } from "../organizations/organizationSelect";
-import { billableCountsTowardBase, ProjectFormPage, projectFields } from "./projectForm";
+import { billingRules, ProjectFormPage, projectFields } from "./projectForm";
 import {
   ensureParticipation,
   participation,
@@ -11,7 +11,7 @@ import {
 } from "./projectParticipation";
 
 // The client is fixed once the project exists.
-const editProjectForm = billableCountsTowardBase(projectFields);
+const editProjectForm = billingRules(projectFields);
 
 export const editProject = formAction({
   schema: editProjectForm,
@@ -24,13 +24,20 @@ export const editProject = formAction({
         name: projects.name,
         code: projects.code,
         client: clients.name,
-        billable: projects.billable,
+        billing: projects.billing,
         countsTowardBillableBase: projects.countsTowardBillableBase,
+        hasLoggedTime: exists(
+          database
+            .select()
+            .from(timeEntries)
+            .innerJoin(tasks, eq(tasks.id, timeEntries.taskId))
+            .where(eq(tasks.projectId, projects.id)),
+        ).mapWith(Boolean),
         contractOwnerId: projectOrganizations.orgId,
       })
       .from(projects)
       .innerJoin(clients, eq(clients.id, projects.clientId))
-      .innerJoin(
+      .leftJoin(
         projectOrganizations,
         and(
           eq(projectOrganizations.projectId, projects.id),
@@ -45,9 +52,17 @@ export const editProject = formAction({
       contractOwnerId: project.contractOwnerId,
     };
   },
-  onSubmit: async (_c, { contractOwnerId, ...form }, { project, organizations }) => {
-    if (!organizations.some((organization) => organization.id === contractOwnerId)) {
+  onSubmit: async (_c, { contractOwnerId = null, ...form }, { project, organizations }) => {
+    if (
+      contractOwnerId !== null &&
+      !organizations.some((organization) => organization.id === contractOwnerId)
+    ) {
       return { fieldErrors: { contractOwnerId: ["Pick an organization"] } };
+    }
+    if (project.hasLoggedTime && form.billing !== project.billing) {
+      return {
+        formError: "Time is logged on this project. Start a new project to bill it differently.",
+      };
     }
     const openToMembers = await database.$count(
       projectOrganizations,
@@ -56,28 +71,34 @@ export const editProject = formAction({
         eq(projectOrganizations.openToMembers, true),
       ),
     );
-    if (form.billable && openToMembers) {
-      return { formError: "Projects open to an organization's members can't be billable" };
+    if (form.billing !== "non_billable" && openToMembers) {
+      return { formError: "Only non-billable projects can be open to an organization's members" };
     }
     try {
       await database.transaction(async (transaction) => {
         await transaction.update(projects).set(form).where(eq(projects.id, project.id));
         if (contractOwnerId === project.contractOwnerId) return;
+        const previousOwnerId = project.contractOwnerId;
         // Cleared first: the unique index allows one contract owner per project.
-        await transaction
-          .update(projectOrganizations)
-          .set({ isContractOwner: false })
-          .where(participation(project.id, project.contractOwnerId));
-        const newOwner = { projectId: project.id, orgId: contractOwnerId };
-        await ensureParticipation(transaction, newOwner);
-        await transaction
-          .update(projectOrganizations)
-          .set({ isContractOwner: true })
-          .where(participation(project.id, contractOwnerId));
-        await removeUnneededParticipation(transaction, {
-          projectId: project.id,
-          orgId: project.contractOwnerId,
-        });
+        if (previousOwnerId !== null) {
+          await transaction
+            .update(projectOrganizations)
+            .set({ isContractOwner: false })
+            .where(participation(project.id, previousOwnerId));
+        }
+        if (contractOwnerId !== null) {
+          await ensureParticipation(transaction, { projectId: project.id, orgId: contractOwnerId });
+          await transaction
+            .update(projectOrganizations)
+            .set({ isContractOwner: true })
+            .where(participation(project.id, contractOwnerId));
+        }
+        if (previousOwnerId !== null) {
+          await removeUnneededParticipation(transaction, {
+            projectId: project.id,
+            orgId: previousOwnerId,
+          });
+        }
       });
     } catch {
       // ponytail: assumes a unique violation; any other failure reads as a name clash.

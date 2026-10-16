@@ -57,7 +57,7 @@ async function insertProject() {
   const project = onlyRow(
     await database
       .insert(projects)
-      .values({ clientId: client.id, code: "ACME-1", name: "Website", billable: true })
+      .values({ clientId: client.id, code: "ACME-1", name: "Website", billing: "hourly" })
       .returning(),
   );
   await database
@@ -101,12 +101,15 @@ test("a billable project can't be open to members, whichever side changes", asyn
   ).toBe("open_projects_not_billable");
 
   await database.transaction(async (transaction) => {
-    await transaction.update(projects).set({ billable: false }).where(eq(projects.id, project.id));
+    await transaction
+      .update(projects)
+      .set({ billing: "non_billable" })
+      .where(eq(projects.id, project.id));
     await transaction.update(projectOrganizations).set({ openToMembers: true }).where(owner);
   });
   expect(
     await violatedConstraint(
-      database.update(projects).set({ billable: true }).where(eq(projects.id, project.id)),
+      database.update(projects).set({ billing: "hourly" }).where(eq(projects.id, project.id)),
     ),
   ).toBe("open_projects_not_billable");
 });
@@ -194,7 +197,12 @@ test("moving an entry to another task picks the rate again; changing its minutes
   const internalProject = onlyRow(
     await database
       .insert(projects)
-      .values({ clientId: internalClient.id, code: "VAR1000", name: "Drift", billable: false })
+      .values({
+        clientId: internalClient.id,
+        code: "VAR1000",
+        name: "Drift",
+        billing: "non_billable",
+      })
       .returning(),
   );
   await database
@@ -277,6 +285,50 @@ test("the export prices an entry with its locked rate", async () => {
   ]);
 });
 
+test("a project's billing can't change once time is logged on it", async () => {
+  const { project, user, task } = await insertRatedAssignment();
+  const setBilling = (billing: "hourly" | "fixed_fee") =>
+    database.update(projects).set({ billing }).where(eq(projects.id, project.id));
+
+  await setBilling("fixed_fee");
+  await setBilling("hourly");
+  await database
+    .insert(timeEntries)
+    .values({ userId: user.id, taskId: task.id, spentOn: "2026-07-01", minutes: 60 });
+
+  expect(await violatedConstraint(setBilling("fixed_fee"))).toBe(
+    "project_billing_fixed_once_logged",
+  );
+});
+
+test("fixed fee time is billable, but only hourly time is priced", async () => {
+  const { project, user, task } = await insertRatedAssignment();
+  await database.update(projects).set({ billing: "fixed_fee" }).where(eq(projects.id, project.id));
+
+  expect(await entryRate(user.id, task.id, "2026-07-01")).toEqual([]);
+  // A rate written by hand still doesn't reach the export.
+  await database.insert(timeEntries).values({
+    userId: user.id,
+    taskId: task.id,
+    spentOn: "2026-07-01",
+    minutes: 90,
+    rate: 150000,
+    currency: "NOK",
+  });
+  const rows = await database
+    .select({
+      billable: timeEntriesExport.billable,
+      billableHours: timeEntriesExport.billableHours,
+      billableRate: timeEntriesExport.billableRate,
+      amount: timeEntriesExport.amount,
+    })
+    .from(timeEntriesExport);
+
+  expect(rows).toEqual([
+    { billable: true, billableHours: "1.50", billableRate: null, amount: null },
+  ]);
+});
+
 test("the export leaves time on projects that don't count out of billable base hours", async () => {
   const { organization, user } = await insertRatedAssignment();
   const internalClient = onlyRow(
@@ -290,7 +342,7 @@ test("the export leaves time on projects that don't count out of billable base h
           clientId: internalClient.id,
           code,
           name: code,
-          billable: false,
+          billing: "non_billable",
           countsTowardBillableBase,
         })
         .returning(),
@@ -333,7 +385,7 @@ test("a billable project counts toward billable base hours", async () => {
         clientId: client.id,
         code: "ACME-1",
         name: "Website",
-        billable: true,
+        billing: "hourly",
         countsTowardBillableBase: false,
       }),
     ),

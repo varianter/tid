@@ -65,7 +65,13 @@ test("members can't start projects", async () => {
 });
 
 test("the contract owner moves to the chosen organization on edit", async () => {
-  const fields = { name: "Website", code: "ACME-1", contractOwnerId: String(oslo) };
+  const fields = {
+    name: "Website",
+    code: "ACME-1",
+    billing: "hourly",
+    countsTowardBillableBase: "on",
+    contractOwnerId: String(oslo),
+  };
   const started = await requestAs(manager, "/projects/new", {
     ...fields,
     clientId: String(clientId),
@@ -81,4 +87,22 @@ test("the contract owner moves to the chosen organization on edit", async () => 
     contractOwnerId: String(bergen),
   });
   expect(await participants(projectId)).toEqual([{ orgId: bergen, isContractOwner: true }]);
+});
+
+test("only non-billable projects can be started without a contract owner", async () => {
+  const start = (code: string, billing: string) =>
+    requestAs(manager, "/projects/new", {
+      name: code,
+      code,
+      billing,
+      countsTowardBillableBase: "on",
+      contractOwnerId: "",
+      clientId: String(clientId),
+    });
+
+  expect((await start("ACME-2", "fixed_fee")).status).toBe(422);
+  const started = await start("ACME-3", "non_billable");
+  expect(started.status).toBe(303);
+  const projectId = Number(started.headers.get("location")?.split("/").at(-1));
+  expect(await participants(projectId)).toEqual([]);
 });

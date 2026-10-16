@@ -12,7 +12,7 @@ Each country's Harvest accounts are organized differently, so each country has i
 bun run harvest:import:norway [from-month [to-month]] --tokens <token>,<token> [--save] [--verbose]
 ```
 
-Pass one Harvest personal access token per account, with months as `YYYY-MM`. It lists every problem it finds before importing anything, but the dev database is emptied either way. `--save` keeps the raw Harvest data in `packages/harvest/harvest-export`, which is gitignored. `--verbose` shows what Harvest becomes, as tables, before anything is written.
+Pass one Harvest personal access token per account, with months as `YYYY-MM`. It lists every problem it finds before importing anything, but the dev database is emptied either way. `--save` keeps the raw Harvest data in `packages/harvest/harvest-export`, which is gitignored. `--verbose` shows what Harvest becomes, as tables, before anything is written, including how each project in several accounts marks its code, to check the suggested contract owners against.
 
 ## Today's state and history
 
@@ -55,13 +55,13 @@ A client in another country is a different client, so a client never has more th
 
 **Projects are global, and identified by code.** The same code in several Harvest accounts, or on several projects in one account, becomes one project. Each account that logged time on it becomes a participating organization.
 
-**Customer project codes look like `AAA9999`, or `AAA9999-S`.** The `-S` suffix is meant to mark a project that has subcontractors, but it isn't applied consistently, so the import doesn't rely on it for ownership. `AAA9999` and `AAA9999-S` are the same project, so the import merges them into one with the code `AAA9999`.
+**Customer project codes look like `AAA9999`, or `AAA9999-S`.** The `-S` suffix marks the account that has subcontractors on the project, which makes it the contract owner, but not every shared project has it. `AAA9999` and `AAA9999-S` are the same project, so the import merges them into one with the code `AAA9999`.
 
-**The import doesn't decide who owns a project.** Ownership is set by hand, since we don't yet know the owner of every project.
+**Whoever imports picks each billable project's contract owner.** Harvest doesn't say who invoices the client, so the import only suggests one: the only account the project is in, or the only account whose code has `-S`. The preview offers it for every billable project without an owner in Tid, and an owner set in Tid is never changed. One left without an owner is picked later, when editing the project. The command-line import takes the suggestions as they are. Non-billable projects get no owner.
 
 **A project has one rate per person.** Harvest bills a project at one rate, at each person's rate or at each task's rate, and the import takes the rate from wherever that is. When a project billed per task prices its billable tasks differently, each task stands for a level or a year's price, so each person gets the rate they were last billed at on the project, which takes history. Without it, or without time logged on the project, they get no rate, to be set by hand.
 
-**Billable comes from the project.** Time and materials and fixed fee projects are billable, and non-billable projects aren't. Non-billable tasks on billable projects export as billable; see `identified-edge-cases.md`.
+**Billing comes from the project.** Time and materials becomes hourly, fixed fee stays fixed fee, and non-billable stays non-billable. Only hourly projects have rates in Tid, so Harvest's rates on the others, such as a fixed fee project's budget rates, are dropped from assignments and entries. Non-billable tasks on billable projects export as billable; see `identified-edge-cases.md`.
 
 **Non-billable projects of the Varianttid client are open to everyone.** Harvest has no such setting, so the import assumes it. Other projects get Harvest's active assignments; assignments to archived projects, and of deactivated users, are left out.
 
@@ -89,4 +89,4 @@ A client in another country is a different client, so a client never has more th
 
 ### Open
 
-- **Fixed fee projects.** Harvest stores the fee and budget, but we only store that the project is billable, so these hours export without an amount. To be discussed with stakeholders.
+- **Fixed fee amounts.** Harvest stores the fee and budget, but Tid only stores that a project has a fixed fee, so its hours export without an amount.

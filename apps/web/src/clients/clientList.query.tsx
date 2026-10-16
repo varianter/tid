@@ -1,5 +1,5 @@
 import { clients, projects, tasks, timeEntries } from "@tid/db/schema";
-import { Button, EmptyState, Page } from "@tid/ui";
+import { Button, DataGrid, EmptyState, Page } from "@tid/ui";
 import { countDistinct, eq, sql } from "drizzle-orm";
 import type { Context } from "hono";
 import { database } from "../database";
@@ -37,26 +37,21 @@ function ClientListPage({ clients }: { clients: ClientRow[] }) {
       {clients.length === 0 ? (
         <EmptyState emoji="🏢" title="No clients yet" action={newClientButton()} />
       ) : (
-        <div
-          class="d-grid of-scroll gap-column-l lh-snug t-tabular"
-          style="grid-template-columns: minmax(16ch, 1fr) max-content max-content;"
+        <DataGrid
+          columns={[
+            { label: "Name" },
+            { label: "Projects", kind: "number" },
+            { label: "Spent", kind: "number" },
+          ]}
         >
-          <div class="grid-all-columns grid-subgrid items-center b-b bc-subtle p-xs fs-s ink-subtle fw-bold">
-            <span>Name</span>
-            <span class="ta-right">Projects</span>
-            <span class="ta-right">Spent</span>
-          </div>
           {clients.map((client) => (
-            <a
-              href={`/clients/${client.id}`}
-              class="grid-all-columns grid-subgrid items-center b-b bc-subtle bg-wash:hover p-xs fs-s"
-            >
-              <span class="fw-medium">{client.name}</span>
-              <span class="ta-right">{client.projectCount}</span>
-              <span class="ta-right">{formatSpent(client.spentMinutes)}</span>
-            </a>
+            <DataGrid.Row href={`/clients/${client.id}`}>
+              <DataGrid.Title>{client.name}</DataGrid.Title>
+              {client.projectCount}
+              {formatSpent(client.spentMinutes)}
+            </DataGrid.Row>
           ))}
-        </div>
+        </DataGrid>
       )}
     </Page>
   );

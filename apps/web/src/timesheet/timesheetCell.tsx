@@ -1,5 +1,5 @@
 import { formatHours } from "@tid/elements/hours";
-import { Input, Popover } from "@tid/ui";
+import { ColorMode, Input, Popover } from "@tid/ui";
 import { z } from "zod";
 import { formatDate } from "../dates/dateDisplay";
 import { isIsoDate } from "../dates/isoDate";
@@ -77,7 +77,7 @@ export function TimesheetCell({
       <input type="hidden" name="taskId" value={task.id} />
       <input type="hidden" name="date" value={day} />
       {error ? (
-        <color-mode palette="coral" class="pos-relative stack-h nowrap items-center gap-3xs">
+        <ColorMode palette="coral" class="pos-relative stack-h nowrap items-center gap-3xs">
           {input}
           <button
             type="button"
@@ -92,7 +92,7 @@ export function TimesheetCell({
               {error.message}
             </div>
           </Popover>
-        </color-mode>
+        </ColorMode>
       ) : (
         input
       )}

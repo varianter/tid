@@ -40,7 +40,7 @@ beforeAll(async () => {
   const project = onlyRow(
     await database
       .insert(projects)
-      .values({ clientId: client.id, code: "ACME-1", name: "Website", billable: false })
+      .values({ clientId: client.id, code: "ACME-1", name: "Website", billing: "non_billable" })
       .returning(),
   );
   ids = { projectId: project.id, orgId: organization.id };

@@ -6,11 +6,9 @@ import { formAction } from "../form/formAction";
 import type { User } from "../login/user";
 import { listOrganizations } from "../organizations/organizationSelect";
 import { suggestProjectCode } from "./projectCode";
-import { billableCountsTowardBase, ProjectFormPage, projectFields } from "./projectForm";
+import { billingRules, ProjectFormPage, projectFields } from "./projectForm";
 
-const startProjectForm = billableCountsTowardBase(
-  projectFields.extend({ clientId: z.coerce.number().int() }),
-);
+const startProjectForm = billingRules(projectFields.extend({ clientId: z.coerce.number().int() }));
 
 export const startProject = formAction({
   schema: startProjectForm,
@@ -39,7 +37,10 @@ export const startProject = formAction({
     if (!clients.some((client) => client.id === project.clientId)) {
       return { fieldErrors: { clientId: ["Pick a client"] } };
     }
-    if (!organizations.some((organization) => organization.id === contractOwnerId)) {
+    if (
+      contractOwnerId !== undefined &&
+      !organizations.some((organization) => organization.id === contractOwnerId)
+    ) {
       return { fieldErrors: { contractOwnerId: ["Pick an organization"] } };
     }
     const [inserted] = await database.transaction(async (transaction) => {
@@ -48,7 +49,8 @@ export const startProject = formAction({
         .values(project)
         .onConflictDoNothing()
         .returning();
-      if (rows[0]) {
+      // Without a contract owner, the project joins organizations as people are assigned to it.
+      if (rows[0] && contractOwnerId !== undefined) {
         await transaction
           .insert(projectOrganizations)
           .values({ projectId: rows[0].id, orgId: contractOwnerId, isContractOwner: true });

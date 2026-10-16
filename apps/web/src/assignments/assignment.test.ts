@@ -38,7 +38,7 @@ beforeAll(async () => {
   projectId = onlyRow(
     await database
       .insert(projects)
-      .values({ clientId: client.id, code: "ACME-1", name: "Website", billable: false })
+      .values({ clientId: client.id, code: "ACME-1", name: "Website", billing: "non_billable" })
       .returning(),
   ).id;
   await database

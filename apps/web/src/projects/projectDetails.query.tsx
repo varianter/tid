@@ -1,4 +1,5 @@
 import {
+  assignmentRates,
   clients,
   organizations,
   projectAssignments,
@@ -8,16 +9,39 @@ import {
   timeEntries,
   users,
 } from "@tid/db/schema";
-import { Badge, Button, Detail, Page } from "@tid/ui";
-import { and, desc, eq, notExists, sql } from "drizzle-orm";
+import { Badge, Button, DataGrid, Detail, Page } from "@tid/ui";
+import { and, desc, eq, lte, notExists, type SQL, sql } from "drizzle-orm";
 import type { Context } from "hono";
+import { formatAmount } from "../amount/amount";
 import { AssignConsultantForm } from "../assignments/assignConsultant.command";
 import { RemoveConsultantForm } from "../assignments/removeConsultant.command";
 import { database } from "../database";
+import { addMonths } from "../dates/isoDate";
+import { todayInOslo } from "../dates/osloClock";
 import type { UserEnv } from "../login/user";
 import { isManager } from "../users/manager";
 import { AddTaskForm } from "./addTask.command";
+import { billingLabels } from "./billing";
 import { formatSpent, type ProjectSummary, projectSummary } from "./projectSummary";
+
+type HoursSpent = { total: number; lastMonth: number; thisMonth: number };
+
+// Minutes in each period, summed over the time entries that `where` keeps.
+const hoursSpent = (today: string) => {
+  const thisMonthStart = `${today.slice(0, 7)}-01`;
+  const lastMonthStart = `${addMonths(today.slice(0, 7), -1)}-01`;
+  const minutesFrom = (condition?: SQL) =>
+    sql`coalesce(sum(${timeEntries.minutes}) ${condition ? sql`filter (where ${condition})` : sql``}, 0)`.mapWith(
+      Number,
+    );
+  return {
+    total: minutesFrom(),
+    lastMonth: minutesFrom(
+      sql`${timeEntries.spentOn} >= ${lastMonthStart} and ${timeEntries.spentOn} < ${thisMonthStart}`,
+    ),
+    thisMonth: minutesFrom(sql`${timeEntries.spentOn} >= ${thisMonthStart}`),
+  };
+};
 
 export const projectDetails = async (c: Context<UserEnv>) => {
   const id = Number(c.req.param("id"));
@@ -28,6 +52,13 @@ export const projectDetails = async (c: Context<UserEnv>) => {
     .innerJoin(clients, eq(clients.id, projects.clientId))
     .where(eq(projects.id, id));
   if (!project) return c.notFound();
+
+  const today = todayInOslo();
+  const [projectHours] = await database
+    .select(hoursSpent(today))
+    .from(timeEntries)
+    .innerJoin(tasks, eq(tasks.id, timeEntries.taskId))
+    .where(eq(tasks.projectId, id));
 
   const projectTasks = await database
     .select({
@@ -40,11 +71,31 @@ export const projectDetails = async (c: Context<UserEnv>) => {
     .groupBy(tasks.id)
     .orderBy(tasks.name);
 
+  const currentRate = (column: typeof assignmentRates.rate) =>
+    sql<number | null>`(
+      select ${column} from ${assignmentRates}
+      where ${and(
+        eq(assignmentRates.projectId, id),
+        eq(assignmentRates.userId, users.id),
+        lte(assignmentRates.validFrom, today),
+      )}
+      order by ${assignmentRates.validFrom} desc limit 1
+    )`;
   const assignedPeople = await database
-    .select({ id: users.id, name: users.name })
+    .select({
+      id: users.id,
+      name: users.name,
+      currency: organizations.currency,
+      rate: currentRate(assignmentRates.rate),
+      ...hoursSpent(today),
+    })
     .from(projectAssignments)
     .innerJoin(users, eq(users.id, projectAssignments.userId))
+    .innerJoin(organizations, eq(organizations.id, users.orgId))
+    .leftJoin(tasks, eq(tasks.projectId, projectAssignments.projectId))
+    .leftJoin(timeEntries, and(eq(timeEntries.taskId, tasks.id), eq(timeEntries.userId, users.id)))
     .where(eq(projectAssignments.projectId, id))
+    .groupBy(users.id, organizations.id)
     .orderBy(users.name);
 
   const participations = await database
@@ -78,6 +129,7 @@ export const projectDetails = async (c: Context<UserEnv>) => {
   return c.render(
     <ProjectDetailsPage
       project={project}
+      hours={projectHours ?? { total: 0, lastMonth: 0, thisMonth: 0 }}
       tasks={projectTasks}
       assignedPeople={assignedPeople}
       assignablePeople={assignablePeople}
@@ -91,6 +143,13 @@ type TaskTotal = { name: string; spentMinutes: number };
 
 type Person = { id: number; name: string };
 
+type Consultant = Person &
+  HoursSpent & {
+    /** In minor units of `currency`; none when no rate has started yet. */
+    rate: number | null;
+    currency: string;
+  };
+
 type Participation = {
   name: string;
   slug: string;
@@ -100,8 +159,9 @@ type Participation = {
 
 type ProjectDetailsPageProps = {
   project: ProjectSummary;
+  hours: HoursSpent;
   tasks: TaskTotal[];
-  assignedPeople: Person[];
+  assignedPeople: Consultant[];
   /** Everyone not assigned yet, sorted by organization so the picker can group them. */
   assignablePeople: (Person & { orgName: string })[];
   /** The contract owner first, so it reads as the lead organization. */
@@ -111,12 +171,14 @@ type ProjectDetailsPageProps = {
 
 function ProjectDetailsPage({
   project,
+  hours,
   tasks,
   assignedPeople,
   assignablePeople,
   participations,
   isManager,
 }: ProjectDetailsPageProps) {
+  const isHourly = project.billing === "hourly";
   const contractOwner = participations.find((participation) => participation.isContractOwner);
   return (
     <Page
@@ -135,7 +197,7 @@ function ProjectDetailsPage({
           <a href={`/clients/${project.clientId}`}>{project.client}</a>
         </Detail>
         <Detail label="Code">{project.code}</Detail>
-        <Detail label="Billable">{project.billable ? "Yes" : "No"}</Detail>
+        <Detail label="Billing">{billingLabels[project.billing]}</Detail>
         <Detail label="Contract owner">{contractOwner?.name ?? "None"}</Detail>
         <Detail label="Organizations">
           {participations.length === 0 ? (
@@ -159,8 +221,62 @@ function ProjectDetailsPage({
             </span>
           )}
         </Detail>
-        <Detail label="Spent">{formatSpent(project.spentMinutes)}</Detail>
       </dl>
+      <div class="stack-h wrap gap-m">
+        <HoursCard label="Total hours" minutes={hours.total} />
+        <HoursCard label="Last month" minutes={hours.lastMonth} />
+        <HoursCard label="This month so far" minutes={hours.thisMonth} />
+      </div>
+      <section class="stack-v gap-s">
+        <div class="stack-h items-center justify-between gap-m wrap">
+          <h2 class="fs-l fw-bold">Consultants</h2>
+          {isManager && assignablePeople.length > 0 && (
+            <AssignConsultantForm projectId={project.id} assignablePeople={assignablePeople} />
+          )}
+        </div>
+        {assignedPeople.length === 0 ? (
+          <p class="ink-subtle">No one is assigned yet.</p>
+        ) : (
+          <DataGrid
+            columns={[
+              { label: "Name" },
+              { label: "Total", kind: "number" },
+              { label: "Last month", kind: "number" },
+              { label: "This month", kind: "number" },
+              isHourly && { label: "Rate", kind: "number" },
+              isManager && { kind: "action" },
+            ]}
+          >
+            {assignedPeople.map((person) => (
+              <DataGrid.Row>
+                <DataGrid.Title>{person.name}</DataGrid.Title>
+                {formatSpent(person.total)}
+                {formatSpent(person.lastMonth)}
+                {formatSpent(person.thisMonth)}
+                {isHourly &&
+                  (person.rate === null
+                    ? "–"
+                    : `${formatAmount(person.rate / 100, person.currency, 2)}/h`)}
+                {isManager && (
+                  <span class="stack-h justify-end gap-xs">
+                    {isHourly && (
+                      <Button
+                        as="a"
+                        href={`/projects/${project.id}/assignments/${person.id}/rates`}
+                        data-variant="plain"
+                        data-size="small"
+                      >
+                        Edit rate
+                      </Button>
+                    )}
+                    <RemoveConsultantForm projectId={project.id} userId={person.id} />
+                  </span>
+                )}
+              </DataGrid.Row>
+            ))}
+          </DataGrid>
+        )}
+      </section>
       <section class="stack-v gap-s">
         <div class="stack-h items-center justify-between gap-m wrap">
           <h2 class="fs-l fw-bold">Tasks</h2>
@@ -179,38 +295,15 @@ function ProjectDetailsPage({
           </ul>
         )}
       </section>
-      <section class="stack-v gap-s">
-        <div class="stack-h items-center justify-between gap-m wrap">
-          <h2 class="fs-l fw-bold">Consultants</h2>
-          {isManager && assignablePeople.length > 0 && (
-            <AssignConsultantForm projectId={project.id} assignablePeople={assignablePeople} />
-          )}
-        </div>
-        {assignedPeople.length === 0 ? (
-          <p class="ink-subtle">No one is assigned yet.</p>
-        ) : (
-          <ul class="stack-v gap-3xs b-all bc-subtle p-2xs">
-            {assignedPeople.map((person) => (
-              <li class="stack-h items-center justify-between gap-xs p-xs px-m surface-tinted">
-                {person.name}
-                {isManager && (
-                  <span class="stack-h gap-xs">
-                    <Button
-                      as="a"
-                      href={`/projects/${project.id}/assignments/${person.id}/rates`}
-                      data-variant="plain"
-                      data-size="small"
-                    >
-                      Edit rate
-                    </Button>
-                    <RemoveConsultantForm projectId={project.id} userId={person.id} />
-                  </span>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
     </Page>
+  );
+}
+
+function HoursCard({ label, minutes }: { label: string; minutes: number }) {
+  return (
+    <div class="stack-v gap-3xs b-all bc-default br-l p-m">
+      <span class="fs-s ink-subtle">{label}</span>
+      <span class="fs-xl fw-bold t-tabular">{formatSpent(minutes)}</span>
+    </div>
   );
 }

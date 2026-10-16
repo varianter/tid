@@ -33,6 +33,7 @@ export type Consultant = AssignmentIds & {
   currency: string;
 };
 
+/** Only assignments on hourly projects have rates, so other projects' are left out. */
 export async function loadConsultant(ids: AssignmentIds): Promise<Consultant | undefined> {
   const [consultant] = await database
     .select({
@@ -46,6 +47,6 @@ export async function loadConsultant(ids: AssignmentIds): Promise<Consultant | u
     .innerJoin(users, eq(users.id, projectAssignments.userId))
     .innerJoin(projects, eq(projects.id, projectAssignments.projectId))
     .innerJoin(organizations, eq(organizations.id, projectAssignments.orgId))
-    .where(assignment(ids));
+    .where(and(assignment(ids), eq(projects.billing, "hourly")));
   return consultant;
 }

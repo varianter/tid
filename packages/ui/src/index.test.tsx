@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { Button, FormField, Page, Tabs } from "./index";
+import { Button, DataGrid, FormField, Page, Tabs } from "./index";
 
 test("Button renders a button by default and a link with as='a'", () => {
   expect(
@@ -73,4 +73,37 @@ test("Tabs.Link marks only the active tab as the current page", () => {
   );
   expect(html).toContain('aria-label="Group by"');
   expect(html.match(/aria-current="page"/g)).toHaveLength(1);
+});
+
+test("DataGrid aligns cells by column and drops hidden columns with their cells", () => {
+  const showMissing = false;
+  const grid = String(
+    <DataGrid
+      columns={[
+        { label: "Name" },
+        { label: "Hours", kind: "number" },
+        showMissing && { label: "Missing", kind: "number" },
+      ]}
+    >
+      <DataGrid.Row href="/users/1">
+        Ada
+        {"7,5 h"}
+        {showMissing && "0 h"}
+      </DataGrid.Row>
+    </DataGrid>,
+  );
+  expect(grid).toContain("grid-template-columns: minmax(16ch, 1fr) max-content;");
+  expect(grid).toContain('<span class="ta-right">Hours</span>');
+  expect(grid).not.toContain("Missing");
+  expect(grid).toContain('<span>Ada</span><span class="ta-right">7,5 h</span></a>');
+});
+
+test("DataGrid rejects a row whose cells don't match its columns", () => {
+  expect(() =>
+    String(
+      <DataGrid columns={[{ label: "Name" }, { label: "Hours", kind: "number" }]}>
+        <DataGrid.Row>Ada</DataGrid.Row>
+      </DataGrid>,
+    ),
+  ).toThrow("1 cells for 2 columns");
 });

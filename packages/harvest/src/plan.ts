@@ -1,12 +1,15 @@
 // Maps Harvest exports onto our tables, following the rules in README.md.
 // Nothing here touches the database, so every problem is found before anything is written.
 
+import type { billing } from "@tid/db/schema";
 import { planAssignments, readAssignments } from "./assignments";
 import { planEntries, readEntries } from "./entries";
 import type { HarvestExport } from "./harvestExport";
 import { type KnownOrganization, matchOrganizations } from "./organizations";
 import { nameProjectsApart, planProjects } from "./projects";
 import { mergePeople, placeUsers } from "./users";
+
+export type Billing = (typeof billing.enumValues)[number];
 
 // Rows refer to each other by email, client name, project code and organization slug; the
 // writer resolves ids.
@@ -24,12 +27,16 @@ export type ImportPlan = {
     code: string;
     client: string;
     name: string;
-    billable: boolean;
+    billing: Billing;
     openToEveryone: boolean;
     countsTowardBillableBase: boolean;
     startsOn: string | null;
     endsOn: string | null;
     organizations: string[];
+    // The Harvest projects merged into it, by organization and code as Harvest has it.
+    harvestProjects: { organization: string; code: string }[];
+    // The organization slug the import offers as contract owner. Someone confirms it.
+    suggestedOwner: string | null;
   }[];
   tasks: { project: string; name: string }[];
   assignments: { project: string; email: string; rates: { validFrom: string; rate: number }[] }[];
@@ -54,7 +61,6 @@ export type Warning =
   | { kind: "noRatePricedByTask"; email: string; client: string; project: string }
   | { kind: "ratesNotRising"; email: string; project: string; rates: number[]; kept: number }
   | { kind: "severalOrganizations"; email: string; organizations: string[]; placedIn: string }
-  | { kind: "fixedFee"; project: string }
   | { kind: "sharedName"; client: string; name: string; projects: string[] }
   | { kind: "nonBillableEntries"; project: string; entries: number }
   | { kind: "mixedRatedEntries"; email: string; project: string; task: string; day: string };
@@ -67,7 +73,7 @@ export function planImport(harvestExports: HarvestExport[], organizations: Known
   const findings: Findings = { problems: [], warnings: [] };
   const slugByAccount = matchOrganizations(harvestExports, organizations, findings);
   const { people, emailByHarvestUser } = mergePeople(harvestExports, slugByAccount);
-  const { clients, projectsByCode, codeByHarvestProject, fixedFeeCodes } = planProjects(
+  const { clients, projectsByCode, codeByHarvestProject } = planProjects(
     harvestExports,
     slugByAccount,
     findings,
@@ -99,7 +105,7 @@ export function planImport(harvestExports: HarvestExport[], organizations: Known
     clients,
     projects: [...projectsByCode.values()],
     tasks: [],
-    assignments: planAssignments(assignments, projectsByCode, fixedFeeCodes, people, findings),
+    assignments: planAssignments(assignments, projectsByCode, people, findings),
     entries: [],
   };
   plan.entries = planEntries(entries, plan.projects, people, findings);
@@ -129,3 +135,11 @@ export function planImport(harvestExports: HarvestExport[], organizations: Known
     ],
   };
 }
+
+// What the command-line import writes, since no one is there to pick.
+export const suggestedOwners = (plan: ImportPlan) =>
+  new Map(
+    plan.projects.flatMap((project) =>
+      project.suggestedOwner ? [[project.code, project.suggestedOwner] as const] : [],
+    ),
+  );

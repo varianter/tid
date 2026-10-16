@@ -6,12 +6,14 @@ const project = (code: string, client: string) => ({
   code,
   client,
   name: `Project ${code}`,
-  billable: true,
+  billing: "hourly" as const,
   openToEveryone: false,
   countsTowardBillableBase: true,
   startsOn: null,
   endsOn: null,
   organizations: ["trondheim"],
+  harvestProjects: [{ organization: "trondheim", code }],
+  suggestedOwner: "trondheim",
 });
 
 const plan: ImportPlan = {

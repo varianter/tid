@@ -37,12 +37,14 @@ const plan: ImportPlan = {
       code: "KUN1001",
       client: "Kunde AS",
       name: "Kvalitetssystem",
-      billable: true,
+      billing: "hourly",
       openToEveryone: false,
       countsTowardBillableBase: true,
       startsOn: null,
       endsOn: null,
       organizations: ["trondheim"],
+      harvestProjects: [{ organization: "trondheim", code: "KUN1001" }],
+      suggestedOwner: "trondheim",
     },
   ],
   tasks: [{ project: "KUN1001", name: "Utvikling" }],
@@ -148,14 +150,14 @@ test("opening a project in Harvest is a difference on each of its organizations"
     ...stable,
     projects: stable.projects.map((project) => ({
       ...project,
-      billable: false,
+      billing: "non_billable" as const,
       openToEveryone: true,
     })),
   };
 
   const { differences } = await writePlan(database, opened);
   expect(differences.map((difference) => difference.id)).toEqual([
-    "project|KUN1001|billable",
+    "project|KUN1001|billing",
     "project|KUN1001 trondheim|openToMembers",
   ]);
 
@@ -166,4 +168,24 @@ test("opening a project in Harvest is a difference on each of its organizations"
     .select({ openToMembers: projectOrganizations.openToMembers })
     .from(projectOrganizations);
   expect(participations).toEqual([{ openToMembers: true }]);
+});
+
+test("only a picked contract owner is set, and one set in Tid is kept", async () => {
+  const owners = async () =>
+    database
+      .select({ slug: organizations.slug })
+      .from(projectOrganizations)
+      .innerJoin(organizations, eq(organizations.id, projectOrganizations.orgId))
+      .where(eq(projectOrganizations.isContractOwner, true));
+
+  const unpicked = await writePlan(database, plan);
+  expect(unpicked.ownerless).toEqual(["KUN1001"]);
+  expect(await owners()).toEqual([]);
+
+  const picked = await writePlan(database, plan, { owners: new Map([["KUN1001", "oslo"]]) });
+  expect(picked.ownerless).toEqual([]);
+  expect(await owners()).toEqual([{ slug: "oslo" }]);
+
+  await writePlan(database, plan, { owners: new Map([["KUN1001", "trondheim"]]) });
+  expect(await owners()).toEqual([{ slug: "oslo" }]);
 });

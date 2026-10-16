@@ -1,5 +1,5 @@
 import { assignmentRates } from "@tid/db/schema";
-import { Badge, Button, EmptyState, FormField, Page, Table } from "@tid/ui";
+import { Badge, Button, DataGrid, EmptyState, FormField, Page } from "@tid/ui";
 import { desc } from "drizzle-orm";
 import { z } from "zod";
 import { formatAmount } from "../amount/amount";
@@ -93,33 +93,30 @@ function RatesPage({ consultant, rates, today, values, fieldErrors }: RatesPageP
           Time logged on this project has no billable amount until it has a rate.
         </EmptyState>
       ) : (
-        <Table class="t-tabular">
-          <thead>
-            <tr>
-              <th>Hourly rate</th>
-              <th>Start date</th>
-              <th>End date</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {ratePeriods(rates, today).map((period) => (
-              <tr>
-                <td>
-                  {formatAmount(period.rate / 100, consultant.currency, 2)}
-                  {period.isCurrent && <Badge class="ml-xs">Current</Badge>}
-                </td>
-                <td>{formatTableDate(period.validFrom)}</td>
-                <td>{period.validUntil ? formatTableDate(period.validUntil) : "All future"}</td>
-                <td class="ta-right">
-                  {period.validFrom > today && (
-                    <DeleteRateForm ids={consultant} validFrom={period.validFrom} />
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </Table>
+        <DataGrid
+          columns={[
+            { label: "Hourly rate" },
+            { label: "Start date", kind: "fit" },
+            { label: "End date", kind: "fit" },
+            { kind: "action" },
+          ]}
+        >
+          {ratePeriods(rates, today).map((period) => (
+            <DataGrid.Row>
+              <span>
+                {formatAmount(period.rate / 100, consultant.currency, 2)}
+                {period.isCurrent && <Badge class="ml-xs">Current</Badge>}
+              </span>
+              {formatTableDate(period.validFrom)}
+              {period.validUntil ? formatTableDate(period.validUntil) : "All future"}
+              {period.validFrom > today ? (
+                <DeleteRateForm ids={consultant} validFrom={period.validFrom} />
+              ) : (
+                ""
+              )}
+            </DataGrid.Row>
+          ))}
+        </DataGrid>
       )}
     </Page>
   );

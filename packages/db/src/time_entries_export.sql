@@ -1,7 +1,7 @@
 -- Shaped like dbo.time_entries in the reporting database.
 create view time_entries_export as
 select
-  organizations.name                                 as account_name,
+  organizations.legal_name                           as account_name,
   entry.spent_on                                     as spent_date,
   extract(year from entry.spent_on)::int             as spent_year,
   extract(month from entry.spent_on)::int            as spent_month,
@@ -11,13 +11,14 @@ select
   projects.code                                      as project_code,
   projects.name                                      as project_name,
   tasks.name                                         as task_name,
-  projects.billable,
+  projects.billing <> 'non_billable'                 as billable,
   hours.hours,
   hours.billable_hours,
   hours.billable_base_hours,
-  -- The rate locked on the entry. Assumes a currency with two decimals.
-  (entry.rate / 100.0)::numeric(18, 2)               as billable_rate,
-  round(hours.billable_hours * entry.rate / 100.0, 2) as amount,
+  -- The rate locked on the entry. Assumes a currency with two decimals. Only hourly projects
+  -- have an amount, even if a rate slipped onto another project's entry.
+  (hours.rate / 100.0)::numeric(18, 2)               as billable_rate,
+  round(hours.billable_hours * hours.rate / 100.0, 2) as amount,
   to_char(entry.spent_on, 'IYYYIW')::int             as spent_year_week
 from time_entries entry
 join users         on users.id = entry.user_id
@@ -29,7 +30,9 @@ join clients       on clients.id = projects.client_id
 cross join lateral (
   select
     round(entry.minutes / 60.0, 2) as hours,
-    case when projects.billable then round(entry.minutes / 60.0, 2) else 0 end as billable_hours,
+    case when projects.billing <> 'non_billable' then round(entry.minutes / 60.0, 2) else 0 end
+      as billable_hours,
     case when projects.counts_toward_billable_base then round(entry.minutes / 60.0, 2) else 0 end
-      as billable_base_hours
+      as billable_base_hours,
+    case when projects.billing = 'hourly' then entry.rate end as rate
 ) hours;

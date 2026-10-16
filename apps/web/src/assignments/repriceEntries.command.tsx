@@ -1,5 +1,5 @@
 import { formatHours } from "@tid/elements/hours";
-import { Badge, Button, Page, Table } from "@tid/ui";
+import { Badge, Button, DataGrid, Page } from "@tid/ui";
 import { z } from "zod";
 import { formatAmount } from "../amount/amount";
 import { formatDate, formatTableDate } from "../dates/dateDisplay";
@@ -61,45 +61,35 @@ function RepricePage({ consultant, newRate, entries }: RepricePageProps) {
         {entries.length === 1 ? "entry" : "entries"} on {consultant.projectName}, locked months
         included.
       </p>
-      <Table class="t-tabular">
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th class="ta-right">Hours</th>
-            <th class="ta-right">Old rate</th>
-            <th class="ta-right">New rate</th>
-            <th class="ta-right">Difference</th>
-          </tr>
-        </thead>
-        <tbody>
-          {entries.map((entry) => (
-            <tr>
-              <td>
-                <span class="stack-v gap-4xs">
-                  <span class="fw-medium">
-                    {formatTableDate(entry.spentOn)}
-                    {entry.isLocked && <Badge class="ml-xs">Locked</Badge>}
-                  </span>
-                  <span class="fs-xs ink-subtle">{entry.task}</span>
-                </span>
-              </td>
-              <td class="ta-right">{formatHours(entry.minutes)}</td>
-              <td class="ta-right">{entry.rate === null ? "No rate" : money(entry.rate)}</td>
-              <td class="ta-right">{money(newRate.rate)}</td>
-              <td class="ta-right">{money(difference(entry))}</td>
-            </tr>
-          ))}
-        </tbody>
-        <tfoot>
-          <tr>
-            <th>Total</th>
-            <td class="ta-right">{formatHours(totalMinutes)}</td>
-            <td />
-            <td />
-            <td class="ta-right">{money(totalDifference)}</td>
-          </tr>
-        </tfoot>
-      </Table>
+      <DataGrid
+        columns={[
+          { label: "Date" },
+          { label: "Hours", kind: "number" },
+          { label: "Old rate", kind: "number" },
+          { label: "New rate", kind: "number" },
+          { label: "Difference", kind: "number" },
+        ]}
+      >
+        {entries.map((entry) => (
+          <DataGrid.Row>
+            <DataGrid.Title secondary={entry.task}>
+              {formatTableDate(entry.spentOn)}
+              {entry.isLocked && <Badge class="ml-xs">Locked</Badge>}
+            </DataGrid.Title>
+            {formatHours(entry.minutes)}
+            {entry.rate === null ? "No rate" : money(entry.rate)}
+            {money(newRate.rate)}
+            {money(difference(entry))}
+          </DataGrid.Row>
+        ))}
+        <DataGrid.Footer>
+          Total
+          {formatHours(totalMinutes)}
+          {""}
+          {""}
+          {money(totalDifference)}
+        </DataGrid.Footer>
+      </DataGrid>
       <form method="post" class="stack-h gap-xs">
         <Button type="submit">Add rate and reprice</Button>
         <Button as="a" href={ratesPath(consultant)} data-variant="plain">

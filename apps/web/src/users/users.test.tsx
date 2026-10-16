@@ -69,3 +69,17 @@ test("managers make others managers, and remove the role again", async () => {
   await requestAs(manager, `/users/${member.id}/manager/delete?organization=oslo`, "POST");
   expect(await managerIds()).toEqual([manager.id]);
 });
+
+test("managers see any user's details, members only their own", async () => {
+  const page = await (await requestAs(manager, `/users/${member.id}`)).text();
+  expect(page).toContain("ola@variant.no");
+  expect((await requestAs(member, `/users/${member.id}`)).status).toBe(200);
+  expect((await requestAs(member, `/users/${manager.id}`)).status).toBe(403);
+  expect((await requestAs(manager, "/users/0")).status).toBe(404);
+});
+
+test("a user's details show the month asked for", async () => {
+  const page = await (await requestAs(member, `/users/${member.id}?month=2025-03`)).text();
+  expect(page).toContain("March 2025");
+  expect(page).toContain(`/users/${member.id}?month=2025-02"`);
+});

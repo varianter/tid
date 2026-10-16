@@ -1,6 +1,6 @@
 import { clients, projectOrganizations, projects } from "@tid/db/schema";
-import { EmptyState, Page } from "@tid/ui";
-import { and, eq, not, notExists } from "drizzle-orm";
+import { DataGrid, EmptyState, Page } from "@tid/ui";
+import { and, eq, notExists } from "drizzle-orm";
 import type { Context } from "hono";
 import { database } from "../database";
 import type { UserEnv } from "../login/user";
@@ -37,7 +37,7 @@ export const openProjectList = async (c: Context<UserEnv>) => {
         .innerJoin(clients, eq(clients.id, projects.clientId))
         .where(
           and(
-            not(projects.billable),
+            eq(projects.billing, "non_billable"),
             notExists(
               database
                 .select()
@@ -98,34 +98,30 @@ function OpenProjectListPage({
           Members log time only on projects they're assigned to.
         </EmptyState>
       ) : (
-        <div
-          class="d-grid of-scroll gap-column-l lh-snug"
-          style={`grid-template-columns: minmax(12ch, 1fr) minmax(16ch, 1fr) max-content${canChange ? " max-content" : ""};`}
+        <DataGrid
+          columns={[
+            { label: "Client" },
+            { label: "Project" },
+            { label: "Code", kind: "fit" },
+            canChange && { kind: "action" },
+          ]}
         >
-          <div class="grid-all-columns grid-subgrid items-center b-b bc-subtle p-xs fs-s ink-subtle fw-bold">
-            <span>Client</span>
-            <span>Project</span>
-            <span>Code</span>
-            {canChange && <span />}
-          </div>
           {openProjects.map((project) => (
-            <div class="grid-all-columns grid-subgrid items-center b-b bc-subtle p-xs fs-s">
-              <span>{project.client}</span>
+            <DataGrid.Row>
+              {project.client}
               <a href={`/projects/${project.id}`} class="fw-medium">
                 {project.name}
               </a>
               <span class="ink-subtle">{project.code}</span>
               {canChange && (
-                <span class="justify-self-end">
-                  <CloseProjectToMembersForm
-                    organizationSlug={organization.slug}
-                    projectId={project.id}
-                  />
-                </span>
+                <CloseProjectToMembersForm
+                  organizationSlug={organization.slug}
+                  projectId={project.id}
+                />
               )}
-            </div>
+            </DataGrid.Row>
           ))}
-        </div>
+        </DataGrid>
       )}
     </Page>
   );

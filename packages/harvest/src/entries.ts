@@ -35,7 +35,7 @@ export function planEntries(
 ) {
   for (const project of projects) {
     const nonBillable = entries.filter((entry) => entry.code === project.code && !entry.billable);
-    if (project.billable && nonBillable.length > 0) {
+    if (project.billing !== "non_billable" && nonBillable.length > 0) {
       warnings.push({
         kind: "nonBillableEntries",
         project: project.code,
@@ -44,6 +44,9 @@ export function planEntries(
     }
   }
 
+  const hourlyCodes = new Set(
+    projects.filter((project) => project.billing === "hourly").map((project) => project.code),
+  );
   return [
     ...Map.groupBy(
       entries,
@@ -62,7 +65,10 @@ export function planEntries(
       );
     }
     const notes = sameDay.flatMap((entry) => (entry.notes?.trim() ? [entry.notes.trim()] : []));
-    const rated = sameDay.filter((entry) => entry.billable_rate !== null);
+    // Only hourly projects' entries have rates in Tid, so Harvest's rates on others are dropped.
+    const rated = hourlyCodes.has(first.code)
+      ? sameDay.filter((entry) => entry.billable_rate !== null)
+      : [];
     const prices = [
       ...new Set(rated.map((entry) => `${entry.billable_rate} ${entry.client.currency}`)),
     ];

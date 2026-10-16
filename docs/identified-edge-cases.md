@@ -26,9 +26,9 @@ Settled: hours logged before the move keep their currency, since each entry stor
 
 ## Billable tasks on a billable project
 
-Harvest sets billing per project (time and materials, fixed fee or non-billable), but each task on a project can also be marked non-billable. We only have `projects.billable`. In August 2026, STI1001 had a billable task (Forberedelser) and a non-billable one (Kundeoppfølging).
+Harvest sets billing per project (time and materials, fixed fee or non-billable), but each task on a project can also be marked non-billable. We only have `projects.billing`. In August 2026, STI1001 had a billable task (Forberedelser) and a non-billable one (Kundeoppfølging).
 
-Moving `billable` to tasks would record this faithfully, but the rule that open projects can't be billable would then span two tables.
+Moving billing to tasks would record this faithfully, but the rule that only non-billable projects can be open would then span two tables, and so would the rule that billing is fixed once time is logged.
 
 **Currently:** the project's billing type decides, so every task on a billable project exports as billable.
 

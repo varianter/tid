@@ -5,43 +5,50 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1792067698233,
+      "when": 1792069414253,
       "tag": "0000_init",
       "breakpoints": true
     },
     {
       "idx": 1,
       "version": "7",
-      "when": 1792067698668,
+      "when": 1792069414703,
       "tag": "0001_time_entry_rates",
       "breakpoints": true
     },
     {
       "idx": 2,
       "version": "7",
-      "when": 1792067699098,
+      "when": 1792069415142,
       "tag": "0002_time_entries_export",
       "breakpoints": true
     },
     {
       "idx": 3,
       "version": "7",
-      "when": 1792067699530,
+      "when": 1792069415577,
       "tag": "0003_organizations",
       "breakpoints": true
     },
     {
       "idx": 4,
       "version": "7",
-      "when": 1792067699962,
+      "when": 1792069416017,
       "tag": "0004_month_locks",
       "breakpoints": true
     },
     {
       "idx": 5,
       "version": "7",
-      "when": 1792067700395,
+      "when": 1792069416457,
       "tag": "0005_open_projects",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792069416907,
+      "tag": "0006_project_billing",
       "breakpoints": true
     }
   ]

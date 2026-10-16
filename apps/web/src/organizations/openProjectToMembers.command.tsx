@@ -12,12 +12,15 @@ export const openProjectToMembers = async (c: Context<UserEnv>) => {
   if (change instanceof Response) return change;
   const { organization, projectId } = change;
   const [project] = await database
-    .select({ billable: projects.billable })
+    .select({ billing: projects.billing })
     .from(projects)
     .where(eq(projects.id, projectId));
   if (!project) return c.notFound();
-  if (project.billable) {
-    return c.text(`Billable projects can't be open to everyone in ${organization.name}`, 400);
+  if (project.billing !== "non_billable") {
+    return c.text(
+      `Only non-billable projects can be open to everyone in ${organization.name}`,
+      400,
+    );
   }
   await database.transaction(async (transaction) => {
     await ensureParticipation(transaction, { projectId, orgId: organization.id });

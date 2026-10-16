@@ -1,5 +1,5 @@
 import type { HarvestExport } from "./harvestExport";
-import type { Findings, ImportPlan } from "./plan";
+import type { Billing, Findings, ImportPlan } from "./plan";
 
 // Non-billable projects of this client are internal, so everyone may log time on them.
 const internalClientName = "Varianttid";
@@ -7,12 +7,32 @@ const internalClientName = "Varianttid";
 const notCountingTowardBillableBase = new Set(["FER1000", "VEL1000"]);
 // The reporting database holds project codes of at most 16 characters.
 const maxCodeLength = 16;
+// Marks the account that has subcontractors on the project, which makes it the contract owner.
+const subcontractorsSuffix = /-S$/i;
+
+const billingOf = (project: HarvestExport["projects"][number]): Billing =>
+  !project.is_billable ? "non_billable" : project.is_fixed_fee ? "fixed_fee" : "hourly";
+
+// The organization that invoices the client, when the Harvest projects make it clear: the only
+// account the project is in, or the only one whose code says it has subcontractors.
+function suggestOwner(parts: ImportPlan["projects"][number]["harvestProjects"]) {
+  const only = (organizations: string[]) => {
+    const distinct = new Set(organizations);
+    return distinct.size === 1 ? ([...distinct][0] as string) : null;
+  };
+  return (
+    only(parts.map((part) => part.organization)) ??
+    only(
+      parts.filter((part) => subcontractorsSuffix.test(part.code)).map((part) => part.organization),
+    )
+  );
+}
 
 // Projects are identified by code, across accounts too, and clients by name ignoring case.
 export function planProjects(
   harvestExports: HarvestExport[],
   slugByAccount: Map<number, string>,
-  { problems, warnings }: Findings,
+  { problems }: Findings,
 ) {
   // Keeps the first spelling.
   const clientNames = new Map<string, string>();
@@ -28,7 +48,7 @@ export function planProjects(
     projects.map((project) => ({ account, project })),
   );
   for (const { account, project } of harvestProjects) {
-    const code = project.code?.trim().replace(/-S$/i, "");
+    const code = project.code?.trim().replace(subcontractorsSuffix, "");
     if (!code) {
       problems.push(`${account.name}: project "${project.name}" has no code.`);
       continue;
@@ -45,7 +65,6 @@ export function planProjects(
   }
 
   const projectsByCode = new Map<string, ImportPlan["projects"][number]>();
-  const fixedFeeCodes = new Set<string>();
   for (const [code, sameCode] of Map.groupBy(
     harvestProjects.filter(({ account, project }) =>
       codeByHarvestProject.has(`${account.id}:${project.id}`),
@@ -59,15 +78,14 @@ export function planProjects(
     if (clients.size > 1) {
       problems.push(`Project code ${code} is used for different clients: ${describe()}.`);
     }
-    if (sameCode.some(({ project }) => project.is_billable !== first.is_billable)) {
-      problems.push(
-        `Project code ${code} is billable on some projects but not others: ${describe()}.`,
-      );
+    const billing = billingOf(first);
+    if (sameCode.some(({ project }) => billingOf(project) !== billing)) {
+      problems.push(`Project code ${code} is billed differently on its projects: ${describe()}.`);
     }
-    if (sameCode.some(({ project }) => project.is_fixed_fee)) {
-      fixedFeeCodes.add(code);
-      warnings.push({ kind: "fixedFee", project: code });
-    }
+    const harvestProjects = sameCode.flatMap(({ account, project }) => {
+      const organization = slugByAccount.get(account.id);
+      return organization ? [{ organization, code: (project.code as string).trim() }] : [];
+    });
     const startDates = sameCode.map(({ project }) => project.starts_on);
     const endDates = sameCode.map(({ project }) => project.ends_on);
     const client = clientName(first.client.name);
@@ -75,9 +93,9 @@ export function planProjects(
       code,
       client,
       name: [...new Set(sameCode.map(({ project }) => project.name))].join(" / "),
-      billable: first.is_billable,
+      billing,
       openToEveryone:
-        !first.is_billable && client.toLowerCase() === internalClientName.toLowerCase(),
+        billing === "non_billable" && client.toLowerCase() === internalClientName.toLowerCase(),
       countsTowardBillableBase: !notCountingTowardBillableBase.has(code),
       // A merged project spans all of its parts, and is open-ended if any part is.
       startsOn: startDates.includes(null) ? null : (startDates.toSorted()[0] ?? null),
@@ -85,6 +103,8 @@ export function planProjects(
       organizations: [
         ...new Set(sameCode.map(({ account }) => slugByAccount.get(account.id) as string)),
       ],
+      harvestProjects,
+      suggestedOwner: billing === "non_billable" ? null : suggestOwner(harvestProjects),
     });
   }
 
@@ -92,7 +112,6 @@ export function planProjects(
     clients: [...clientNames.values()],
     projectsByCode,
     codeByHarvestProject,
-    fixedFeeCodes,
   };
 }
 

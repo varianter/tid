@@ -3,6 +3,7 @@ import type { UserEnv } from "../login/user";
 import { managesOrganization } from "../users/manager";
 import { enterHarvestTokens } from "./enterHarvestTokens.command";
 import { forgetHarvestTokens } from "./forgetHarvestTokens.command";
+import { harvestImportList } from "./harvestImportList.query";
 import { importFromHarvest } from "./importFromHarvest.command";
 
 export const harvestImport = new Hono<UserEnv>()
@@ -14,6 +15,7 @@ export const harvestImport = new Hono<UserEnv>()
     }
     await next();
   })
-  .on(["GET", "POST"], "/", importFromHarvest)
+  .get("/", harvestImportList)
+  .on(["GET", "POST"], "/projects", importFromHarvest)
   .on(["GET", "POST"], "/tokens", enterHarvestTokens)
   .post("/forget", forgetHarvestTokens);

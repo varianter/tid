@@ -1,5 +1,5 @@
 import { userRoles, users } from "@tid/db/schema";
-import { Badge, Page } from "@tid/ui";
+import { Badge, DataGrid, Page } from "@tid/ui";
 import { and, eq, exists } from "drizzle-orm";
 import type { Context } from "hono";
 import { database } from "../database";
@@ -71,37 +71,27 @@ function UserListPage({
         <OrganizationSelect organizationSlug={organizationSlug} organizations={organizations} />
       }
     >
-      <div
-        class="d-grid of-scroll gap-column-l lh-snug"
-        style="grid-template-columns: minmax(0, 1fr) max-content;"
-      >
-        <div class="grid-all-columns grid-subgrid items-center b-b bc-subtle p-xs fs-s ink-subtle fw-bold">
-          <span>Name</span>
-          <span />
-        </div>
+      <DataGrid columns={[{ label: "Name" }, { kind: "action" }]}>
         {users.map((user) => (
-          <div class="grid-all-columns grid-subgrid items-center b-b bc-subtle p-xs fs-s">
-            <span class="stack-v">
+          <DataGrid.Row>
+            <DataGrid.Title
+              secondary={[user.email, user.endsOn && `Left ${formatDate(user.endsOn)}`]
+                .filter(Boolean)
+                .join(" · ")}
+            >
               <span class="stack-h gap-xs items-center">
-                <span class="fw-medium">{user.name}</span>
+                <a href={`/users/${user.id}`}>{user.name}</a>
                 {user.isManager && <Badge>Manager</Badge>}
               </span>
-              <span class="ink-subtle" style="overflow-wrap: anywhere;">
-                {[user.email, user.endsOn && `Left ${formatDate(user.endsOn)}`]
-                  .filter(Boolean)
-                  .join(" · ")}
-              </span>
-            </span>
-            <span class="justify-self-end">
-              {user.isManager ? (
-                <RemoveManagerForm userId={user.id} organizationSlug={organizationSlug} />
-              ) : (
-                <MakeManagerForm userId={user.id} organizationSlug={organizationSlug} />
-              )}
-            </span>
-          </div>
+            </DataGrid.Title>
+            {user.isManager ? (
+              <RemoveManagerForm userId={user.id} organizationSlug={organizationSlug} />
+            ) : (
+              <MakeManagerForm userId={user.id} organizationSlug={organizationSlug} />
+            )}
+          </DataGrid.Row>
         ))}
-      </div>
+      </DataGrid>
     </Page>
   );
 }

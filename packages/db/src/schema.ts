@@ -7,13 +7,15 @@
 //   bunx drizzle-kit generate --custom --name organizations
 //   bunx drizzle-kit generate --custom --name month_locks
 //   bunx drizzle-kit generate --custom --name open_projects
-// then copy time_entry_rates.sql, time_entries_export.sql, organizations.sql, month_locks.sql and
-// open_projects.sql over the generated, empty files. Databases that ran the old migrations have to be rebuilt afterwards:
+//   bunx drizzle-kit generate --custom --name project_billing
+// then copy time_entry_rates.sql, time_entries_export.sql, organizations.sql, month_locks.sql,
+// open_projects.sql and project_billing.sql over the generated, empty files. Databases that ran the old migrations have to be rebuilt afterwards:
 // locally with bun run db:reset or bun run harvest:import:norway, and deployed ones by emptying them.
 //
 // Live: never edit or delete a migration, since the live database has already run it.
 // Add new ones with drizzle-kit generate. Delete this comment, time_entry_rates.sql,
-// time_entries_export.sql, organizations.sql, month_locks.sql and open_projects.sql.
+// time_entries_export.sql, organizations.sql, month_locks.sql, open_projects.sql and
+// project_billing.sql.
 
 // Where a rule lives is a choice, not a default. Enforce an invariant in the
 // database when every writer must obey it or a violation corrupts data — a
@@ -109,6 +111,9 @@ export const userIdentities = pgTable(
   ],
 );
 
+// Fixed fee projects are billable, but their time has no hourly amount.
+export const billing = pgEnum("billing", ["hourly", "fixed_fee", "non_billable"]);
+
 // Clients and projects are shared across organizations. A client found in several
 // Harvest accounts becomes one row; downstream reporting matches on project code.
 export const clients = pgTable("clients", {
@@ -124,7 +129,8 @@ export const projects = pgTable(
     // Used outside the app, and the reporting database holds at most 16 characters.
     code: text().notNull().unique(),
     name: text().notNull(),
-    billable: boolean().notNull(),
+    // Fixed once time is logged on the project; see project_billing.sql.
+    billing: billing().notNull(),
     // Only used by reporting, to leave out time such as vacation from billable base hours.
     countsTowardBillableBase: boolean().notNull().default(true),
     startsOn: date(),
@@ -135,7 +141,7 @@ export const projects = pgTable(
     check("code_length", sql`length(${table.code}) <= 16`),
     check(
       "billable_projects_count_toward_base",
-      sql`not ${table.billable} or ${table.countsTowardBillableBase}`,
+      sql`${table.billing} = 'non_billable' or ${table.countsTowardBillableBase}`,
     ),
     check("ends_after_start", sql`${table.endsOn} >= ${table.startsOn}`),
   ],
@@ -148,7 +154,7 @@ export const projectOrganizations = pgTable(
   {
     projectId: reference().references(() => projects.id),
     orgId: reference().references(() => organizations.id),
-    // The organization that invoices the client.
+    // The organization that invoices the client. Non-billable projects usually have none.
     isContractOwner: boolean().notNull().default(false),
     // Everyone in the organization may log time without being assigned. Only on non-billable
     // projects; see open_projects.sql.
@@ -226,8 +232,9 @@ export const assignmentRates = pgTable(
 // members. The app enforces this rather than the database, so it can tell the user why an
 // entry was rejected.
 // The rate is locked when the entry is created, so a rate that's later added for the future
-// doesn't reprice logged time. See time_entry_rates.sql for how it's picked. A backdated rate
-// does reprice its period; the app does that when it adds the rate.
+// doesn't reprice logged time. Only entries on hourly projects get one. See time_entry_rates.sql
+// for how it's picked. A backdated rate does reprice its period; the app does that when it adds
+// the rate.
 export const timeEntries = pgTable(
   "time_entries",
   {

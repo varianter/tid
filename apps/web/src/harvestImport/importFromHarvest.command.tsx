@@ -2,7 +2,7 @@ import { organizations } from "@tid/db/schema";
 import { fetchHarvestAccounts } from "@tid/harvest/fetch";
 import { type ImportPlan, planImport, type Warning } from "@tid/harvest/plan";
 import { type Difference, describeRejection, writePlan } from "@tid/harvest/write";
-import { Button, Checkbox, Page } from "@tid/ui";
+import { Badge, Button, Checkbox, ColorMode, DataGrid, Page, type Palette, Select } from "@tid/ui";
 import type { Context } from "hono";
 import type { Child } from "hono/jsx";
 import { z } from "zod";
@@ -11,18 +11,35 @@ import { database } from "../database";
 import { formatDate } from "../dates/dateDisplay";
 import { isIsoDate } from "../dates/isoDate";
 import { type FormProps, formAction } from "../form/formAction";
+import { billingLabels } from "../projects/billing";
 import { ForgetHarvestTokensForm } from "./forgetHarvestTokens.command";
-import { importPath, readHarvestTokens } from "./harvestTokens";
+import { importPath, projectImportPath } from "./harvestImportUrl";
+import { readHarvestTokens } from "./harvestTokens";
 import { groupPreview } from "./importPreview";
 
-const importFromHarvestForm = z.object({
-  fingerprint: z.string(),
-  // One ticked box posts a string, several post an array.
-  accept: z
-    .union([z.string(), z.array(z.string())])
-    .default([])
-    .transform((accepted) => new Set([accepted].flat())),
-});
+const ownerField = "owner.";
+
+const importFromHarvestForm = z
+  .looseObject({
+    fingerprint: z.string(),
+    // One ticked box posts a string, several post an array.
+    accept: z
+      .union([z.string(), z.array(z.string())])
+      .default([])
+      .transform((accepted) => new Set([accepted].flat())),
+  })
+  // Each project without a contract owner posts owner.<code>, empty when none was picked.
+  .transform(({ fingerprint, accept, ...fields }) => ({
+    fingerprint,
+    accept,
+    owners: new Map(
+      Object.entries(fields).flatMap(([name, slug]) =>
+        name.startsWith(ownerField) && typeof slug === "string" && slug !== ""
+          ? [[name.slice(ownerField.length), slug] as const]
+          : [],
+      ),
+    ),
+  }));
 
 // Ties an import to the plan that was previewed, so Harvest changing in between isn't imported unseen.
 const fingerprint = (plan: ImportPlan) => Bun.hash(JSON.stringify(plan)).toString(36);
@@ -44,13 +61,14 @@ async function preview(tokens: string) {
   try {
     const { plan, problems, warnings, currencies } = await planFromHarvest(tokens);
     if (problems.length > 0) return { problems, warnings };
-    const { added, differences } = await writePlan(database, plan, { preview: true });
+    const { added, differences, ownerless } = await writePlan(database, plan, { preview: true });
     return {
       problems,
       warnings,
       plan,
       additions: groupPreview(plan, added, currencies),
       differences,
+      ownerless: plan.projects.filter((project) => ownerless.includes(project.code)),
       fingerprint: fingerprint(plan),
     };
   } catch (error) {
@@ -68,20 +86,23 @@ export const importFromHarvest = formAction({
     const notice = c.req.query("notice");
     return { ...(await preview(tokens)), notice: isNotice(notice) ? notice : undefined };
   },
-  onSubmit: async (_c, { fingerprint, accept }, { plan, fingerprint: previewed, error }) => {
+  onSubmit: async (
+    _c,
+    { fingerprint, accept, owners },
+    { plan, fingerprint: previewed, error },
+  ) => {
     if (error) return { formError: error };
-    if (!plan || fingerprint !== previewed) return { redirect: `${importPath}?notice=changed` };
+    if (!plan || fingerprint !== previewed)
+      return { redirect: `${projectImportPath}?notice=changed` };
     try {
-      await writePlan(database, plan, { accepted: accept });
+      await writePlan(database, plan, { accepted: accept, owners });
     } catch (rejection) {
       return { formError: describeRejection(rejection) };
     }
-    return { redirect: `${importPath}?notice=applied` };
+    return { redirect: `${projectImportPath}?notice=applied` };
   },
   view: HarvestImportPage,
 });
-
-type Palette = "green" | "yellow" | "coral";
 
 const notices = {
   applied: {
@@ -106,6 +127,7 @@ function HarvestImportPage({
   warnings = [],
   additions,
   differences = [],
+  ownerless = [],
   fingerprint,
 }: {
   notice?: Notice;
@@ -115,11 +137,13 @@ function HarvestImportPage({
   warnings?: Warning[];
   additions?: Additions;
   differences?: Difference[];
+  ownerless?: ImportPlan["projects"];
   fingerprint?: string;
 } & FormProps) {
   const hasAdditions = additions && (additions.users.length > 0 || additions.clients.length > 0);
+  const hasChoices = hasAdditions || differences.length > 0 || ownerless.length > 0;
   return (
-    <Page title="Harvest import" actions={<ForgetHarvestTokensForm />}>
+    <Page title="Import users, projects and tasks" actions={<ForgetHarvestTokensForm />}>
       {notice && <Banner palette={notices[notice].palette}>{notices[notice].message}</Banner>}
       {formError && (
         <Banner palette="coral" title="Nothing was imported">
@@ -139,15 +163,14 @@ function HarvestImportPage({
       {warnings.length > 0 && <Warnings warnings={warnings} />}
 
       {fingerprint && additions && (
-        <form method="post" action={importPath} class="stack-v nowrap gap-xl">
+        <form method="post" action={projectImportPath} class="stack-v nowrap gap-xl">
           <input type="hidden" name="fingerprint" value={fingerprint} />
-          {!hasAdditions && differences.length === 0 && (
-            <p class="ink-subtle">Tid already has everything in Harvest.</p>
-          )}
+          {!hasChoices && <p class="ink-subtle">Tid already has everything in Harvest.</p>}
           {additions.users.length > 0 && <NewUsers groups={additions.users} />}
           {additions.clients.length > 0 && <NewProjects clients={additions.clients} />}
+          {ownerless.length > 0 && <ContractOwners projects={ownerless} />}
           {differences.length > 0 && <Differences differences={differences} />}
-          {(hasAdditions || differences.length > 0) && (
+          {hasChoices && (
             <Button type="submit" data-variant="tinted" class="w-max-content">
               Import
             </Button>
@@ -196,12 +219,6 @@ const warningGroups: { [Kind in Warning["kind"]]: WarningGroup<Kind> } = {
     headers: ["Person", "Harvest accounts", "Placed in"],
     cells: (warning) => [warning.email, warning.organizations.join(", "), warning.placedIn],
   },
-  fixedFee: {
-    title: "Fixed fee",
-    consequence: "Tid has no fee, so these projects' hours export without an amount.",
-    headers: ["Project"],
-    cells: (warning) => [warning.project],
-  },
   sharedName: {
     title: "Projects sharing a name",
     consequence: "A client's project names must differ, so each gets its code added.",
@@ -233,16 +250,17 @@ function Warnings({ warnings }: { warnings: Warning[] }) {
         const rows = byKind.get(kind) ?? [];
         if (rows.length === 0) return null;
         return (
-          <color-mode
-            palette="yellow"
-            class="d-block surface-tinted br-l p-m stack-v nowrap gap-xs"
-          >
+          <ColorMode palette="yellow" class="d-block surface-tinted br-l p-m stack-v nowrap gap-xs">
             <h3 class="fs-m fw-bold">
               {group.title} <span class="ink-subtle">· {rows.length}</span>
             </h3>
             <p class="fs-s ink-subtle">{group.consequence}</p>
-            <DataTable headers={group.headers} rows={rows.map((warning) => group.cells(warning))} />
-          </color-mode>
+            <DataGrid columns={group.headers.map((label) => ({ label }))}>
+              {rows.map((warning) => (
+                <DataGrid.Row>{group.cells(warning)}</DataGrid.Row>
+              ))}
+            </DataGrid>
+          </ColorMode>
         );
       })}
     </section>
@@ -256,15 +274,23 @@ function NewUsers({ groups }: { groups: Additions["users"] }) {
       <h2 class="fs-l fw-bold">
         New users <span class="ink-subtle">· {users.length}</span>
       </h2>
-      <DataTable
-        headers={["Name", "Email", "Organization", "Role"]}
-        rows={users.map((user) => [
-          <span class="fw-medium">{user.name}</span>,
-          user.email,
-          user.organization,
-          user.manager ? <Badge palette="green">Manager</Badge> : "",
-        ])}
-      />
+      <DataGrid
+        columns={[
+          { label: "Name" },
+          { label: "Email" },
+          { label: "Organization" },
+          { label: "Role", kind: "fit" },
+        ]}
+      >
+        {users.map((user) => (
+          <DataGrid.Row>
+            <DataGrid.Title>{user.name}</DataGrid.Title>
+            {user.email}
+            {user.organization}
+            {user.manager ? <Badge palette="green">Manager</Badge> : ""}
+          </DataGrid.Row>
+        ))}
+      </DataGrid>
     </section>
   );
 }
@@ -304,11 +330,7 @@ function ProjectAdditions({
   // A long list of tasks Tid already has would hide the new ones.
   const shownTasks = marksRows ? project.tasks.filter((task) => task.isNew) : project.tasks;
   const existingTasks = project.tasks.length - shownTasks.length;
-  const billing = project.openToEveryone
-    ? "Open to everyone"
-    : project.billable
-      ? "Billable"
-      : "Non-billable";
+  const billing = project.openToEveryone ? "Open to everyone" : billingLabels[project.billing];
   return (
     <article class="stack-v nowrap gap-2xs b-all bc-subtle br-l p-s fs-s">
       <header class="stack-h items-center gap-xs">
@@ -358,6 +380,51 @@ function ProjectAdditions({
   );
 }
 
+// Harvest doesn't know who invoices the client, so someone picks it. Suggestions come from the
+// Harvest codes; see the Harvest import README.
+function ContractOwners({ projects }: { projects: ImportPlan["projects"] }) {
+  return (
+    <section class="stack-v nowrap gap-s">
+      <h2 class="fs-l fw-bold">
+        No contract owner <span class="ink-subtle">· {projects.length}</span>
+      </h2>
+      <p class="ink-subtle">
+        Pick the organization that invoices the client, or leave it for later and pick it when
+        editing the project.
+      </p>
+      <DataGrid
+        columns={[
+          { label: "Project" },
+          { label: "Client" },
+          { label: "Harvest codes" },
+          { label: "Contract owner", kind: "fit" },
+        ]}
+      >
+        {projects.map((project) => (
+          <DataGrid.Row>
+            <DataGrid.Title secondary={project.name}>{project.code}</DataGrid.Title>
+            {project.client}
+            {project.harvestProjects
+              .map((part) => `${part.code} (${part.organization})`)
+              .join(", ")}
+            <Select
+              name={`${ownerField}${project.code}`}
+              aria-label={`Contract owner of ${project.code}`}
+            >
+              <option value="">None</option>
+              {project.organizations.map((slug) => (
+                <option value={slug} selected={slug === project.suggestedOwner}>
+                  {slug}
+                </option>
+              ))}
+            </Select>
+          </DataGrid.Row>
+        ))}
+      </DataGrid>
+    </section>
+  );
+}
+
 const fieldNames: Record<string, string> = {
   openToMembers: "open to members",
   countsTowardBillableBase: "counts toward billable base",
@@ -377,56 +444,26 @@ function Differences({ differences }: { differences: Difference[] }) {
     <section class="stack-v nowrap gap-s">
       <h2 class="fs-l fw-bold">Different in Tid</h2>
       <p class="ink-subtle">Tid keeps its value unless you tick Use Harvest.</p>
-      <div
-        class="d-grid gap-column-l lh-snug"
-        style="grid-template-columns: max-content minmax(12ch, max-content) minmax(8ch, 1fr) minmax(8ch, 1fr); overflow-wrap: anywhere;"
+      <DataGrid
+        columns={[
+          { label: "Use Harvest", kind: "fit" },
+          { label: "Row" },
+          { label: "Tid" },
+          { label: "Harvest" },
+        ]}
       >
-        <div class="grid-all-columns grid-subgrid items-center b-b bc-subtle p-xs fs-s ink-subtle fw-bold">
-          <span>Use Harvest</span>
-          <span>Row</span>
-          <span>Tid</span>
-          <span>Harvest</span>
-        </div>
         {differences.map((difference, index) => (
-          <label
-            for={`accept-${index}`}
-            class="grid-all-columns grid-subgrid items-center b-b bc-subtle bg-wash:hover p-xs fs-s"
-          >
+          <DataGrid.Row for={`accept-${index}`}>
             <Checkbox id={`accept-${index}`} name="accept" value={difference.id} />
-            <span class="stack-v nowrap">
-              <span class="fw-medium">
-                {difference.kind} {difference.row}
-              </span>
-              <span class="ink-subtle">{fieldNames[difference.field] ?? difference.field}</span>
-            </span>
-            <span>{describeValue(difference.tid)}</span>
-            <span>{describeValue(difference.harvest)}</span>
-          </label>
+            <DataGrid.Title secondary={fieldNames[difference.field] ?? difference.field}>
+              {difference.kind} {difference.row}
+            </DataGrid.Title>
+            {describeValue(difference.tid)}
+            {describeValue(difference.harvest)}
+          </DataGrid.Row>
         ))}
-      </div>
+      </DataGrid>
     </section>
-  );
-}
-
-function DataTable({ headers, rows }: { headers: string[]; rows: Child[][] }) {
-  return (
-    <div
-      class="d-grid gap-column-l lh-snug fs-s"
-      style={`grid-template-columns: repeat(${headers.length}, auto); overflow-wrap: anywhere;`}
-    >
-      <div class="grid-all-columns grid-subgrid items-center b-b bc-subtle py-2xs ink-subtle fw-bold">
-        {headers.map((header) => (
-          <span>{header}</span>
-        ))}
-      </div>
-      {rows.map((cells) => (
-        <div class="grid-all-columns grid-subgrid items-center b-b bc-subtle py-2xs">
-          {cells.map((cell) => (
-            <span>{cell}</span>
-          ))}
-        </div>
-      ))}
-    </div>
   );
 }
 
@@ -440,24 +477,13 @@ function Banner({
   children: Child;
 }) {
   return (
-    <color-mode
+    <ColorMode
       palette={palette}
       class="d-block surface-dyed b-all bc-subtle br-l p-m stack-v nowrap gap-xs"
     >
       {title && <h2 class="fs-m fw-bold">{title}</h2>}
       {title ? children : <p class="fw-medium">{children}</p>}
-    </color-mode>
-  );
-}
-
-function Badge({ palette, children }: { palette: Palette; children: Child }) {
-  return (
-    <color-mode
-      palette={palette}
-      class="d-inline-block surface-dyed px-xs py-3xs br-pill fs-xs fw-medium"
-    >
-      {children}
-    </color-mode>
+    </ColorMode>
   );
 }
 

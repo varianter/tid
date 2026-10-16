@@ -1,11 +1,13 @@
 -- The rate a new entry on this task and day gets: the latest assignment rate that has started,
--- in the currency of the user's organization. No row when the assignment has no rate.
+-- in the currency of the user's organization. No row when the assignment has no rate, or the
+-- project isn't billed by the hour.
 create function entry_rate(entry_user_id bigint, entry_task_id bigint, entry_spent_on date)
 returns table (rate integer, currency char(3))
 language sql stable
 as $$
   select assignment_rates.rate, organizations.currency
   from tasks
+  join projects on projects.id = tasks.project_id and projects.billing = 'hourly'
   join assignment_rates
     on assignment_rates.project_id = tasks.project_id
     and assignment_rates.user_id = entry_user_id

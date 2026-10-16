@@ -16,7 +16,7 @@ begin
     select from project_organizations
     join projects on projects.id = project_organizations.project_id
     where projects.id = changed_project_id
-      and projects.billable
+      and projects.billing <> 'non_billable'
       and project_organizations.open_to_members
   ) then
     raise exception 'Billable projects can''t be open to an organization''s members'
@@ -28,7 +28,7 @@ $$;
 --> statement-breakpoint
 
 create constraint trigger open_projects_not_billable
-after insert or update of billable on projects
+after insert or update of billing on projects
 deferrable initially deferred
 for each row
 execute function open_projects_not_billable();

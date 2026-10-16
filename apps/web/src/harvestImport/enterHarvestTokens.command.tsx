@@ -1,7 +1,8 @@
 import { Button, FormField, Page } from "@tid/ui";
 import { z } from "zod";
 import { type FormProps, formAction } from "../form/formAction";
-import { importPath, keepHarvestTokens } from "./harvestTokens";
+import { importPath } from "./harvestImportUrl";
+import { keepHarvestTokens } from "./harvestTokens";
 
 const enterHarvestTokensForm = z.object({
   tokens: z
@@ -38,7 +39,7 @@ function HarvestTokensPage({ fieldErrors }: FormProps) {
           required
         />
         <Button type="submit" class="w-max-content">
-          Preview import
+          Continue
         </Button>
       </form>
     </Page>

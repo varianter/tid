@@ -1,6 +1,6 @@
 import { projects, tasks, timeEntries, users } from "@tid/db/schema";
 import { formatHours } from "@tid/elements/hours";
-import { Page, PeriodNavigation } from "@tid/ui";
+import { DataGrid, Page, PeriodNavigation } from "@tid/ui";
 import { and, between, eq, gte, isNull, or, sql } from "drizzle-orm";
 import type { Context } from "hono";
 import { database } from "../database";
@@ -56,7 +56,7 @@ export const monthDetails = async (c: Context<UserEnv>) => {
       endsOn: users.endsOn,
       minutes: sql`coalesce(sum(${timeEntries.minutes}), 0)`.mapWith(Number),
       billableMinutes:
-        sql`coalesce(sum(${timeEntries.minutes}) filter (where ${projects.billable}), 0)`.mapWith(
+        sql`coalesce(sum(${timeEntries.minutes}) filter (where ${projects.billing} <> 'non_billable'), 0)`.mapWith(
           Number,
         ),
     })
@@ -195,27 +195,25 @@ function ConsultantTable({
   return (
     <section class="stack-v gap-s">
       <h2 class="fs-l fw-bold">{title}</h2>
-      <div
-        class="d-grid of-scroll gap-column-l lh-snug t-tabular"
-        style={`grid-template-columns: minmax(16ch, 1fr) repeat(${showMissing ? 4 : 3}, max-content);`}
+      <DataGrid
+        columns={[
+          { label: "Consultant" },
+          { label: "Logged", kind: "number" },
+          { label: "Billable share", kind: "number" },
+          { label: "Expected", kind: "number" },
+          showMissing && { label: "Missing", kind: "number" },
+        ]}
       >
-        <div class="grid-all-columns grid-subgrid items-center b-b bc-subtle p-xs fs-s ink-subtle fw-bold">
-          <span>Consultant</span>
-          <span class="ta-right">Logged</span>
-          <span class="ta-right">Billable share</span>
-          <span class="ta-right">Expected</span>
-          {showMissing && <span class="ta-right">Missing</span>}
-        </div>
         {rows.map((row) => (
-          <div class="grid-all-columns grid-subgrid items-center b-b bc-subtle bg-wash:hover p-xs fs-s">
-            <span class="fw-medium">{row.name}</span>
-            <span class="ta-right">{formatTotal(row.minutes)}</span>
-            <span class="ta-right">{formatShare(row.billableMinutes, row.minutes)}</span>
-            <span class="ta-right ink-subtle">{formatTotal(row.expectedMinutes)}</span>
-            {showMissing && <span class="ta-right">{formatTotal(row.missingMinutes)}</span>}
-          </div>
+          <DataGrid.Row>
+            <DataGrid.Title>{row.name}</DataGrid.Title>
+            {formatTotal(row.minutes)}
+            {formatShare(row.billableMinutes, row.minutes)}
+            <span class="ink-subtle">{formatTotal(row.expectedMinutes)}</span>
+            {showMissing && formatTotal(row.missingMinutes)}
+          </DataGrid.Row>
         ))}
-      </div>
+      </DataGrid>
     </section>
   );
 }

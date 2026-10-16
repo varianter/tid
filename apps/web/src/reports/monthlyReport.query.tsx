@@ -1,6 +1,6 @@
-import { timeEntriesExport } from "@tid/db/schema";
+import { projects, timeEntriesExport } from "@tid/db/schema";
 import { formatHours } from "@tid/elements/hours";
-import { EmptyState, Page, PeriodNavigation, Tabs } from "@tid/ui";
+import { DataGrid, type DataGridColumn, EmptyState, Page, PeriodNavigation, Tabs } from "@tid/ui";
 import { and, between, eq, sql } from "drizzle-orm";
 import type { Context } from "hono";
 import type { Child } from "hono/jsx";
@@ -51,10 +51,11 @@ export const monthlyReport = async (c: Context<UserEnv, "/:organization">) => {
     hours: sql`sum(${view.hours})`.mapWith(Number),
     billableHours: sql`sum(${view.billableHours})`.mapWith(Number),
     amount: sql`coalesce(sum(${view.amount}), 0)`.mapWith(Number),
-    unratedHours:
-      sql`coalesce(sum(${view.billableHours}) filter (where ${view.amount} is null), 0)`.mapWith(
-        Number,
-      ),
+    // Fixed fee time has no amount by design, so only hourly time can be missing a rate.
+    unratedHours: sql`coalesce(sum(${view.billableHours}) filter (
+      where ${view.amount} is null
+        and ${view.projectCode} in (select ${projects.code} from ${projects} where ${projects.billing} = 'hourly')
+    ), 0)`.mapWith(Number),
   };
   const currency = organization.currency;
   const capacityHours = capacityMinutes(month, organization.fullDayMinutes) / 60;
@@ -153,9 +154,7 @@ export type ReportRows =
   | { tab: "tasks"; rows: (Totals & { name: string })[] };
 
 type ReportTable = {
-  headings: string[];
-  /** How many leading columns hold text rather than figures. */
-  textColumns?: number;
+  columns: DataGridColumn[];
   rows: Child[][];
   footer: Child[];
 };
@@ -221,12 +220,12 @@ function ReportPage({
               No time was logged in {formatMonth(month)}.
             </EmptyState>
           ) : (
-            <Table
-              headings={table.headings}
-              textColumns={table.textColumns ?? 1}
-              rows={table.rows}
-              footer={table.footer}
-            />
+            <DataGrid columns={table.columns}>
+              {table.rows.map((cells) => (
+                <DataGrid.Row>{cells}</DataGrid.Row>
+              ))}
+              <DataGrid.Footer>{table.footer}</DataGrid.Footer>
+            </DataGrid>
           )}
         </div>
       </section>
@@ -243,9 +242,14 @@ function reportTable(
   switch (report.tab) {
     case "clients":
       return {
-        headings: ["Name", "Hours", "Billable hours", "Billable amount"],
+        columns: [
+          { label: "Name" },
+          { label: "Hours", kind: "number" },
+          { label: "Billable hours", kind: "number" },
+          { label: "Billable amount", kind: "number" },
+        ],
         rows: report.rows.map((row) => [
-          <span class="fw-medium">{row.name}</span>,
+          <DataGrid.Title>{row.name}</DataGrid.Title>,
           formatTotal(row.hours),
           formatTotal(row.billableHours),
           formatAmount(row.amount, currency),
@@ -259,13 +263,15 @@ function reportTable(
       };
     case "projects":
       return {
-        headings: ["Name", "Client", "Hours", "Billable hours", "Billable amount"],
-        textColumns: 2,
+        columns: [
+          { label: "Name" },
+          { label: "Client" },
+          { label: "Hours", kind: "number" },
+          { label: "Billable hours", kind: "number" },
+          { label: "Billable amount", kind: "number" },
+        ],
         rows: report.rows.map((row) => [
-          <span class="stack-v gap-4xs">
-            <span class="fw-medium">{row.name}</span>
-            <span class="fs-xs ink-subtle">{row.code}</span>
-          </span>,
+          <DataGrid.Title secondary={row.code}>{row.name}</DataGrid.Title>,
           row.client,
           formatTotal(row.hours),
           formatTotal(row.billableHours),
@@ -281,9 +287,15 @@ function reportTable(
       };
     case "consultants":
       return {
-        headings: ["Name", "Hours", "Utilization", "Billable hours", "Billable amount"],
+        columns: [
+          { label: "Name" },
+          { label: "Hours", kind: "number" },
+          { label: "Utilization", kind: "number" },
+          { label: "Billable hours", kind: "number" },
+          { label: "Billable amount", kind: "number" },
+        ],
         rows: report.rows.map((row) => [
-          <span class="fw-medium">{row.name}</span>,
+          <DataGrid.Title>{row.name}</DataGrid.Title>,
           formatTotal(row.hours),
           formatShare(row.hours, capacityHours),
           <BillableHours hours={row.hours} billableHours={row.billableHours} />,
@@ -300,9 +312,13 @@ function reportTable(
       };
     case "tasks":
       return {
-        headings: ["Name", "Billable hours", "Billable amount"],
+        columns: [
+          { label: "Name" },
+          { label: "Billable hours", kind: "number" },
+          { label: "Billable amount", kind: "number" },
+        ],
         rows: report.rows.map((row) => [
-          <span class="fw-medium">{row.name}</span>,
+          <DataGrid.Title>{row.name}</DataGrid.Title>,
           formatTotal(row.billableHours),
           formatAmount(row.amount, currency),
         ]),
@@ -361,45 +377,6 @@ function Stat({
         {share && <span class="ink-subtle">{share}</span>}
       </dd>
       {note && <dd class="fs-xs ink-subtle">{note}</dd>}
-    </div>
-  );
-}
-
-/** Text columns share the spare width; the figures after them align right. */
-function Table({
-  headings,
-  textColumns,
-  rows,
-  footer,
-}: {
-  headings: string[];
-  textColumns: number;
-  rows: Child[][];
-  footer: Child[];
-}) {
-  const align = (index: number) => (index < textColumns ? "ta-left" : "ta-right");
-  return (
-    <div
-      class="d-grid of-scroll gap-column-l lh-snug t-tabular"
-      style={`grid-template-columns: repeat(${textColumns}, minmax(16ch, 1fr)) repeat(${headings.length - textColumns}, max-content);`}
-    >
-      <div class="grid-all-columns grid-subgrid items-center b-b bc-subtle p-xs">
-        {headings.map((label, index) => (
-          <span class={`fs-s ink-subtle fw-bold ${align(index)}`}>{label}</span>
-        ))}
-      </div>
-      {rows.map((cells) => (
-        <div class="grid-all-columns grid-subgrid items-center b-b bc-subtle bg-wash:hover p-xs fs-s">
-          {cells.map((cell, index) => (
-            <span class={align(index)}>{cell}</span>
-          ))}
-        </div>
-      ))}
-      <div class="grid-all-columns grid-subgrid items-center p-xs fs-s fw-medium">
-        {footer.map((cell, index) => (
-          <span class={align(index)}>{cell}</span>
-        ))}
-      </div>
     </div>
   );
 }

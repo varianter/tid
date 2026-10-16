@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import type { Database } from "./client";
 import {
   assignmentRates,
+  type billing,
   clients,
   organizations,
   projectAssignments,
@@ -26,12 +27,12 @@ type ProjectDefinition = {
   name: string;
   client: string;
   owner: OrganizationSlug;
-  billable: boolean;
+  billing: (typeof billing.enumValues)[number];
   countsTowardBillableBase?: boolean;
   endsWeek?: number;
 };
 
-const internal = { client: "Varianttid", owner: "trondheim", billable: false } as const;
+const internal = { client: "Varianttid", owner: "trondheim", billing: "non_billable" } as const;
 
 // Varianttid's internal projects are copied from Harvest. Customer projects are made up, with
 // codes shaped like the real ones; a suffix splits a project that bills at a different rate.
@@ -44,27 +45,37 @@ const projectCatalog = {
   VEL1001: { ...internal, name: "Velferdspermisjoner fra NAV samt permisjon uten lønn" },
   SYK1000: { ...internal, name: "Sykefravær - korttids" },
   FER1000: { ...internal, name: "Ferie", countsTowardBillableBase: false },
-  LYS1001: { name: "Kundeportal", client: "Lysning Energi AS", owner: "trondheim", billable: true },
+  LYS1001: {
+    name: "Kundeportal",
+    client: "Lysning Energi AS",
+    owner: "trondheim",
+    billing: "hourly",
+  },
   BOL1001: {
     name: "Ruteplanlegger",
     client: "Bølge Transport AS",
     owner: "trondheim",
-    billable: true,
+    billing: "hourly",
   },
   GRA1001: {
     name: "Innbyggertjenester",
     client: "Granlia kommune",
     owner: "trondheim",
-    billable: true,
+    billing: "fixed_fee",
     endsWeek: -9,
   },
-  FJA1001: { name: "Pasientreise", client: "Fjære Helse AS", owner: "trondheim", billable: true },
-  KVI1001: { name: "Nettbank", client: "Kvist Bank ASA", owner: "oslo", billable: true },
+  FJA1001: {
+    name: "Pasientreise",
+    client: "Fjære Helse AS",
+    owner: "trondheim",
+    billing: "hourly",
+  },
+  KVI1001: { name: "Nettbank", client: "Kvist Bank ASA", owner: "oslo", billing: "hourly" },
   "KVI1001-B": {
     name: "Nettbank - rådgivning",
     client: "Kvist Bank ASA",
     owner: "oslo",
-    billable: true,
+    billing: "hourly",
   },
 } satisfies Record<string, ProjectDefinition>;
 
@@ -168,7 +179,7 @@ const people: Person[] = [
     email: "ingrid.berg@example.com",
     organization: "trondheim",
     usualDay: { betweenProjects: 6.5, betweenProjectsMarketing: 1 },
-    assignments: [{ project: "GRA1001", rates: [{ rate: 1300 }] }],
+    assignments: [{ project: "GRA1001", rates: [] }],
     exceptions: [{ from: firstWeek, to: -9, hours: { citizenServicesDevelopment: 7.5 } }],
   },
   {
@@ -291,7 +302,7 @@ function plannedEntries(person: Person) {
         const definition: TaskDefinition = taskCatalog[task];
         const project: ProjectDefinition = projectCatalog[definition.project];
         const isAssigned = person.assignments?.some((a) => a.project === definition.project);
-        if (project.billable && !isAssigned) {
+        if (project.billing !== "non_billable" && !isAssigned) {
           throw new Error(`${person.name} isn't assigned to ${definition.project}`);
         }
         const endsWeek = definition.endsWeek ?? project.endsWeek;
@@ -358,7 +369,7 @@ export function seedDatabase(database: Database) {
           clientId: lookup(clientIds, project.client).id,
           code,
           name: project.name,
-          billable: project.billable,
+          billing: project.billing,
           countsTowardBillableBase: project.countsTowardBillableBase ?? true,
           endsOn: project.endsWeek === undefined ? null : dayOf(project.endsWeek, 5),
         })),
@@ -368,10 +379,11 @@ export function seedDatabase(database: Database) {
     const projectId = (code: ProjectCode) => lookup(projectIds, code).id;
 
     // Internal projects are open to the members of the owner's country, since countries don't
-    // share them. Customer projects are shared by the contract owner and the organizations of
-    // the people assigned to them.
+    // share them, and no one invoices them. Customer projects are shared by the contract owner
+    // and the organizations of the people assigned to them.
     const participants = projectEntries.flatMap(([code, project]) => {
-      const slugs = project.billable
+      const isBillable = project.billing !== "non_billable";
+      const slugs = isBillable
         ? new Set([
             project.owner,
             ...people
@@ -384,8 +396,8 @@ export function seedDatabase(database: Database) {
       return [...slugs].map((slug) => ({
         projectId: projectId(code),
         orgId: organizationId(slug),
-        isContractOwner: slug === project.owner,
-        openToMembers: !project.billable,
+        isContractOwner: isBillable && slug === project.owner,
+        openToMembers: !isBillable,
       }));
     });
     await transaction.insert(projectOrganizations).values(participants);
