@@ -9,6 +9,7 @@ import {
   timeEntries,
   users,
 } from "@tid/db/schema";
+import { formatTotalHours } from "@tid/elements/hours";
 import { Badge, Button, DataGrid, Detail, Page } from "@tid/ui";
 import { and, desc, eq, lte, notExists, type SQL, sql } from "drizzle-orm";
 import type { Context } from "hono";
@@ -22,7 +23,7 @@ import type { UserEnv } from "../login/user";
 import { isManager } from "../users/manager";
 import { AddTaskForm } from "./addTask.command";
 import { billingLabels } from "./billing";
-import { formatSpent, type ProjectSummary, projectSummary } from "./projectSummary";
+import { type ProjectSummary, projectSummary } from "./projectSummary";
 
 type HoursSpent = { total: number; lastMonth: number; thisMonth: number };
 
@@ -250,9 +251,9 @@ function ProjectDetailsPage({
             {assignedPeople.map((person) => (
               <DataGrid.Row>
                 <DataGrid.Title>{person.name}</DataGrid.Title>
-                {formatSpent(person.total)}
-                {formatSpent(person.lastMonth)}
-                {formatSpent(person.thisMonth)}
+                {formatTotalHours(person.total)}
+                {formatTotalHours(person.lastMonth)}
+                {formatTotalHours(person.thisMonth)}
                 {isHourly &&
                   (person.rate === null
                     ? "–"
@@ -289,7 +290,7 @@ function ProjectDetailsPage({
             {tasks.map((task) => (
               <li class="stack-h justify-between p-xs px-m surface-tinted">
                 {task.name}
-                <span class="ink-subtle">{formatSpent(task.spentMinutes)}</span>
+                <span class="ink-subtle">{formatTotalHours(task.spentMinutes)}</span>
               </li>
             ))}
           </ul>
@@ -303,7 +304,7 @@ function HoursCard({ label, minutes }: { label: string; minutes: number }) {
   return (
     <div class="stack-v gap-3xs b-all bc-default br-l p-m">
       <span class="fs-s ink-subtle">{label}</span>
-      <span class="fs-xl fw-bold t-tabular">{formatSpent(minutes)}</span>
+      <span class="fs-xl fw-bold t-tabular">{formatTotalHours(minutes)}</span>
     </div>
   );
 }

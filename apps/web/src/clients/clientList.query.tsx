@@ -1,9 +1,9 @@
 import { clients, projects, tasks, timeEntries } from "@tid/db/schema";
+import { formatTotalHours } from "@tid/elements/hours";
 import { Button, DataGrid, EmptyState, Page } from "@tid/ui";
 import { countDistinct, eq, sql } from "drizzle-orm";
 import type { Context } from "hono";
 import { database } from "../database";
-import { formatSpent } from "../projects/projectSummary";
 import type { Client } from "./client";
 
 export const clientList = async (c: Context) => {
@@ -48,7 +48,7 @@ function ClientListPage({ clients }: { clients: ClientRow[] }) {
             <DataGrid.Row href={`/clients/${client.id}`}>
               <DataGrid.Title>{client.name}</DataGrid.Title>
               {client.projectCount}
-              {formatSpent(client.spentMinutes)}
+              {formatTotalHours(client.spentMinutes)}
             </DataGrid.Row>
           ))}
         </DataGrid>

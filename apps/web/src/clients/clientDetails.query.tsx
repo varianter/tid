@@ -1,13 +1,9 @@
 import { projects } from "@tid/db/schema";
+import { formatTotalHours } from "@tid/elements/hours";
 import { Button, Detail, Page } from "@tid/ui";
 import { eq } from "drizzle-orm";
 import type { Context } from "hono";
-import {
-  formatSpent,
-  listProjects,
-  type ProjectSummary,
-  ProjectTable,
-} from "../projects/projectSummary";
+import { listProjects, type ProjectSummary, ProjectTable } from "../projects/projectSummary";
 import { type Client, findClient } from "./client";
 
 export const clientDetails = async (c: Context) => {
@@ -38,7 +34,7 @@ function ClientDetailsPage({ client, projects }: { client: Client; projects: Pro
       <dl class="stack-h items-start gap-xl b-all bc-default br-l p-m">
         <Detail label="Projects">{projects.length}</Detail>
         <Detail label="Organizations">{organizations.join(", ") || "None"}</Detail>
-        <Detail label="Spent">{formatSpent(spentMinutes)}</Detail>
+        <Detail label="Spent">{formatTotalHours(spentMinutes)}</Detail>
       </dl>
       {projects.length === 0 ? (
         <p class="ink-subtle">No projects yet.</p>

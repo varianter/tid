@@ -6,7 +6,7 @@ import {
   tasks,
   timeEntries,
 } from "@tid/db/schema";
-import { formatHours } from "@tid/elements/hours";
+import { formatTotalHours } from "@tid/elements/hours";
 import { DataGrid } from "@tid/ui";
 import { eq, type SQL, sql } from "drizzle-orm";
 import { database } from "../database";
@@ -57,10 +57,6 @@ export const listProjects = (where?: SQL) =>
     .where(where)
     .orderBy(clients.name, projects.name);
 
-export function formatSpent(minutes: number) {
-  return `${formatHours(minutes) || "0"} h`;
-}
-
 /** Projects with their organizations and time spent, under a heading per client unless `groupByClient` is off. */
 export function ProjectTable({
   projects,
@@ -85,7 +81,7 @@ export function ProjectTable({
             <DataGrid.Row href={`/projects/${project.id}`}>
               <DataGrid.Title secondary={project.code}>{project.name}</DataGrid.Title>
               {project.organizations.join(", ")}
-              {formatSpent(project.spentMinutes)}
+              {formatTotalHours(project.spentMinutes)}
             </DataGrid.Row>
           ))}
         </>

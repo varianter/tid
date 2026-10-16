@@ -7,7 +7,7 @@ import {
   userRoles,
   users,
 } from "@tid/db/schema";
-import { formatHours } from "@tid/elements/hours";
+import { formatTotalHours } from "@tid/elements/hours";
 import { Badge, EmptyState, Page, PeriodNavigation } from "@tid/ui";
 import { and, desc, eq, exists, gte, lte, sql } from "drizzle-orm";
 import type { Context } from "hono";
@@ -139,11 +139,11 @@ function MonthHours({
       <dl class="stack-h items-start gap-xl">
         <div class="stack-v gap-3xs flex-1">
           <dt class="fs-s ink-subtle">Total hours</dt>
-          <dd class="fs-l fw-medium">{formatTotal(minutes)}</dd>
+          <dd class="fs-l fw-medium">{formatTotalHours(minutes)}</dd>
         </div>
         <div class="stack-v gap-3xs flex-1">
           <dt class="fs-s ink-subtle">Capacity</dt>
-          <dd class="fs-l fw-medium">{formatTotal(capacityMinutes)}</dd>
+          <dd class="fs-l fw-medium">{formatTotalHours(capacityMinutes)}</dd>
         </div>
       </dl>
       <div
@@ -173,7 +173,7 @@ function LegendRow({ color, label, minutes }: { color: string; label: string; mi
         <span class="br-xs" style={`width: 1rem; height: 1rem; background: ${color};`} />
         {label}
       </dt>
-      <dd class="fw-medium">{formatTotal(minutes)}</dd>
+      <dd class="fw-medium">{formatTotalHours(minutes)}</dd>
     </div>
   );
 }
@@ -201,7 +201,9 @@ function MonthEntries({ month, entries }: { month: string; entries: Entry[] }) {
           <div class="stack-v b-all bc-subtle br-l p-xs t-tabular">
             <h3 class="stack-h items-baseline b-b bc-subtle p-xs fs-s fw-bold">
               <span class="flex-1">{formatDate(day)}</span>
-              <span>{formatTotal(dayEntries.reduce((sum, entry) => sum + entry.minutes, 0))}</span>
+              <span>
+                {formatTotalHours(dayEntries.reduce((sum, entry) => sum + entry.minutes, 0))}
+              </span>
             </h3>
             {dayEntries.map((entry) => (
               <div class="stack-h nowrap items-start gap-m p-xs fs-s">
@@ -212,7 +214,7 @@ function MonthEntries({ month, entries }: { month: string; entries: Entry[] }) {
                   <span>{entry.task}</span>
                   {entry.notes && <span class="ink-subtle">{entry.notes}</span>}
                 </span>
-                <span>{formatTotal(entry.minutes)}</span>
+                <span>{formatTotalHours(entry.minutes)}</span>
               </div>
             ))}
           </div>
@@ -220,9 +222,4 @@ function MonthEntries({ month, entries }: { month: string; entries: Entry[] }) {
       )}
     </section>
   );
-}
-
-/** Unlike a timesheet cell, an empty total still reads as zero. */
-function formatTotal(minutes: number) {
-  return `${formatHours(minutes) || "0"} h`;
 }
