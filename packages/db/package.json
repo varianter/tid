@@ -5,7 +5,7 @@
   "exports": {
     "./client": "./src/client.ts",
     "./container": "./src/container.ts",
-    "./fixture": "./src/fixture.ts",
+    "./seedDatabase": "./src/seedDatabase.ts",
     "./schema": "./src/schema.ts"
   },
   "scripts": {

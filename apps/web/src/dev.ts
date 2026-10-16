@@ -1,7 +1,7 @@
 import { createDatabase, migrateDatabase } from "@tid/db/client";
 import { startDevelopmentDatabase } from "@tid/db/container";
-import { seedDatabase } from "@tid/db/fixture";
 import { users } from "@tid/db/schema";
+import { seedDatabase } from "@tid/db/seedDatabase";
 
 const container = await startDevelopmentDatabase();
 const databaseUrl = container.getConnectionUri();
