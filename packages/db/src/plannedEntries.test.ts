@@ -1,7 +1,8 @@
 import { expect, test } from "bun:test";
+import { isoDateInOslo } from "@tid/calendar/osloClock";
 import { type Person, people, syntheticPeople } from "./fixtureData";
 import { plannedDay, plannedEntries } from "./plannedEntries";
-import { dayOf, todayIso, Weekday } from "./week";
+import { dayOf, Weekday } from "./week";
 
 // A fixed Wednesday, so the dates the fixture expands to are predictable.
 const now = new Date("2026-10-14T12:00:00Z");
@@ -79,7 +80,7 @@ test("plannedEntries stops at the week the person left", () => {
 test("plannedEntries never logs today or the future", () => {
   const entries = plannedEntries(person(), now);
   expect(entries.at(-1)?.spentOn).toBe(dayOf(now, 0, Weekday.Tuesday));
-  expect(entries.every((entry) => entry.spentOn < todayIso(now))).toBe(true);
+  expect(entries.every((entry) => entry.spentOn < isoDateInOslo(now))).toBe(true);
 });
 
 test("plannedEntries fills the whole requested history", () => {

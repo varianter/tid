@@ -1,3 +1,4 @@
+import { isoDateInOslo } from "@tid/calendar/osloClock";
 import {
   companyWideExceptions,
   type Exception,
@@ -9,7 +10,7 @@ import {
   type TaskKey,
   taskCatalog,
 } from "./fixtureData";
-import { dayOf, todayIso, type Weekday, weekdays, workWeek } from "./week";
+import { dayOf, type Weekday, weekdays, workWeek } from "./week";
 
 export function plannedDay(
   person: Person,
@@ -30,7 +31,7 @@ export function plannedDay(
 
 // Throws when the fixture breaks a rule the app relies on, so a bad edit fails the seed test.
 export function plannedEntries(person: Person, now: Date, startWeek: number = recentStartWeek) {
-  const today = todayIso(now);
+  const today = isoDateInOslo(now);
   const entries: { task: TaskKey; spentOn: string; minutes: number; notes?: string }[] = [];
   for (let week = Math.max(startWeek, person.joinedWeek ?? startWeek); week <= 0; week++) {
     if (person.leftWeek !== undefined && week > person.leftWeek) break;
