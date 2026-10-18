@@ -23,6 +23,9 @@ async function fetchPostgresToken(credential: WorkloadIdentityCredential) {
  * development, CI) the URL's own credentials are used instead of workload identity.
  */
 function connection(url: string) {
+  // Test files rebuild the schema, which gives types new ids. Prepared statements
+  // on other pooled connections would keep the old ids and fail with "cache lookup failed".
+  if (process.env.NODE_ENV === "test") return new SQL(url, { prepare: false });
   if (!process.env.AZURE_CLIENT_ID) return url;
   const credential = new WorkloadIdentityCredential();
   return new SQL(url, { password: () => fetchPostgresToken(credential) });
