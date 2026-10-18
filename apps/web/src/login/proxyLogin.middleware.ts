@@ -1,17 +1,14 @@
-import { userIdentities, users } from "@tid/db/schema";
-import { and, eq, getTableColumns, sql } from "drizzle-orm";
 import type { Context } from "hono";
 import { createMiddleware } from "hono/factory";
 import { z } from "zod";
-import { database } from "../database";
-import type { PublicEnv, User } from "./user";
+import { signupPath } from "./signupUrl";
+import type { PublicEnv } from "./user";
+import { findUserByEmail, findUserByIdentity, linkIdentity } from "./userIdentity";
 
 // oauth2-proxy logs the user in with Entra and nginx overwrites these headers on every
 // request, so they can be trusted as long as only the ingress can reach the app.
 const subjectHeader = "x-auth-request-user";
 const emailHeader = "x-auth-request-email";
-export const identityProvider = "entra";
-export const signupPath = "/signup";
 
 export function readProxyIdentity(c: Context) {
   const subject = c.req.header(subjectHeader);
@@ -38,43 +35,6 @@ function readDisplayName(c: Context) {
   } catch {
     return undefined;
   }
-}
-
-export async function findUserByIdentity(tenantId: string, subject: string) {
-  const [user] = await database
-    .select(getTableColumns(users))
-    .from(users)
-    .innerJoin(userIdentities, eq(userIdentities.userId, users.id))
-    .where(
-      and(
-        eq(userIdentities.provider, identityProvider),
-        eq(userIdentities.tenantId, tenantId),
-        eq(userIdentities.subject, subject),
-      ),
-    );
-  return user;
-}
-
-export async function findUserByEmail(email: string) {
-  const [user] = await database
-    .select()
-    .from(users)
-    .where(sql`lower(${users.email}) = lower(${email})`);
-  return user;
-}
-
-// Imported users have no identity until their first login, so they are matched on email.
-async function linkIdentity(tenantId: string, subject: string, user: User) {
-  const [identity] = await database
-    .insert(userIdentities)
-    .values({ userId: user.id, provider: identityProvider, tenantId, subject })
-    // Conflicts when concurrent first requests race, or when the email now belongs to someone
-    // other than the subject the user is already linked to. Only the stored owner may log in.
-    .onConflictDoNothing()
-    .returning();
-  if (identity) return user;
-  const owner = await findUserByIdentity(tenantId, subject);
-  return owner?.id === user.id ? user : undefined;
 }
 
 export const requireProxyUser = (tenantId: string) =>

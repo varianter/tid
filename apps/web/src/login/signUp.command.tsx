@@ -6,12 +6,8 @@ import { z } from "zod";
 import { database } from "../database";
 import { type FormProps, formAction } from "../form/formAction";
 import { employeeCountry } from "./employeeEmail";
-import {
-  findUserByEmail,
-  findUserByIdentity,
-  identityProvider,
-  readProxyIdentity,
-} from "./login.middleware";
+import { readProxyIdentity } from "./proxyLogin.middleware";
+import { findUserByEmail, findUserByIdentity, identityProvider } from "./userIdentity";
 
 const signUpForm = z.object({
   name: z.string().trim().min(1, "Enter your name"),

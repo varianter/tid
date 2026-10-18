@@ -5,8 +5,8 @@ import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { database } from "../database";
 import { organizationIdBySlug } from "../testing/rows";
-import { requireProxyUser } from "./login.middleware";
 import { signupRouter } from "./login.routes";
+import { requireProxyUser } from "./proxyLogin.middleware";
 import type { PublicEnv } from "./user";
 
 const app = new Hono<PublicEnv>()

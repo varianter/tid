@@ -1,12 +1,13 @@
 import { organizations, userRoles, users } from "@tid/db/schema";
 import { Button, Page } from "@tid/ui";
-import { and, eq, exists, sql } from "drizzle-orm";
+import { and, eq, exists } from "drizzle-orm";
 import { type Context, Hono } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { createMiddleware } from "hono/factory";
 import { database } from "../database";
-import { signupPath } from "../login/login.middleware";
+import { signupPath } from "../login/signupUrl";
 import type { PublicEnv } from "../login/user";
+import { findUserByEmail } from "../login/userIdentity";
 
 // Trusts whoever is named in a cookie, so only dev.ts turns it on.
 const cookieName = "dev_user_email";
@@ -108,9 +109,7 @@ dev.post("/login", async (c) => {
 
 export const requireDevUser = createMiddleware<PublicEnv>(async (c, next) => {
   const email = getCookie(c, cookieName);
-  const [user] = email
-    ? await database.select().from(users).where(sql`lower(${users.email}) = lower(${email})`)
-    : [];
+  const user = email ? await findUserByEmail(email) : undefined;
   if (!user && email && isNewcomer(email)) return c.redirect(signupPath);
   if (!user) {
     // The user may be gone after the database was reset.
