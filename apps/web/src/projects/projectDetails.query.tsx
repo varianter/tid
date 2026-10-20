@@ -20,7 +20,7 @@ import { AssignConsultantForm } from "../assignments/assignConsultant.command";
 import { RemoveConsultantForm } from "../assignments/removeConsultant.command";
 import { database } from "../database";
 import type { UserEnv } from "../login/user";
-import { isManager } from "../managers/manager";
+import { isManager, managesProject } from "../managers/manager";
 import { AddTaskForm } from "./addTask.form";
 import { billingLabels } from "./billing";
 import { type ProjectSummary, projectSummary } from "./projectSummary";
@@ -108,18 +108,27 @@ export const projectDetails = async (c: Context<UserEnv>) => {
     .where(eq(projectOrganizations.projectId, id))
     .orderBy(desc(projectOrganizations.isContractOwner), organizations.name);
 
+  const user = c.get("user");
+  const [canManageProject, viewerIsManager] = await Promise.all([
+    managesProject(user, id),
+    isManager(user),
+  ]);
+  // Other managers may only bring in their own organization's consultants.
   const assignablePeople = await database
     .select({ id: users.id, name: users.name, orgName: organizations.name })
     .from(users)
     .innerJoin(organizations, eq(organizations.id, users.orgId))
     .where(
-      notExists(
-        database
-          .select()
-          .from(projectAssignments)
-          .where(
-            and(eq(projectAssignments.projectId, id), eq(projectAssignments.userId, users.id)),
-          ),
+      and(
+        canManageProject ? undefined : eq(users.orgId, user.orgId),
+        notExists(
+          database
+            .select()
+            .from(projectAssignments)
+            .where(
+              and(eq(projectAssignments.projectId, id), eq(projectAssignments.userId, users.id)),
+            ),
+        ),
       ),
     )
     .orderBy(organizations.name, users.name);
@@ -132,7 +141,8 @@ export const projectDetails = async (c: Context<UserEnv>) => {
       assignedPeople={assignedPeople}
       assignablePeople={assignablePeople}
       participations={participations}
-      isManager={await isManager(c.get("user"))}
+      canManageProject={canManageProject}
+      canAssign={viewerIsManager}
     />,
   );
 };
@@ -162,7 +172,10 @@ type ProjectDetailsPageProps = {
   assignablePeople: (Person & { orgName: string })[];
   /** The contract owner first, so it reads as the lead organization. */
   participations: Participation[];
-  isManager: boolean;
+  /** Edit the project, its tasks, consultants and rates. */
+  canManageProject: boolean;
+  /** Any manager may assign their own organization's consultants. */
+  canAssign: boolean;
 };
 
 function ProjectDetailsPage({
@@ -172,7 +185,8 @@ function ProjectDetailsPage({
   assignedPeople,
   assignablePeople,
   participations,
-  isManager,
+  canManageProject,
+  canAssign,
 }: ProjectDetailsPageProps) {
   const isHourly = project.billing === "hourly";
   const contractOwner = participations.find((participation) => participation.isContractOwner);
@@ -181,7 +195,7 @@ function ProjectDetailsPage({
       title={project.name}
       back={{ href: "/projects", label: "Back to projects" }}
       actions={
-        isManager && (
+        canManageProject && (
           <Button as="a" href={`/projects/${project.id}/edit`} data-variant="tinted">
             Edit
           </Button>
@@ -225,7 +239,7 @@ function ProjectDetailsPage({
       <section class="stack-v gap-s">
         <div class="stack-h items-center justify-between gap-m wrap">
           <h2 class="fs-l fw-bold">Consultants</h2>
-          {isManager && assignablePeople.length > 0 && (
+          {canAssign && assignablePeople.length > 0 && (
             <AssignConsultantForm projectId={project.id} assignablePeople={assignablePeople} />
           )}
         </div>
@@ -239,7 +253,7 @@ function ProjectDetailsPage({
               { label: "Last month", kind: "number" },
               { label: "This month", kind: "number" },
               isHourly && { label: "Rate", kind: "number" },
-              isManager && { kind: "action" },
+              canManageProject && { kind: "action" },
             ]}
           >
             {assignedPeople.map((person) => (
@@ -252,7 +266,7 @@ function ProjectDetailsPage({
                   (person.rate === null
                     ? "–"
                     : `${formatAmount(person.rate / 100, project.currency, 2)}/h`)}
-                {isManager && (
+                {canManageProject && (
                   <span class="stack-h justify-end gap-xs">
                     {isHourly && (
                       <Button
@@ -275,7 +289,7 @@ function ProjectDetailsPage({
       <section class="stack-v gap-s">
         <div class="stack-h items-center justify-between gap-m wrap">
           <h2 class="fs-l fw-bold">Tasks</h2>
-          {isManager && <AddTaskForm projectId={project.id} />}
+          {canManageProject && <AddTaskForm projectId={project.id} />}
         </div>
         {tasks.length === 0 ? (
           <p class="ink-subtle">No tasks yet.</p>

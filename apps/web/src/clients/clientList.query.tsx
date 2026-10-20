@@ -4,9 +4,11 @@ import { Button, DataGrid, EmptyState, Page } from "@tid/ui";
 import { countDistinct, eq, sql } from "drizzle-orm";
 import type { Context } from "hono";
 import { database } from "../database";
+import type { UserEnv } from "../login/user";
+import { isManager } from "../managers/manager";
 import type { Client } from "./client";
 
-export const clientList = async (c: Context) => {
+export const clientList = async (c: Context<UserEnv>) => {
   const rows = await database
     .select({
       id: clients.id,
@@ -20,7 +22,7 @@ export const clientList = async (c: Context) => {
     .leftJoin(timeEntries, eq(timeEntries.taskId, tasks.id))
     .groupBy(clients.id)
     .orderBy(clients.name);
-  return c.render(<ClientListPage clients={rows} />);
+  return c.render(<ClientListPage clients={rows} canAddClients={await isManager(c.get("user"))} />);
 };
 
 type ClientRow = Client & { projectCount: number; spentMinutes: number };
@@ -31,11 +33,17 @@ const newClientButton = () => (
   </Button>
 );
 
-function ClientListPage({ clients }: { clients: ClientRow[] }) {
+function ClientListPage({
+  clients,
+  canAddClients,
+}: {
+  clients: ClientRow[];
+  canAddClients: boolean;
+}) {
   return (
-    <Page title="Clients" actions={newClientButton()}>
+    <Page title="Clients" actions={canAddClients && newClientButton()}>
       {clients.length === 0 ? (
-        <EmptyState emoji="🏢" title="No clients yet" action={newClientButton()} />
+        <EmptyState emoji="🏢" title="No clients yet" action={canAddClients && newClientButton()} />
       ) : (
         <DataGrid
           columns={[

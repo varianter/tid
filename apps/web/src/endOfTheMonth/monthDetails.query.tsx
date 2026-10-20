@@ -8,7 +8,7 @@ import { and, between, eq, gte, isNull, or, sql } from "drizzle-orm";
 import type { Context } from "hono";
 import { database } from "../database";
 import type { UserEnv } from "../login/user";
-import { managesOrganization } from "../managers/manager";
+import { countryVisibility, managesOrganization } from "../managers/manager";
 import { findOrganizationSlug } from "../organizations/organization";
 import {
   listOrganizations,
@@ -91,14 +91,15 @@ export const monthDetails = async (c: Context<UserEnv>) => {
     };
   });
 
-  const [activeLock, canChangeLock, organizationOptions] = await Promise.all([
+  const [activeLock, canChangeLock, organizationOptions, canViewCountry] = await Promise.all([
     findActiveLock(organization.id, month),
     managesOrganization(c.get("user"), organization.id),
     listOrganizations(),
+    countryVisibility(c.get("user")),
   ]);
   return c.render(
     <MonthDetailsPage
-      organizations={organizationOptions}
+      organizations={organizationOptions.filter((option) => canViewCountry(option.country))}
       organizationSlug={organization.slug}
       month={month}
       rows={rows}

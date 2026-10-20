@@ -3,12 +3,23 @@ import { Button, Select } from "@tid/ui";
 import { eq } from "drizzle-orm";
 import type { Context } from "hono";
 import { database } from "../database";
+import type { UserEnv } from "../login/user";
+import { managesProject } from "../managers/manager";
 import { ensureParticipation } from "../projects/projectParticipation";
 import { type AssignmentIds, idParams } from "./assignment";
 
-export const assignConsultant = async (c: Context) => {
+export const assignConsultant = async (c: Context<UserEnv>) => {
   const ids = idParams({ ...c.req.param(), userId: String((await c.req.parseBody()).userId) });
-  if (!ids || !(await assignToProject(ids))) return c.notFound();
+  if (!ids) return c.notFound();
+  const manager = c.get("user");
+  const [consultant] = await database
+    .select({ orgId: users.orgId })
+    .from(users)
+    .where(eq(users.id, ids.userId));
+  if (consultant?.orgId !== manager.orgId && !(await managesProject(manager, ids.projectId))) {
+    return c.text("Only managers of the project's organizations can assign other consultants", 403);
+  }
+  if (!(await assignToProject(ids))) return c.notFound();
   return c.redirect(`/projects/${ids.projectId}`, 303);
 };
 

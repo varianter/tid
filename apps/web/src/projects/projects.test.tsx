@@ -9,6 +9,7 @@ import {
 } from "@tid/db/schema";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
+import { assignments } from "../assignments/assignments.routes";
 import { database } from "../database";
 import type { User, UserEnv } from "../login/user";
 import { organizationIdBySlug } from "../testing/rows";
@@ -16,6 +17,8 @@ import { projects } from "./projects.routes";
 
 let manager: User;
 let member: User;
+let bergenManager: User;
+let bergenMember: User;
 let oslo: number;
 let bergen: number;
 let clientId: number;
@@ -26,7 +29,8 @@ function requestAs(user: User, path: string, form?: Record<string, string>) {
       c.set("user", user);
       await next();
     })
-    .route("/projects", projects);
+    .route("/projects", projects)
+    .route("/projects/:projectId/assignments", assignments);
   return app.request(
     path,
     form ? { method: "POST", body: new URLSearchParams(form) } : { method: "GET" },
@@ -46,14 +50,19 @@ beforeAll(async () => {
   await rebuildDatabase(database);
   oslo = await organizationIdBySlug("oslo");
   bergen = await organizationIdBySlug("bergen");
-  [manager, member] = (await database
+  [manager, member, bergenManager, bergenMember] = (await database
     .insert(users)
     .values([
       { name: "Kari", email: "kari@variant.no", orgId: oslo },
       { name: "Ola", email: "ola@variant.no", orgId: oslo },
+      { name: "Siri", email: "siri@variant.no", orgId: bergen },
+      { name: "Per", email: "per@variant.no", orgId: bergen },
     ])
-    .returning()) as [User, User];
-  await database.insert(userRoles).values({ userId: manager.id, role: "manager" });
+    .returning()) as [User, User, User, User];
+  await database.insert(userRoles).values([
+    { userId: manager.id, role: "manager" },
+    { userId: bergenManager.id, role: "manager" },
+  ]);
   const [client] = await database.insert(clients).values({ name: "Acme" }).returning();
   if (!client) throw new Error("Expected a client");
   clientId = client.id;
@@ -107,4 +116,34 @@ test("only non-billable projects can be started without a contract owner", async
   expect(started.status).toBe(303);
   const projectId = Number(started.headers.get("location")?.split("/").at(-1));
   expect(await participants(projectId)).toEqual([]);
+});
+
+test("employees see only their own country's projects, managers every country's", async () => {
+  expect((await requestAs(member, "/projects?company=no")).status).toBe(200);
+  expect((await requestAs(member, "/projects?company=se")).status).toBe(404);
+  expect((await requestAs(manager, "/projects?company=se")).status).toBe(200);
+});
+
+test("only managers of a project's organizations change it, but any manager can staff it with their own consultants", async () => {
+  const started = await requestAs(manager, "/projects/new", {
+    name: "Intranet",
+    code: "ACME-4",
+    billing: "hourly",
+    currency: "NOK",
+    countsTowardBillableBase: "on",
+    contractOwnerId: String(oslo),
+    clientId: String(clientId),
+  });
+  const projectId = Number(started.headers.get("location")?.split("/").at(-1));
+  const addTask = (user: User) =>
+    requestAs(user, `/projects/${projectId}/tasks`, { name: `Task ${user.id}` });
+  const assign = (user: User, consultant: User) =>
+    requestAs(user, `/projects/${projectId}/assignments`, { userId: String(consultant.id) });
+
+  expect((await addTask(bergenManager)).status).toBe(403);
+  expect((await assign(bergenManager, member)).status).toBe(403);
+  expect((await assign(bergenManager, bergenMember)).status).toBe(303);
+  // Bergen takes part now, so its managers share the project.
+  expect((await addTask(bergenManager)).status).toBe(303);
+  expect((await assign(bergenManager, member)).status).toBe(303);
 });

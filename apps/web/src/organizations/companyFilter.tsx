@@ -4,6 +4,7 @@ import { Button, Label, Select } from "@tid/ui";
 import type { Context } from "hono";
 import { database } from "../database";
 import type { UserEnv } from "../login/user";
+import { countryVisibility } from "../managers/manager";
 
 type Organization = typeof organizations.$inferSelect;
 
@@ -59,12 +60,14 @@ export function listCompanies(organizations: Organization[]): Company[] {
 
 /**
  * The company a list page is narrowed to, or a response to return instead: a redirect that picks
- * the user's own organization when none is given, or not found for an unknown one.
+ * the user's own organization when none is given, or not found for an unknown one or one in a
+ * country the user may not see.
  */
 export async function resolveCompany(c: Context<UserEnv>) {
+  const canViewCountry = await countryVisibility(c.get("user"));
   const companies = listCompanies(
     await database.select().from(organizations).orderBy(organizations.country, organizations.name),
-  );
+  ).filter((company) => canViewCountry(company.country));
   const value = c.req.query("company");
   if (!value) {
     const own = companies.find(

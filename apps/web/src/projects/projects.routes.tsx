@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import type { UserEnv } from "../login/user";
-import { managersOnly } from "../managers/manager";
+import { managersOnly, projectManagersOnly } from "../managers/manager";
 import { addTask } from "./addTask.command";
 import { editProject } from "./editProject.command";
 import { projectDetails } from "./projectDetails.query";
@@ -13,5 +13,5 @@ export const projects = new Hono<UserEnv>()
   .on(["GET", "POST"], "/new", managersOnly, startProject)
   .get("/:id", projectDetails)
   .get("/:id/timesheet/:month", projectTimesheet)
-  .on(["GET", "POST"], "/:id/edit", managersOnly, editProject)
-  .post("/:id/tasks", managersOnly, addTask);
+  .on(["GET", "POST"], "/:id/edit", projectManagersOnly, editProject)
+  .post("/:id/tasks", projectManagersOnly, addTask);
