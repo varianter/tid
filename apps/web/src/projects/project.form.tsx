@@ -22,7 +22,7 @@ const checkbox = z
   .optional()
   .transform((value) => value === "on");
 
-export const projectFields = z.object({
+const projectFields = z.object({
   name: z.string().trim().min(1, "Enter a name"),
   // The reporting database holds at most 16 characters.
   code: z.string().trim().min(1, "Enter a code").max(16, "At most 16 characters"),
@@ -35,7 +35,7 @@ export const projectFields = z.object({
   ),
 });
 
-export const billingRules = <S extends typeof projectFields>(schema: S) =>
+const billingRules = <S extends typeof projectFields>(schema: S) =>
   schema
     .refine((form) => form.billing === "non_billable" || form.countsTowardBillableBase, {
       message: "Billable projects count toward the billable base",
@@ -44,6 +44,13 @@ export const billingRules = <S extends typeof projectFields>(schema: S) =>
       message: "Pick the organization that invoices the client",
       path: ["contractOwnerId"],
     });
+
+export const startProjectForm = billingRules(
+  projectFields.extend({ clientId: z.coerce.number().int() }),
+);
+
+// The client is fixed once the project exists.
+export const editProjectForm = billingRules(projectFields);
 
 type ClientOption = typeof clients.$inferSelect & { codeSuggestion?: string };
 

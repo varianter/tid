@@ -44,6 +44,8 @@ export function Layout({
         <Style />
         <Style>
           {css`
+            /* Varde's display utilities would otherwise show an element marked hidden. */
+            [hidden] { display: none !important; }
             @media (min-width: 900px) {
               #nav-popover { display: contents; }
               .menu-toggle { display: none; }

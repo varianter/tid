@@ -216,7 +216,7 @@ function ReportPage({
             </Tabs.Link>
           ))}
         </Tabs>
-        <div class="b-all bc-subtle br-l p-m">
+        <div class="b-all bc-subtle br-l p-m mt-s">
           {table.rows.length === 0 ? (
             <EmptyState emoji="🗓️" title="No hours logged">
               No time was logged in {formatDate(month, "month")}.

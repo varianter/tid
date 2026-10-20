@@ -42,11 +42,22 @@ test("only routers import queries", () => {
   expect(stray.map(describe)).toEqual([]);
 });
 
-// A command shown on another page lends that page its form, and nothing else.
-test("only routers import commands, except their forms", () => {
+// ponytail: `.command.tsx` lends its form to other pages until every feature splits it out
+// into a `.form.tsx`, like projects/. Then the exception goes.
+test("only routers import commands", () => {
   const stray = namedImports.filter(
     ({ file, name, from }) =>
-      from.endsWith(".command.tsx") && !file.endsWith(".routes.tsx") && !name.endsWith("Form"),
+      /\.command\.tsx?$/.test(from) &&
+      !file.endsWith(".routes.tsx") &&
+      !(from.endsWith(".command.tsx") && name.endsWith("Form")),
+  );
+  expect(stray.map(describe)).toEqual([]);
+});
+
+// A form changes with the screen; what a command does with it changes with the business.
+test("forms don't touch the database", () => {
+  const stray = namedImports.filter(
+    ({ file, from }) => file.endsWith(".form.tsx") && from === "database.ts",
   );
   expect(stray.map(describe)).toEqual([]);
 });

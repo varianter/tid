@@ -1,14 +1,11 @@
 import { clients, projectOrganizations, projects } from "@tid/db/schema";
 import { eq } from "drizzle-orm";
-import { z } from "zod";
 import { database } from "../database";
 import { formAction } from "../form/formAction";
 import type { User } from "../login/user";
 import { listOrganizations } from "../organizations/organizationSelect";
+import { ProjectFormPage, startProjectForm } from "./project.form";
 import { suggestProjectCode } from "./projectCode";
-import { billingRules, ProjectFormPage, projectFields } from "./projectForm";
-
-const startProjectForm = billingRules(projectFields.extend({ clientId: z.coerce.number().int() }));
 
 export const startProject = formAction({
   schema: startProjectForm,

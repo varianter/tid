@@ -21,7 +21,7 @@ import { RemoveConsultantForm } from "../assignments/removeConsultant.command";
 import { database } from "../database";
 import type { UserEnv } from "../login/user";
 import { isManager } from "../users/manager";
-import { AddTaskForm } from "./addTask.command";
+import { AddTaskForm } from "./addTask.form";
 import { billingLabels } from "./billing";
 import { type ProjectSummary, projectSummary } from "./projectSummary";
 

@@ -3,15 +3,12 @@ import { and, eq, exists, ne } from "drizzle-orm";
 import { database } from "../database";
 import { formAction } from "../form/formAction";
 import { listOrganizations } from "../organizations/organizationSelect";
-import { billingRules, ProjectFormPage, projectFields } from "./projectForm";
+import { editProjectForm, ProjectFormPage } from "./project.form";
 import {
   ensureParticipation,
   participation,
   removeUnneededParticipation,
 } from "./projectParticipation";
-
-// The client is fixed once the project exists.
-const editProjectForm = billingRules(projectFields);
 
 export const editProject = formAction({
   schema: editProjectForm,
