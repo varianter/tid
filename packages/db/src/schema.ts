@@ -1,21 +1,5 @@
-// Before changing this schema, ask the user whether the app is live.
-//
-// Not live: keep the migrations squashed. Delete packages/db/migrations, run
-//   bunx drizzle-kit generate --name init
-//   bunx drizzle-kit generate --custom --name time_entry_rates
-//   bunx drizzle-kit generate --custom --name time_entries_export
-//   bunx drizzle-kit generate --custom --name organizations
-//   bunx drizzle-kit generate --custom --name month_locks
-//   bunx drizzle-kit generate --custom --name open_projects
-//   bunx drizzle-kit generate --custom --name project_billing
-// then copy time_entry_rates.sql, time_entries_export.sql, organizations.sql, month_locks.sql,
-// open_projects.sql and project_billing.sql over the generated, empty files. Databases that ran the old migrations have to be rebuilt afterwards:
-// locally with bun run db:reset or bun run harvest:import:norway, and deployed ones by emptying them.
-//
-// Live: never edit or delete a migration, since the live database has already run it.
-// Add new ones with drizzle-kit generate. Delete this comment, time_entry_rates.sql,
-// time_entries_export.sql, organizations.sql, month_locks.sql, open_projects.sql and
-// project_billing.sql.
+// The app is live: never edit or delete a migration, since the live database has already run it.
+// Add new ones with drizzle-kit generate.
 
 // Where a rule lives is a choice, not a default. Enforce an invariant in the
 // database when every writer must obey it or a violation corrupts data — a
@@ -130,8 +114,12 @@ export const projects = pgTable(
     // Used outside the app, and the reporting database holds at most 16 characters.
     code: text().notNull().unique(),
     name: text().notNull(),
-    // Fixed once time is logged on the project; see project_billing.sql.
+    // Billing and currency are fixed once time is logged on the project; see
+    // migrations/0007_project_currency.sql.
     billing: billing().notNull(),
+    // ISO 4217. Agreed with the client, so it can differ from the contract owner's. Every rate and
+    // amount on the project is in it, whoever logs the time.
+    currency: char({ length: 3 }).notNull(),
     // Only used by reporting, to leave out time such as vacation from billable base hours.
     countsTowardBillableBase: boolean().notNull().default(true),
     startsOn: date(),
@@ -158,7 +146,7 @@ export const projectOrganizations = pgTable(
     // The organization that invoices the client. Non-billable projects usually have none.
     isContractOwner: boolean().notNull().default(false),
     // Everyone in the organization may log time without being assigned. Only on non-billable
-    // projects; see open_projects.sql.
+    // projects; see migrations/0005_open_projects.sql.
     openToMembers: boolean().notNull().default(false),
   },
   (table) => [
@@ -215,7 +203,7 @@ export const assignmentRates = pgTable(
     projectId: reference(),
     userId: reference(),
     validFrom: date().notNull(),
-    // Minor units of the organization's currency.
+    // Minor units of the project's currency.
     rate: integer().notNull(),
   },
   (table) => [
@@ -233,8 +221,8 @@ export const assignmentRates = pgTable(
 // members. The app enforces this rather than the database, so it can tell the user why an
 // entry was rejected.
 // The rate is locked when the entry is created, so a rate that's later added for the future
-// doesn't reprice logged time. Only entries on hourly projects get one. See time_entry_rates.sql
-// for how it's picked. A backdated rate does reprice its period; the app does that when it adds
+// doesn't reprice logged time. Only entries on hourly projects get one. See
+// migrations/0007_project_currency.sql for how it's picked. A backdated rate does reprice its period; the app does that when it adds
 // the rate.
 export const timeEntries = pgTable(
   "time_entries",
@@ -259,8 +247,8 @@ export const timeEntries = pgTable(
 );
 
 // A locked month stops an organization's time entries in it from changing, so invoiced hours stay
-// put. Their rates can still be corrected. Unlocking keeps the row as history; month_locks.sql
-// enforces the lock.
+// put. Their rates can still be corrected. Unlocking keeps the row as history;
+// migrations/0004_month_locks.sql enforces the lock.
 export const monthLocks = pgTable(
   "month_locks",
   {
@@ -292,7 +280,8 @@ export const monthLocks = pgTable(
   ],
 );
 
-// Defined in time_entries_export.sql; drizzle-kit can't manage views with lateral joins.
+// Defined in migrations/0002_time_entries_export.sql; drizzle-kit can't manage views with lateral
+// joins.
 export const timeEntriesExport = pgView("time_entries_export", {
   accountName: text().notNull(),
   spentDate: date().notNull(),

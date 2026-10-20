@@ -1,10 +1,4 @@
-import {
-  assignmentRates,
-  organizations,
-  projectAssignments,
-  projects,
-  users,
-} from "@tid/db/schema";
+import { assignmentRates, projectAssignments, projects, users } from "@tid/db/schema";
 import { and, eq } from "drizzle-orm";
 import { database } from "../database";
 
@@ -41,12 +35,11 @@ export async function loadConsultant(ids: AssignmentIds): Promise<Consultant | u
       userId: projectAssignments.userId,
       name: users.name,
       projectName: projects.name,
-      currency: organizations.currency,
+      currency: projects.currency,
     })
     .from(projectAssignments)
     .innerJoin(users, eq(users.id, projectAssignments.userId))
     .innerJoin(projects, eq(projects.id, projectAssignments.projectId))
-    .innerJoin(organizations, eq(organizations.id, projectAssignments.orgId))
     .where(and(assignment(ids), eq(projects.billing, "hourly")));
   return consultant;
 }

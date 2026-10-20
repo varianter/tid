@@ -86,17 +86,15 @@ export const projectDetails = async (c: Context<UserEnv>) => {
     .select({
       id: users.id,
       name: users.name,
-      currency: organizations.currency,
       rate: currentRate(assignmentRates.rate),
       ...hoursSpent(today),
     })
     .from(projectAssignments)
     .innerJoin(users, eq(users.id, projectAssignments.userId))
-    .innerJoin(organizations, eq(organizations.id, users.orgId))
     .leftJoin(tasks, eq(tasks.projectId, projectAssignments.projectId))
     .leftJoin(timeEntries, and(eq(timeEntries.taskId, tasks.id), eq(timeEntries.userId, users.id)))
     .where(eq(projectAssignments.projectId, id))
-    .groupBy(users.id, organizations.id)
+    .groupBy(users.id)
     .orderBy(users.name);
 
   const participations = await database
@@ -145,9 +143,8 @@ type Person = { id: number; name: string };
 
 type Consultant = Person &
   HoursSpent & {
-    /** In minor units of `currency`; none when no rate has started yet. */
+    /** In minor units of the project's currency; none when no rate has started yet. */
     rate: number | null;
-    currency: string;
   };
 
 type Participation = {
@@ -197,6 +194,7 @@ function ProjectDetailsPage({
         </Detail>
         <Detail label="Code">{project.code}</Detail>
         <Detail label="Billing">{billingLabels[project.billing]}</Detail>
+        <Detail label="Currency">{project.currency}</Detail>
         <Detail label="Contract owner">{contractOwner?.name ?? "None"}</Detail>
         <Detail label="Organizations">
           {participations.length === 0 ? (
@@ -253,7 +251,7 @@ function ProjectDetailsPage({
                 {isHourly &&
                   (person.rate === null
                     ? "–"
-                    : `${formatAmount(person.rate / 100, person.currency, 2)}/h`)}
+                    : `${formatAmount(person.rate / 100, project.currency, 2)}/h`)}
                 {isManager && (
                   <span class="stack-h justify-end gap-xs">
                     {isHourly && (

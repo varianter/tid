@@ -34,7 +34,13 @@ beforeAll(async () => {
   const project = onlyRow(
     await database
       .insert(projects)
-      .values({ clientId: client.id, code: "ACME-1", name: "Website", billing: "hourly" })
+      .values({
+        clientId: client.id,
+        code: "ACME-1",
+        name: "Website",
+        currency: "NOK",
+        billing: "hourly",
+      })
       .returning(),
   );
   const task = onlyRow(

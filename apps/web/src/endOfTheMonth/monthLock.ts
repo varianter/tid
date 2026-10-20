@@ -44,7 +44,7 @@ export async function isLockedOn(orgId: number, day: string) {
 
 /** Whether the error is the database refusing to change an entry in a locked month. */
 export function isMonthLockedError(error: unknown) {
-  // month_locks.sql raises TL001; Bun puts the SQLSTATE in errno, under Drizzle's wrapper.
+  // migrations/0004_month_locks.sql raises TL001; Bun puts the SQLSTATE in errno, under Drizzle's wrapper.
   return (
     error instanceof Error && (error.cause as { errno?: string } | undefined)?.errno === "TL001"
   );

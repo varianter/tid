@@ -69,6 +69,7 @@ test("the contract owner moves to the chosen organization on edit", async () => 
     name: "Website",
     code: "ACME-1",
     billing: "hourly",
+    currency: "NOK",
     countsTowardBillableBase: "on",
     contractOwnerId: String(oslo),
   };
@@ -95,6 +96,7 @@ test("only non-billable projects can be started without a contract owner", async
       name: code,
       code,
       billing,
+      currency: "NOK",
       countsTowardBillableBase: "on",
       contractOwnerId: "",
       clientId: String(clientId),

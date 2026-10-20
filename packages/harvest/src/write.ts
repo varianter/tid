@@ -194,6 +194,8 @@ export async function writePlan(
               code,
               name,
               billing,
+              // ponytail: assumes Norwegian accounts, the only ones the import maps to organizations.
+              currency: "NOK",
               countsTowardBillableBase,
               startsOn,
               endsOn,

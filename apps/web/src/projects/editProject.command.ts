@@ -4,6 +4,7 @@ import { database } from "../database";
 import { formAction } from "../form/formAction";
 import { listOrganizations } from "../organizations/organizationSelect";
 import { editProjectForm, ProjectFormPage } from "./project.form";
+import { listProjectCurrencies } from "./projectCurrency";
 import {
   ensureParticipation,
   participation,
@@ -22,6 +23,7 @@ export const editProject = formAction({
         code: projects.code,
         client: clients.name,
         billing: projects.billing,
+        currency: projects.currency,
         countsTowardBillableBase: projects.countsTowardBillableBase,
         hasLoggedTime: exists(
           database
@@ -46,17 +48,29 @@ export const editProject = formAction({
     return {
       project,
       organizations: await listOrganizations(),
+      currencies: await listProjectCurrencies(),
+      currency: project.currency,
       contractOwnerId: project.contractOwnerId,
     };
   },
-  onSubmit: async (_c, { contractOwnerId = null, ...form }, { project, organizations }) => {
+  onSubmit: async (
+    _c,
+    { contractOwnerId = null, ...form },
+    { project, organizations, currencies },
+  ) => {
+    if (!currencies.includes(form.currency)) {
+      return { fieldErrors: { currency: ["Pick a currency"] } };
+    }
     if (
       contractOwnerId !== null &&
       !organizations.some((organization) => organization.id === contractOwnerId)
     ) {
       return { fieldErrors: { contractOwnerId: ["Pick an organization"] } };
     }
-    if (project.hasLoggedTime && form.billing !== project.billing) {
+    if (
+      project.hasLoggedTime &&
+      (form.billing !== project.billing || form.currency !== project.currency)
+    ) {
       return {
         formError: "Time is logged on this project. Start a new project to bill it differently.",
       };

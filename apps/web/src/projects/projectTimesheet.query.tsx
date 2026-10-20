@@ -28,6 +28,7 @@ export const projectTimesheet = async (c: Context<UserEnv, "/:id/timesheet/:mont
       code: projects.code,
       name: projects.name,
       billing: projects.billing,
+      currency: projects.currency,
       client: clients.name,
     })
     .from(projects)
@@ -88,7 +89,7 @@ export const projectTimesheet = async (c: Context<UserEnv, "/:id/timesheet/:mont
         project.billing === "hourly"
           ? formatAmount(
               entries.reduce((total, entry) => total + entry.amount, 0),
-              selected.currency,
+              project.currency,
               2,
             )
           : undefined

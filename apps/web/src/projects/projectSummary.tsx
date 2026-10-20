@@ -31,6 +31,7 @@ export const projectSummary = {
   name: projects.name,
   code: projects.code,
   billing: projects.billing,
+  currency: projects.currency,
   clientId: clients.id,
   client: clients.name,
   spentMinutes,
@@ -42,6 +43,7 @@ export type ProjectSummary = {
   name: string;
   code: string;
   billing: Billing;
+  currency: string;
   clientId: number;
   client: string;
   spentMinutes: number;

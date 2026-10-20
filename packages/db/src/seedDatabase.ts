@@ -107,6 +107,7 @@ export function seedDatabase(
           code,
           name: project.name,
           billing: project.billing,
+          currency: lookup(organizationIds, project.owner).currency,
           countsTowardBillableBase: project.countsTowardBillableBase ?? true,
           endsOn:
             project.endsWeek === undefined ? null : dayOf(now, project.endsWeek, Weekday.Friday),

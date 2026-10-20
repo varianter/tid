@@ -1,4 +1,4 @@
-import { clients, projectOrganizations, projects } from "@tid/db/schema";
+import { clients, organizations, projectOrganizations, projects } from "@tid/db/schema";
 import { eq } from "drizzle-orm";
 import { database } from "../database";
 import { formAction } from "../form/formAction";
@@ -6,6 +6,7 @@ import type { User } from "../login/user";
 import { listOrganizations } from "../organizations/organizationSelect";
 import { ProjectFormPage, startProjectForm } from "./project.form";
 import { suggestProjectCode } from "./projectCode";
+import { listProjectCurrencies } from "./projectCurrency";
 
 export const startProject = formAction({
   schema: startProjectForm,
@@ -16,6 +17,10 @@ export const startProject = formAction({
       .from(projects);
     const allCodes = codes.map((row) => row.code);
     const clientRows = await database.select().from(clients).orderBy(clients.name);
+    const [ownOrganization] = await database
+      .select({ currency: organizations.currency })
+      .from(organizations)
+      .where(eq(organizations.id, user.orgId));
     return {
       clients: clientRows.map((client) => ({
         ...client,
@@ -27,10 +32,16 @@ export const startProject = formAction({
       })),
       suggestedClientId: c.req.query("client"),
       organizations: await listOrganizations(),
+      currencies: await listProjectCurrencies(),
+      // The user's organization is the suggested contract owner, so its currency is the likely one.
+      currency: ownOrganization?.currency ?? "",
       contractOwnerId: user.orgId,
     };
   },
-  onSubmit: async (_c, { contractOwnerId, ...project }, { clients, organizations }) => {
+  onSubmit: async (_c, { contractOwnerId, ...project }, { clients, organizations, currencies }) => {
+    if (!currencies.includes(project.currency)) {
+      return { fieldErrors: { currency: ["Pick a currency"] } };
+    }
     if (!clients.some((client) => client.id === project.clientId)) {
       return { fieldErrors: { clientId: ["Pick a client"] } };
     }

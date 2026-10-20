@@ -57,7 +57,13 @@ async function insertProject() {
   const project = onlyRow(
     await database
       .insert(projects)
-      .values({ clientId: client.id, code: "ACME-1", name: "Website", billing: "hourly" })
+      .values({
+        clientId: client.id,
+        code: "ACME-1",
+        name: "Website",
+        currency: "NOK",
+        billing: "hourly",
+      })
       .returning(),
   );
   await database
@@ -174,15 +180,17 @@ async function entryRate(userId: number, taskId: number, spentOn: string) {
   return [...rows];
 }
 
-test("a new entry gets the assignment rate valid on its day, in the user's currency", async () => {
-  const { user, task } = await insertRatedAssignment();
+test("a new entry gets the assignment rate valid on its day, in the project's currency", async () => {
+  const { project, user, task } = await insertRatedAssignment();
+  // The user's organization bills in NOK, so this tells the two apart.
+  await database.update(projects).set({ currency: "EUR" }).where(eq(projects.id, project.id));
 
   expect(await entryRate(user.id, task.id, "2025-12-31")).toEqual([]);
   expect(await entryRate(user.id, task.id, "2026-06-30")).toEqual([
-    { rate: 100000, currency: "NOK" },
+    { rate: 100000, currency: "EUR" },
   ]);
   expect(await entryRate(user.id, task.id, "2026-07-01")).toEqual([
-    { rate: 120000, currency: "NOK" },
+    { rate: 120000, currency: "EUR" },
   ]);
 });
 
@@ -201,6 +209,7 @@ test("moving an entry to another task picks the rate again; changing its minutes
         clientId: internalClient.id,
         code: "VAR1000",
         name: "Drift",
+        currency: "NOK",
         billing: "non_billable",
       })
       .returning(),
@@ -285,7 +294,7 @@ test("the export prices an entry with its locked rate", async () => {
   ]);
 });
 
-test("a project's billing can't change once time is logged on it", async () => {
+test("a project's billing and currency can't change once time is logged on it", async () => {
   const { project, user, task } = await insertRatedAssignment();
   const setBilling = (billing: "hourly" | "fixed_fee") =>
     database.update(projects).set({ billing }).where(eq(projects.id, project.id));
@@ -299,6 +308,11 @@ test("a project's billing can't change once time is logged on it", async () => {
   expect(await violatedConstraint(setBilling("fixed_fee"))).toBe(
     "project_billing_fixed_once_logged",
   );
+  expect(
+    await violatedConstraint(
+      database.update(projects).set({ currency: "SEK" }).where(eq(projects.id, project.id)),
+    ),
+  ).toBe("project_billing_fixed_once_logged");
 });
 
 test("fixed fee time is billable, but only hourly time is priced", async () => {
@@ -342,6 +356,7 @@ test("the export leaves time on projects that don't count out of billable base h
           clientId: internalClient.id,
           code,
           name: code,
+          currency: "NOK",
           billing: "non_billable",
           countsTowardBillableBase,
         })
@@ -385,6 +400,7 @@ test("a billable project counts toward billable base hours", async () => {
         clientId: client.id,
         code: "ACME-1",
         name: "Website",
+        currency: "NOK",
         billing: "hourly",
         countsTowardBillableBase: false,
       }),

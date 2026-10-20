@@ -50,6 +50,13 @@
       "when": 1792069416907,
       "tag": "0006_project_billing",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792500337892,
+      "tag": "0007_project_currency",
+      "breakpoints": true
     }
   ]
 }

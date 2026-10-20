@@ -27,6 +27,7 @@ const projectFields = z.object({
   // The reporting database holds at most 16 characters.
   code: z.string().trim().min(1, "Enter a code").max(16, "At most 16 characters"),
   billing: z.enum(billings, { error: "Choose how the project is billed" }),
+  currency: z.string().length(3, "Choose a currency"),
   countsTowardBillableBase: checkbox,
   // Empty when no organization invoices the client.
   contractOwnerId: z.preprocess(
@@ -62,13 +63,17 @@ type ProjectFormPageProps = {
     code: string;
     client: string;
     billing: Billing;
+    currency: string;
     countsTowardBillableBase: boolean;
-    /** Billing is fixed once time is logged, so a project that bills differently is a new one. */
+    /** Billing and currency are fixed once time is logged, so a project that bills differently is a new one. */
     hasLoggedTime: boolean;
   };
   clients?: ClientOption[];
   suggestedClientId?: string;
   organizations: OrganizationOption[];
+  currencies: string[];
+  /** Selected until the user picks another. */
+  currency: string;
   /** The organization that invoices the client, selected until the user picks another. */
   contractOwnerId: number | null;
 } & FormProps;
@@ -78,6 +83,8 @@ export function ProjectFormPage({
   clients = [],
   suggestedClientId,
   organizations,
+  currencies,
+  currency,
   contractOwnerId,
   values,
   fieldErrors,
@@ -92,6 +99,7 @@ export function ProjectFormPage({
     ? values.countsTowardBillableBase === "on"
     : (project?.countsTowardBillableBase ?? true);
   const selectedBilling = values?.billing ?? project?.billing;
+  const selectedCurrency = values?.currency ?? currency;
   const selectedContractOwnerId = values?.contractOwnerId ?? String(contractOwnerId ?? "");
   return (
     <Page
@@ -168,27 +176,48 @@ export function ProjectFormPage({
             <span class="fs-s ink-subtle">Billing</span>
             <span>{billingLabels[project.billing]}</span>
             <input type="hidden" name="billing" value={project.billing} />
+            <span class="fs-s ink-subtle">Currency</span>
+            <span>{project.currency}</span>
+            <input type="hidden" name="currency" value={project.currency} />
             <p class="fs-s ink-subtle">
               Time is logged on this project. Start a new project to bill it differently.
             </p>
           </div>
         ) : (
-          <fieldset class="stack-v gap-2xs">
-            <legend class="v-form-label">Billing</legend>
-            {billings.map((billing) => (
-              <Label class="stack-h items-center gap-xs">
-                <Radio
-                  name="billing"
-                  value={billing}
-                  required
-                  checked={billing === selectedBilling}
-                  {...fieldErrorAttributes("billing", fieldErrors?.billing)}
-                />
-                {billingLabels[billing]}
-              </Label>
-            ))}
-            {fieldErrors?.billing && <FormError id="billing-error" errors={fieldErrors.billing} />}
-          </fieldset>
+          <>
+            <fieldset class="stack-v gap-2xs">
+              <legend class="v-form-label">Billing</legend>
+              {billings.map((billing) => (
+                <Label class="stack-h items-center gap-xs">
+                  <Radio
+                    name="billing"
+                    value={billing}
+                    required
+                    checked={billing === selectedBilling}
+                    {...fieldErrorAttributes("billing", fieldErrors?.billing)}
+                  />
+                  {billingLabels[billing]}
+                </Label>
+              ))}
+              {fieldErrors?.billing && (
+                <FormError id="billing-error" errors={fieldErrors.billing} />
+              )}
+            </fieldset>
+            <Field name="currency" label="Currency" errors={fieldErrors?.currency}>
+              <Select
+                id="currency"
+                name="currency"
+                required
+                {...fieldErrorAttributes("currency", fieldErrors?.currency)}
+              >
+                {currencies.map((option) => (
+                  <option value={option} selected={option === selectedCurrency}>
+                    {option}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          </>
         )}
         <Label class="stack-h items-center gap-xs">
           <Checkbox name="countsTowardBillableBase" checked={countsTowardBillableBase} />

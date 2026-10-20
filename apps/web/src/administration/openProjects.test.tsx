@@ -54,8 +54,14 @@ beforeAll(async () => {
   [{ id: internalId }, { id: billableId }] = (await database
     .insert(projects)
     .values([
-      { clientId: client.id, code: "INT-1", name: "Fagdag", billing: "non_billable" },
-      { clientId: client.id, code: "ACME-1", name: "Website", billing: "hourly" },
+      {
+        clientId: client.id,
+        code: "INT-1",
+        name: "Fagdag",
+        currency: "NOK",
+        billing: "non_billable",
+      },
+      { clientId: client.id, code: "ACME-1", name: "Website", currency: "NOK", billing: "hourly" },
     ])
     .returning({ id: projects.id })) as [{ id: number }, { id: number }];
 });
