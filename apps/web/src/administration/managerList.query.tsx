@@ -1,0 +1,80 @@
+import { formatDate } from "@tid/calendar/dateDisplay";
+import { userRoles, users } from "@tid/db/schema";
+import { Badge, DataGrid, Page } from "@tid/ui";
+import { and, eq, exists } from "drizzle-orm";
+import type { Context } from "hono";
+import { consultantPath } from "../consultants/consultantsUrl";
+import { database } from "../database";
+import type { UserEnv } from "../login/user";
+import { findOrganizationBySlug } from "../organizations/organization";
+import { administrationPath } from "./administrationUrl";
+import { MakeManagerForm } from "./makeManager.command";
+import { RemoveManagerForm } from "./removeManager.command";
+
+export const managerList = async (c: Context<UserEnv>) => {
+  const organization = await findOrganizationBySlug(c.req.param("organization") ?? "");
+  if (!organization) return c.notFound();
+
+  const members = await database
+    .select({
+      id: users.id,
+      name: users.name,
+      email: users.email,
+      endsOn: users.endsOn,
+      isManager: exists(
+        database
+          .select()
+          .from(userRoles)
+          .where(and(eq(userRoles.userId, users.id), eq(userRoles.role, "manager"))),
+      ).mapWith(Boolean),
+    })
+    .from(users)
+    .where(eq(users.orgId, organization.id))
+    .orderBy(users.name);
+  return c.render(<ManagerListPage organization={organization} members={members} />);
+};
+
+type MemberRow = {
+  id: number;
+  name: string;
+  email: string;
+  endsOn: string | null;
+  isManager: boolean;
+};
+
+function ManagerListPage({
+  organization,
+  members,
+}: {
+  organization: { slug: string; name: string };
+  members: MemberRow[];
+}) {
+  return (
+    <Page
+      title={`Managers in ${organization.name}`}
+      back={{ href: administrationPath(organization.slug), label: "Administration" }}
+    >
+      <DataGrid columns={[{ label: "Name" }, { kind: "action" }]}>
+        {members.map((member) => (
+          <DataGrid.Row>
+            <DataGrid.Title
+              secondary={[member.email, member.endsOn && `Left ${formatDate(member.endsOn)}`]
+                .filter(Boolean)
+                .join(" · ")}
+            >
+              <span class="stack-h gap-xs items-center">
+                <a href={consultantPath(member.id)}>{member.name}</a>
+                {member.isManager && <Badge>Manager</Badge>}
+              </span>
+            </DataGrid.Title>
+            {member.isManager ? (
+              <RemoveManagerForm organizationSlug={organization.slug} userId={member.id} />
+            ) : (
+              <MakeManagerForm organizationSlug={organization.slug} userId={member.id} />
+            )}
+          </DataGrid.Row>
+        ))}
+      </DataGrid>
+    </Page>
+  );
+}

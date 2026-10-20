@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import type { UserEnv } from "../login/user";
-import { managersOnly } from "../users/manager";
+import { managersOnly } from "../managers/manager";
 import { addTask } from "./addTask.command";
 import { editProject } from "./editProject.command";
 import { projectDetails } from "./projectDetails.query";

@@ -6,7 +6,7 @@ import { Hono } from "hono";
 import { database } from "../database";
 import type { User, UserEnv } from "../login/user";
 import { organizationIdBySlug } from "../testing/rows";
-import { organizations } from "./organizations.routes";
+import { administration } from "./administration.routes";
 
 let manager: User;
 let member: User;
@@ -21,7 +21,7 @@ function requestAs(user: User, path: string, form?: Record<string, string>) {
       c.set("user", user);
       await next();
     })
-    .route("/organizations", organizations);
+    .route("/administration", administration);
   return app.request(path, form ? { method: "POST", body: new URLSearchParams(form) } : {});
 }
 
@@ -61,7 +61,7 @@ beforeAll(async () => {
 });
 
 test("only the organization's managers open and close projects", async () => {
-  const path = "/organizations/oslo/projects";
+  const path = "/administration/oslo/projects";
   expect((await requestAs(member, path, { projectId: String(internalId) })).status).toBe(403);
   expect((await requestAs(bergenManager, path, { projectId: String(internalId) })).status).toBe(
     403,
@@ -69,17 +69,16 @@ test("only the organization's managers open and close projects", async () => {
   expect((await requestAs(member, `${path}/${internalId}/delete`, {})).status).toBe(403);
   expect(await osloParticipation()).toEqual([]);
 
-  const memberPage = await (await requestAs(member, path)).text();
-  expect(memberPage).not.toContain('name="projectId"');
-  expect((await requestAs(member, "/organizations/nowhere/projects")).status).toBe(404);
+  expect((await requestAs(member, path)).status).toBe(403);
+  expect((await requestAs(manager, "/administration/nowhere/projects")).status).toBe(404);
 });
 
 test("managers open a non-billable project, and close it again", async () => {
-  const path = "/organizations/oslo/projects";
+  const path = "/administration/oslo/projects";
   const opened = await requestAs(manager, path, { projectId: String(internalId) });
   expect(opened.headers.get("location")).toBe(path);
   expect(await osloParticipation()).toEqual([{ projectId: internalId, openToMembers: true }]);
-  expect(await (await requestAs(member, path)).text()).toContain("INT-1");
+  expect(await (await requestAs(manager, path)).text()).toContain("INT-1");
 
   await requestAs(manager, `${path}/${internalId}/delete`, {});
   expect(await osloParticipation()).toEqual([]);
@@ -89,13 +88,13 @@ test("closing keeps the organization on a project it owns", async () => {
   await database
     .insert(projectOrganizations)
     .values({ projectId: internalId, orgId: osloId, isContractOwner: true, openToMembers: true });
-  await requestAs(manager, `/organizations/oslo/projects/${internalId}/delete`, {});
+  await requestAs(manager, `/administration/oslo/projects/${internalId}/delete`, {});
   expect(await osloParticipation()).toEqual([{ projectId: internalId, openToMembers: false }]);
   await database.delete(projectOrganizations);
 });
 
 test("billable projects can't be opened", async () => {
-  const response = await requestAs(manager, "/organizations/oslo/projects", {
+  const response = await requestAs(manager, "/administration/oslo/projects", {
     projectId: String(billableId),
   });
   expect(response.status).toBe(400);

@@ -1,7 +1,7 @@
 import { isIsoMonth } from "@tid/calendar/isoDate";
 import type { Context } from "hono";
 import type { UserEnv } from "../login/user";
-import { managesOrganization } from "../users/manager";
+import { managesOrganization } from "../managers/manager";
 import { findOrganization } from "./monthUrl";
 
 /** The month a lock or unlock names, once the user manages its organization. */

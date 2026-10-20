@@ -4,8 +4,8 @@ import { and, eq, exists, inArray } from "drizzle-orm";
 import type { Context } from "hono";
 import { database } from "../database";
 import type { UserEnv } from "../login/user";
+import { isManager } from "../managers/manager";
 import { type Company, CompanySelect, resolveCompany } from "../organizations/companyFilter";
-import { isManager } from "../users/manager";
 import { listProjects, type ProjectSummary, ProjectTable } from "./projectSummary";
 
 export const projectList = async (c: Context<UserEnv>) => {

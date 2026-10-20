@@ -8,6 +8,7 @@ import { and, between, eq, gte, isNull, or, sql } from "drizzle-orm";
 import type { Context } from "hono";
 import { database } from "../database";
 import type { UserEnv } from "../login/user";
+import { managesOrganization } from "../managers/manager";
 import { findOrganizationSlug } from "../organizations/organization";
 import {
   listOrganizations,
@@ -16,7 +17,6 @@ import {
 } from "../organizations/organizationSelect";
 import { capacityMinutes } from "../reports/capacity";
 import { formatShare } from "../share/share";
-import { managesOrganization } from "../users/manager";
 import { LockMonthForm } from "./lockMonth.command";
 import { findActiveLock } from "./monthLock";
 import { findOrganization, monthPath } from "./monthUrl";

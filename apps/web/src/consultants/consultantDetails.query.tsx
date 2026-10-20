@@ -16,11 +16,11 @@ import { and, desc, eq, exists, gte, lte, sql } from "drizzle-orm";
 import type { Context } from "hono";
 import { database } from "../database";
 import type { UserEnv } from "../login/user";
+import { isManager } from "../managers/manager";
 import { capacityMinutes } from "../reports/capacity";
-import { isManager } from "./manager";
-import { userIdParam, userPath, usersPath } from "./usersUrl";
+import { consultantPath, consultantsPath, userIdParam } from "./consultantsUrl";
 
-export const userDetails = async (c: Context<UserEnv>) => {
+export const consultantDetails = async (c: Context<UserEnv>) => {
   const userId = userIdParam(c);
   if (userId === undefined) return c.notFound();
   const viewer = c.get("user");
@@ -89,12 +89,14 @@ export const userDetails = async (c: Context<UserEnv>) => {
     <Page
       title={user.name}
       back={
-        viewerIsManager ? { href: usersPath(user.organizationSlug), label: "Users" } : undefined
+        viewerIsManager
+          ? { href: consultantsPath(user.organizationSlug), label: "Consultants" }
+          : undefined
       }
       actions={
         <PeriodNavigation
-          previousHref={userPath(user.id, addMonths(month, -1))}
-          nextHref={userPath(user.id, addMonths(month, 1))}
+          previousHref={consultantPath(user.id, addMonths(month, -1))}
+          nextHref={consultantPath(user.id, addMonths(month, 1))}
           previousLabel="Previous month"
           nextLabel="Next month"
         >

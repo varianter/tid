@@ -1,5 +1,6 @@
 import { css, Style } from "hono/css";
 import type { PropsWithChildren } from "hono/jsx";
+import { consultantPath } from "./consultants/consultantsUrl";
 
 export const vardeStylesheet = "https://varde.variant.dev/v/1.0.0/styles.css";
 
@@ -7,6 +8,7 @@ type LayoutProps = PropsWithChildren<{
   title: string;
   currentPath: string;
   user?: { id: number; name: string };
+  isManager: boolean;
   logoutUrl: string;
   /** The bundled custom elements, loaded on every page. */
   elementsSrc: string;
@@ -18,8 +20,10 @@ const navigation = [
   { href: "/projects", label: "Projects" },
   { href: "/reports", label: "Reports" },
   { href: "/end-of-the-month", label: "End of the month" },
-  { href: "/users", label: "Users" },
+  { href: "/consultants", label: "Consultants" },
 ];
+
+const managerNavigation = [{ href: "/administration", label: "Administration" }];
 
 function isActive(href: string, currentPath: string) {
   return currentPath === href || currentPath.startsWith(`${href}/`);
@@ -29,6 +33,7 @@ export function Layout({
   title,
   currentPath,
   user,
+  isManager,
   logoutUrl,
   elementsSrc,
   children,
@@ -74,7 +79,7 @@ export function Layout({
             aria-label="Main"
           >
             <span class="fs-l fw-bold px-xs py-2xs mb-xs">Tid</span>
-            {navigation.map(({ href, label }) => {
+            {[...navigation, ...(isManager ? managerNavigation : [])].map(({ href, label }) => {
               const active = isActive(href, currentPath);
               return (
                 <a
@@ -88,7 +93,7 @@ export function Layout({
             })}
             {user && (
               <div class="stack-v mt-auto px-xs py-2xs">
-                <a href={`/users/${user.id}`} class="fw-medium">
+                <a href={consultantPath(user.id)} class="fw-medium">
                   {user.name}
                 </a>
                 <a href={logoutUrl} class="fs-s ink-subtle">

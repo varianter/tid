@@ -4,7 +4,8 @@ import type { Context } from "hono";
 import { database } from "../database";
 import type { UserEnv } from "../login/user";
 import { participation, removeUnneededParticipation } from "../projects/projectParticipation";
-import { openProjectsPath, readOpenProjectChange } from "./openProjectChange";
+import { openProjectsPath } from "./administrationUrl";
+import { readOpenProjectChange } from "./openProjectChange";
 
 export const closeProjectToMembers = async (c: Context<UserEnv>) => {
   const change = await readOpenProjectChange(c, c.req.param("projectId"));

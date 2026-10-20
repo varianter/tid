@@ -4,11 +4,11 @@ import { and, eq, notExists } from "drizzle-orm";
 import type { Context } from "hono";
 import { database } from "../database";
 import type { UserEnv } from "../login/user";
+import { findOrganizationBySlug } from "../organizations/organization";
 import { participation } from "../projects/projectParticipation";
-import { managesOrganization } from "../users/manager";
+import { administrationPath } from "./administrationUrl";
 import { CloseProjectToMembersForm } from "./closeProjectToMembers.command";
 import { OpenProjectToMembersForm } from "./openProjectToMembers.command";
-import { findOrganizationBySlug } from "./organization";
 
 const projectRow = {
   id: projects.id,
@@ -29,37 +29,30 @@ export const openProjectList = async (c: Context<UserEnv>) => {
     .where(and(eq(projectOrganizations.orgId, organization.id), projectOrganizations.openToMembers))
     .orderBy(clients.name, projects.name);
 
-  const canChange = await managesOrganization(c.get("user"), organization.id);
-  const openableProjects = canChange
-    ? await database
-        .select(projectRow)
-        .from(projects)
-        .innerJoin(clients, eq(clients.id, projects.clientId))
-        .where(
-          and(
-            eq(projects.billing, "non_billable"),
-            notExists(
-              database
-                .select()
-                .from(projectOrganizations)
-                .where(
-                  and(
-                    participation(projects.id, organization.id),
-                    projectOrganizations.openToMembers,
-                  ),
-                ),
+  const openableProjects = await database
+    .select(projectRow)
+    .from(projects)
+    .innerJoin(clients, eq(clients.id, projects.clientId))
+    .where(
+      and(
+        eq(projects.billing, "non_billable"),
+        notExists(
+          database
+            .select()
+            .from(projectOrganizations)
+            .where(
+              and(participation(projects.id, organization.id), projectOrganizations.openToMembers),
             ),
-          ),
-        )
-        .orderBy(clients.name, projects.name)
-    : [];
+        ),
+      ),
+    )
+    .orderBy(clients.name, projects.name);
 
   return c.render(
     <OpenProjectListPage
       organization={organization}
       openProjects={openProjects}
       openableProjects={openableProjects}
-      canChange={canChange}
     />,
   );
 };
@@ -70,27 +63,20 @@ function OpenProjectListPage({
   organization,
   openProjects,
   openableProjects,
-  canChange,
 }: {
   organization: { slug: string; name: string };
   openProjects: ProjectRow[];
   openableProjects: ProjectRow[];
-  canChange: boolean;
 }) {
   return (
     <Page
       title={`Projects open to everyone in ${organization.name}`}
-      back={{
-        href: `/projects?${new URLSearchParams({ organization: organization.slug })}`,
-        label: "Projects",
-      }}
+      back={{ href: administrationPath(organization.slug), label: "Administration" }}
       actions={
-        canChange && (
-          <OpenProjectToMembersForm
-            organizationSlug={organization.slug}
-            projects={openableProjects}
-          />
-        )
+        <OpenProjectToMembersForm
+          organizationSlug={organization.slug}
+          projects={openableProjects}
+        />
       }
     >
       {openProjects.length === 0 ? (
@@ -103,7 +89,7 @@ function OpenProjectListPage({
             { label: "Client" },
             { label: "Project" },
             { label: "Code", kind: "fit" },
-            canChange && { kind: "action" },
+            { kind: "action" },
           ]}
         >
           {openProjects.map((project) => (
@@ -113,12 +99,10 @@ function OpenProjectListPage({
                 {project.name}
               </a>
               <span class="ink-subtle">{project.code}</span>
-              {canChange && (
-                <CloseProjectToMembersForm
-                  organizationSlug={organization.slug}
-                  projectId={project.id}
-                />
-              )}
+              <CloseProjectToMembersForm
+                organizationSlug={organization.slug}
+                projectId={project.id}
+              />
             </DataGrid.Row>
           ))}
         </DataGrid>

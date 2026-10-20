@@ -20,7 +20,7 @@ import { AssignConsultantForm } from "../assignments/assignConsultant.command";
 import { RemoveConsultantForm } from "../assignments/removeConsultant.command";
 import { database } from "../database";
 import type { UserEnv } from "../login/user";
-import { isManager } from "../users/manager";
+import { isManager } from "../managers/manager";
 import { AddTaskForm } from "./addTask.form";
 import { billingLabels } from "./billing";
 import { type ProjectSummary, projectSummary } from "./projectSummary";
@@ -102,7 +102,6 @@ export const projectDetails = async (c: Context<UserEnv>) => {
   const participations = await database
     .select({
       name: organizations.name,
-      slug: organizations.slug,
       isContractOwner: projectOrganizations.isContractOwner,
       openToMembers: projectOrganizations.openToMembers,
     })
@@ -153,7 +152,6 @@ type Consultant = Person &
 
 type Participation = {
   name: string;
-  slug: string;
   isContractOwner: boolean;
   openToMembers: boolean;
 };
@@ -210,11 +208,9 @@ function ProjectDetailsPage({
                 <span>
                   {participation.name}
                   {participation.openToMembers && (
-                    <a href={`/organizations/${participation.slug}/projects`}>
-                      <Badge class="ml-xs" title="Everyone in the organization may log time here">
-                        Open
-                      </Badge>
-                    </a>
+                    <Badge class="ml-xs" title="Everyone in the organization may log time here">
+                      Open
+                    </Badge>
                   )}
                   {index < participations.length - 1 && ","}
                 </span>
