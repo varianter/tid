@@ -7,7 +7,7 @@ import { DataGrid, type DataGridColumn, EmptyState, Page, PeriodNavigation, Tabs
 import { and, between, eq, inArray, sql } from "drizzle-orm";
 import type { Context } from "hono";
 import type { Child } from "hono/jsx";
-import { formatAmount } from "../amount/amount";
+import { type Amounts, addAmounts, formatAmounts } from "../amount/amount";
 import { database } from "../database";
 import type { UserEnv } from "../login/user";
 import { CompanySelect, resolveCompany } from "../organizations/companyFilter";
@@ -42,6 +42,8 @@ export const monthlyReport = async (c: Context<UserEnv>) => {
   const totals = {
     hours: sql`sum(${view.hours})`.mapWith(Number),
     billableHours: sql`sum(${view.billableHours})`.mapWith(Number),
+    // Grouped by currency as well, then merged by mergeCurrencies.
+    currency: projects.currency,
     amount: sql`coalesce(sum(${view.amount}), 0)`.mapWith(Number),
     // Fixed fee time has no amount by design, so only hourly time can be missing a rate.
     unratedHours: sql`coalesce(sum(${view.billableHours}) filter (
@@ -49,6 +51,7 @@ export const monthlyReport = async (c: Context<UserEnv>) => {
         and ${view.projectCode} in (select ${projects.code} from ${projects} where ${projects.billing} = 'hourly')
     ), 0)`.mapWith(Number),
   };
+  // Shown as the amount when nothing was billed, since there's no currency to show it in.
   const currency = selected.currency;
   const capacityHours = capacityMinutes(month, selected.country, selected.fullDayMinutes) / 60;
 
@@ -57,60 +60,78 @@ export const monthlyReport = async (c: Context<UserEnv>) => {
       case "clients":
         return {
           tab,
-          rows: await database
-            .select({ name: view.clientName, ...totals })
-            .from(view)
-            .where(inReport)
-            .groupBy(view.clientName)
-            .orderBy(view.clientName),
+          rows: mergeCurrencies(
+            await database
+              .select({ name: view.clientName, ...totals })
+              .from(view)
+              .innerJoin(projects, eq(projects.code, view.projectCode))
+              .where(inReport)
+              .groupBy(view.clientName, projects.currency)
+              .orderBy(view.clientName),
+          ),
         };
       case "projects":
         return {
           tab,
-          rows: await database
-            .select({
-              id: projects.id,
-              code: view.projectCode,
-              name: view.projectName,
-              client: view.clientName,
-              ...totals,
-            })
-            .from(view)
-            .innerJoin(projects, eq(projects.code, view.projectCode))
-            .where(inReport)
-            .groupBy(projects.id, view.projectCode, view.projectName, view.clientName)
-            .orderBy(view.projectName),
+          rows: mergeCurrencies(
+            await database
+              .select({
+                id: projects.id,
+                code: view.projectCode,
+                name: view.projectName,
+                client: view.clientName,
+                ...totals,
+              })
+              .from(view)
+              .innerJoin(projects, eq(projects.code, view.projectCode))
+              .where(inReport)
+              .groupBy(
+                projects.id,
+                view.projectCode,
+                view.projectName,
+                view.clientName,
+                projects.currency,
+              )
+              .orderBy(view.projectName),
+          ),
         };
       case "consultants":
         return {
           tab,
-          rows: await database
-            .select({ email: view.userEmail, name: view.userName, ...totals })
-            .from(view)
-            .where(inReport)
-            .groupBy(view.userEmail, view.userName)
-            .orderBy(view.userName),
+          rows: mergeCurrencies(
+            await database
+              .select({ email: view.userEmail, name: view.userName, ...totals })
+              .from(view)
+              .innerJoin(projects, eq(projects.code, view.projectCode))
+              .where(inReport)
+              .groupBy(view.userEmail, view.userName, projects.currency)
+              .orderBy(view.userName),
+          ),
         };
       case "tasks":
         return {
           tab,
-          rows: await database
-            .select({ name: view.taskName, ...totals })
-            .from(view)
-            .where(inReport)
-            .groupBy(view.taskName)
-            .orderBy(view.taskName),
+          rows: mergeCurrencies(
+            await database
+              .select({ name: view.taskName, ...totals })
+              .from(view)
+              .innerJoin(projects, eq(projects.code, view.projectCode))
+              .where(inReport)
+              .groupBy(view.taskName, projects.currency)
+              .orderBy(view.taskName),
+          ),
         };
     }
   })();
 
   // Every tab groups the same entries, so its rows add up to the whole report.
   const rows: Totals[] = report.rows;
-  const sumOf = (field: keyof Totals) => rows.reduce((total, row) => total + row[field], 0);
+  const sumOf = (field: "hours" | "billableHours" | "unratedHours") =>
+    rows.reduce((total, row) => total + row[field], 0);
   const total: Totals = {
     hours: sumOf("hours"),
     billableHours: sumOf("billableHours"),
-    amount: sumOf("amount"),
+    amounts: rows.reduce<Amounts>((total, row) => addAmounts(total, row.amounts), {}),
     unratedHours: sumOf("unratedHours"),
   };
   const monthPath = (months: number) =>
@@ -132,7 +153,35 @@ export const monthlyReport = async (c: Context<UserEnv>) => {
   );
 };
 
-type Totals = { hours: number; billableHours: number; amount: number; unratedHours: number };
+type Totals = { hours: number; billableHours: number; amounts: Amounts; unratedHours: number };
+
+type CurrencyTotals = Omit<Totals, "amounts"> & { currency: string; amount: number };
+
+type Merged<Row> = Omit<Row, "currency" | "amount"> & Totals;
+
+/**
+ * Merges rows that differ only by currency. The queries group by currency so amounts in different
+ * currencies aren't added, and order by their other columns so those rows are adjacent.
+ */
+export function mergeCurrencies<Row extends CurrencyTotals>(rows: Row[]): Merged<Row>[] {
+  const merged: Merged<Row>[] = [];
+  let previousKey: string | undefined;
+  for (const { currency, amount, hours, billableHours, unratedHours, ...dimension } of rows) {
+    const key = JSON.stringify(dimension);
+    const amounts = amount === 0 ? {} : { [currency]: amount };
+    const last = merged.at(-1);
+    if (last && key === previousKey) {
+      last.hours += hours;
+      last.billableHours += billableHours;
+      last.unratedHours += unratedHours;
+      last.amounts = addAmounts(last.amounts, amounts);
+    } else {
+      merged.push({ ...dimension, hours, billableHours, unratedHours, amounts } as Merged<Row>);
+    }
+    previousKey = key;
+  }
+  return merged;
+}
 
 /** One tab's rows, each grouping the report's entries by that tab's dimension. */
 export type ReportRows =
@@ -247,14 +296,14 @@ function reportTable(
             <DataGrid.Title>{row.name}</DataGrid.Title>,
             formatTotalHours(row.hours * 60),
             formatTotalHours(row.billableHours * 60),
-            formatAmount(row.amount, currency),
+            formatAmounts(row.amounts, currency),
           ],
         })),
         footer: [
           "Total",
           formatTotalHours(total.hours * 60),
           formatTotalHours(total.billableHours * 60),
-          formatAmount(total.amount, currency),
+          formatAmounts(total.amounts, currency),
         ],
       };
     case "projects":
@@ -272,7 +321,7 @@ function reportTable(
             row.client,
             formatTotalHours(row.hours * 60),
             formatTotalHours(row.billableHours * 60),
-            formatAmount(row.amount, currency),
+            formatAmounts(row.amounts, currency),
           ],
           href: projectHref(row.id),
         })),
@@ -281,7 +330,7 @@ function reportTable(
           "",
           formatTotalHours(total.hours * 60),
           formatTotalHours(total.billableHours * 60),
-          formatAmount(total.amount, currency),
+          formatAmounts(total.amounts, currency),
         ],
       };
     case "consultants":
@@ -299,7 +348,7 @@ function reportTable(
             formatTotalHours(row.hours * 60),
             formatShare(row.hours, capacityHours),
             <BillableHours hours={row.hours} billableHours={row.billableHours} />,
-            formatAmount(row.amount, currency),
+            formatAmounts(row.amounts, currency),
           ],
         })),
         // Utilization has no total, since consultants who started or left mid-month skew any sum.
@@ -308,7 +357,7 @@ function reportTable(
           formatTotalHours(total.hours * 60),
           "",
           <BillableHours hours={total.hours} billableHours={total.billableHours} />,
-          formatAmount(total.amount, currency),
+          formatAmounts(total.amounts, currency),
         ],
       };
     case "tasks":
@@ -322,13 +371,13 @@ function reportTable(
           cells: [
             <DataGrid.Title>{row.name}</DataGrid.Title>,
             formatTotalHours(row.billableHours * 60),
-            formatAmount(row.amount, currency),
+            formatAmounts(row.amounts, currency),
           ],
         })),
         footer: [
           "Total",
           formatTotalHours(total.billableHours * 60),
-          formatAmount(total.amount, currency),
+          formatAmounts(total.amounts, currency),
         ],
       };
   }
@@ -337,7 +386,7 @@ function reportTable(
 function Summary({
   hours,
   billableHours,
-  amount,
+  amounts,
   unratedHours,
   currency,
 }: Totals & { currency: string }) {
@@ -358,7 +407,7 @@ function Summary({
       />
       <Stat
         label="Billable amount"
-        value={formatAmount(amount, currency)}
+        value={formatAmounts(amounts, currency)}
         note={
           unratedHours > 0
             ? `${formatTotalHours(unratedHours * 60)} logged without a rate`

@@ -9,7 +9,8 @@ type Organization = typeof organizations.$inferSelect;
 
 /**
  * What a list is narrowed to: one organization, or every organization in a country. It never spans
- * countries, so a page can count on one currency, length of day and holiday calendar.
+ * countries, so a page can count on one length of day and holiday calendar. Amounts can still be in
+ * several currencies, since each project has its own; `currency` is the organizations'.
  */
 export type Company = {
   /** The `company` query parameter: an organization's slug, or a lowercase country code. */
