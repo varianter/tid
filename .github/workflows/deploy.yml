@@ -1,27 +1,20 @@
 name: Deploy
 
+# Full CD: every commit to main builds one image, deploys it to dev, waits for dev to roll out,
+# then promotes the same image tag to prod (no rebuild). Dispatching from another branch
+# deploys that branch to dev only; prod only ever runs code that has been reviewed into main.
 on:
   push:
     branches:
       - main
   workflow_dispatch:
-    inputs:
-      environment:
-        description: 'Target environment to deploy'
-        required: true
-        default: dev
-        type: choice
-        options:
-          - lab
-          - dev
-          - prod
 
 permissions: {}
 
 # Queued, never cancelled: a half-finished deploy can leave GitOps out of sync.
-# Overlapping runs could land an older image tag last.
+# One group for every ref: a branch dispatch and a main run both write the dev tag.
 concurrency:
-  group: deploy-${{ inputs.environment || 'dev' }}
+  group: deploy
   cancel-in-progress: false
 
 jobs:
@@ -30,50 +23,71 @@ jobs:
     permissions:
       contents: read
 
-  refuse-prod-off-main:
-    name: Refuse prod off main
-    if: inputs.environment == 'prod' && github.ref != 'refs/heads/main'
-    runs-on: ubuntu-latest
-    timeout-minutes: 1
-    steps:
-      - run: |
-          echo "::error::Prod deploys only from main, not $BRANCH."
-          exit 1
-        env:
-          BRANCH: ${{ github.ref_name }}
-
-  deploy:
-    name: Deploy
+  deploy-dev:
+    name: Deploy dev
     needs: verify
-    # Prod only runs code that has been reviewed into main.
-    if: inputs.environment != 'prod' || github.ref == 'refs/heads/main'
     permissions:
       contents: read
     uses: varianter/shared-workflows/.github/workflows/build-and-deploy-shared.yaml@main
     secrets: inherit
     with:
-      environment: ${{ inputs.environment || 'dev' }}
+      environment: dev
       acr-url: variantplatformacr.azurecr.io
       image-name: tid
       docker-context: .
       dockerfile: ./apps/web/Dockerfile
       build-args: ''
       gitops-repository: infrastructure-as-code
-      gitops-directory-path: deployments/${{ inputs.environment || 'dev' }}/workloads/tid
+      gitops-directory-path: deployments/dev/workloads/tid
       gitops-workload-name: tid
       gitops-file-to-update: values.yaml
       gitops-yq-path: .image.tag
-      gitops-continue-on-error: 'true'
+      # A failed push must fail the run: otherwise prod gets promoted without dev having run the image.
+      gitops-continue-on-error: 'false'
       enable-gitops: 'true'
 
-  rollout:
-    name: Check rollout
-    needs: deploy
-    # Nothing to wait for when GitOps pushed no commit (disabled, nothing changed, or the push failed).
-    if: needs.deploy.outputs.gitops-commit-sha != ''
+  rollout-dev:
+    name: Check dev rollout
+    needs: deploy-dev
     permissions:
       id-token: write # lets the shared workflow swap this job's OIDC token for read-only Argo CD access, no secrets
     uses: varianter/shared-workflows/.github/workflows/check-argocd-shared.yaml@main
     with:
-      app: tid-${{ inputs.environment || 'dev' }}
-      expected-revision: ${{ needs.deploy.outputs.gitops-commit-sha }}
+      app: tid-dev
+      # Empty when dev already had this tag (e.g. a re-run): then only health is checked.
+      expected-revision: ${{ needs.deploy-dev.outputs.gitops-commit-sha }}
+
+  deploy-prod:
+    name: Deploy prod
+    needs: [deploy-dev, rollout-dev]
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions: {}
+    outputs:
+      gitops-commit-sha: ${{ steps.update-gitops.outputs.commit-sha }}
+    steps:
+      # Same image dev just rolled out: only the GitOps tag changes.
+      - name: Deploy to prod (Update GitOps repository with dev's image tag)
+        id: update-gitops
+        uses: varianter/shared-workflows/.github/actions/update-gitops-image-tag@main
+        with:
+          repository: infrastructure-as-code
+          environment: prod
+          workload-name: tid
+          directory-path: deployments/prod/workloads/tid
+          file-to-update: values.yaml
+          yq-path: .image.tag
+          tag: ${{ needs.deploy-dev.outputs.image-tag }}
+          gitops-repo-updater-private-key: ${{ secrets.VARIANT_GITHUB_REPO_UPDATER_PRIVATEKEY }}
+          gitops-repo-updater-app-id: ${{ secrets.VARIANT_GITHUB_REPO_UPDATER_APP_ID }}
+
+  rollout-prod:
+    name: Check prod rollout
+    needs: deploy-prod
+    permissions:
+      id-token: write # lets the shared workflow swap this job's OIDC token for read-only Argo CD access, no secrets
+    uses: varianter/shared-workflows/.github/workflows/check-argocd-shared.yaml@main
+    with:
+      app: tid-prod
+      expected-revision: ${{ needs.deploy-prod.outputs.gitops-commit-sha }}
