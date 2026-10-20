@@ -1,31 +1,16 @@
 import { projectOrganizations, projects } from "@tid/db/schema";
 import { Button, EmptyState, Page } from "@tid/ui";
-import { and, eq, exists } from "drizzle-orm";
+import { and, eq, exists, inArray } from "drizzle-orm";
 import type { Context } from "hono";
 import { database } from "../database";
 import type { UserEnv } from "../login/user";
-import { findOrganizationSlug } from "../organizations/organization";
-import {
-  listOrganizations,
-  type OrganizationOption,
-  OrganizationSelect,
-} from "../organizations/organizationSelect";
+import { type Company, CompanySelect, resolveCompany } from "../organizations/companyFilter";
 import { isManager } from "../users/manager";
 import { listProjects, type ProjectSummary, ProjectTable } from "./projectSummary";
 
-const projectListPath = (organizationSlug: string) =>
-  `/projects?${new URLSearchParams({ organization: organizationSlug })}`;
-
 export const projectList = async (c: Context<UserEnv>) => {
-  const slug = c.req.query("organization");
-  if (!slug) {
-    const ownSlug = await findOrganizationSlug(c.get("user").orgId);
-    if (!ownSlug) return c.notFound();
-    return c.redirect(projectListPath(ownSlug));
-  }
-  const organizationOptions = await listOrganizations();
-  const organization = organizationOptions.find((option) => option.slug === slug);
-  if (!organization) return c.notFound();
+  const company = await resolveCompany(c);
+  if (company instanceof Response) return company;
 
   const participates = exists(
     database
@@ -34,15 +19,17 @@ export const projectList = async (c: Context<UserEnv>) => {
       .where(
         and(
           eq(projectOrganizations.projectId, projects.id),
-          eq(projectOrganizations.orgId, organization.id),
+          inArray(
+            projectOrganizations.orgId,
+            company.selected.organizations.map((organization) => organization.id),
+          ),
         ),
       ),
   );
   return c.render(
     <ProjectListPage
       projects={await listProjects(participates)}
-      organizationSlug={slug}
-      organizations={organizationOptions}
+      {...company}
       canStartProjects={await isManager(c.get("user"))}
     />,
   );
@@ -56,13 +43,13 @@ const newProjectButton = () => (
 
 function ProjectListPage({
   projects,
-  organizationSlug,
-  organizations,
+  selected,
+  companies,
   canStartProjects,
 }: {
   projects: ProjectSummary[];
-  organizationSlug: string;
-  organizations: OrganizationOption[];
+  selected: Company;
+  companies: Company[];
   canStartProjects: boolean;
 }) {
   return (
@@ -70,7 +57,7 @@ function ProjectListPage({
       title="Projects"
       actions={
         <>
-          <OrganizationSelect organizationSlug={organizationSlug} organizations={organizations} />
+          <CompanySelect selected={selected} companies={companies} />
           {canStartProjects && newProjectButton()}
         </>
       }

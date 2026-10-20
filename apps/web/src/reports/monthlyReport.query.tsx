@@ -4,36 +4,27 @@ import { todayInOslo } from "@tid/calendar/osloClock";
 import { projects, timeEntriesExport } from "@tid/db/schema";
 import { formatTotalHours } from "@tid/elements/hours";
 import { DataGrid, type DataGridColumn, EmptyState, Page, PeriodNavigation, Tabs } from "@tid/ui";
-import { and, between, eq, sql } from "drizzle-orm";
+import { and, between, eq, inArray, sql } from "drizzle-orm";
 import type { Context } from "hono";
 import type { Child } from "hono/jsx";
 import { formatAmount } from "../amount/amount";
 import { database } from "../database";
 import type { UserEnv } from "../login/user";
-import { findOrganizationBySlug, findOrganizationSlug } from "../organizations/organization";
-import { listOrganizations, OrganizationSelect } from "../organizations/organizationSelect";
+import { CompanySelect, resolveCompany } from "../organizations/companyFilter";
+import { projectTimesheetPath } from "../projects/projectsUrl";
 import { formatShare } from "../share/share";
 import { capacityMinutes } from "./capacity";
 import { reportQuery, type Tab, tabs } from "./period";
-import { projectTimesheetPath, reportPath } from "./reportsUrl";
+import { reportPath } from "./reportsUrl";
 
-// Without an organization picked, it's the user's own.
-export const monthlyReportRedirect = async (c: Context<UserEnv>) => {
-  const slug = c.req.query("organization") || (await findOrganizationSlug(c.get("user").orgId));
-  if (!slug) return c.notFound();
-  return c.redirect(
-    reportPath(slug, reportQuery(c.req.query("from"), c.req.query("tab"), todayInOslo())),
-  );
-};
-
-export const monthlyReport = async (c: Context<UserEnv, "/:organization">) => {
-  const slug = c.req.param("organization");
+export const monthlyReport = async (c: Context<UserEnv>) => {
+  const company = await resolveCompany(c);
+  if (company instanceof Response) return company;
+  const { selected } = company;
   const query = reportQuery(c.req.query("from"), c.req.query("tab"), todayInOslo());
-  if (new URL(c.req.url).search !== `?${query}`) return c.redirect(reportPath(slug, query));
-
-  const organizationOptions = await listOrganizations();
-  const organization = await findOrganizationBySlug(slug);
-  if (!organization) return c.notFound();
+  const canonicalPath = reportPath(selected.value, query);
+  const url = new URL(c.req.url);
+  if (`${url.pathname}${url.search}` !== canonicalPath) return c.redirect(canonicalPath);
 
   const from = query.get("from") ?? "";
   const till = query.get("till") ?? "";
@@ -41,7 +32,10 @@ export const monthlyReport = async (c: Context<UserEnv, "/:organization">) => {
   const month = from.slice(0, 7);
   const view = timeEntriesExport;
   const inReport = and(
-    eq(view.accountName, organization.legalName),
+    inArray(
+      view.accountName,
+      selected.organizations.map((organization) => organization.legalName),
+    ),
     between(view.spentDate, from, till),
   );
 
@@ -55,9 +49,8 @@ export const monthlyReport = async (c: Context<UserEnv, "/:organization">) => {
         and ${view.projectCode} in (select ${projects.code} from ${projects} where ${projects.billing} = 'hourly')
     ), 0)`.mapWith(Number),
   };
-  const currency = organization.currency;
-  const capacityHours =
-    capacityMinutes(month, organization.country, organization.fullDayMinutes) / 60;
+  const currency = selected.currency;
+  const capacityHours = capacityMinutes(month, selected.country, selected.fullDayMinutes) / 60;
 
   const report = await (async (): Promise<ReportRows> => {
     switch (tab) {
@@ -76,14 +69,16 @@ export const monthlyReport = async (c: Context<UserEnv, "/:organization">) => {
           tab,
           rows: await database
             .select({
+              id: projects.id,
               code: view.projectCode,
               name: view.projectName,
               client: view.clientName,
               ...totals,
             })
             .from(view)
+            .innerJoin(projects, eq(projects.code, view.projectCode))
             .where(inReport)
-            .groupBy(view.projectCode, view.projectName, view.clientName)
+            .groupBy(projects.id, view.projectCode, view.projectName, view.clientName)
             .orderBy(view.projectName),
         };
       case "consultants":
@@ -119,18 +114,11 @@ export const monthlyReport = async (c: Context<UserEnv, "/:organization">) => {
     unratedHours: sumOf("unratedHours"),
   };
   const monthPath = (months: number) =>
-    reportPath(slug, reportQuery(`${addMonths(month, months)}-01`, tab, todayInOslo()));
+    reportPath(selected.value, reportQuery(`${addMonths(month, months)}-01`, tab, todayInOslo()));
 
   return c.render(
     <ReportPage
-      organizationSelect={
-        <OrganizationSelect
-          organizationSlug={slug}
-          organizations={organizationOptions}
-          action="/reports"
-          keep={{ from, tab }}
-        />
-      }
+      companySelect={<CompanySelect {...company} keep={{ from, tab }} />}
       month={month}
       report={report}
       total={total}
@@ -138,8 +126,8 @@ export const monthlyReport = async (c: Context<UserEnv, "/:organization">) => {
       capacityHours={capacityHours}
       previousHref={monthPath(-1)}
       nextHref={monthPath(1)}
-      tabHref={(tabName) => reportPath(slug, reportQuery(from, tabName, todayInOslo()))}
-      projectHref={(code) => projectTimesheetPath(slug, code, month)}
+      tabHref={(tabName) => reportPath(selected.value, reportQuery(from, tabName, todayInOslo()))}
+      projectHref={(id) => projectTimesheetPath(id, month, selected.value)}
     />,
   );
 };
@@ -149,7 +137,10 @@ type Totals = { hours: number; billableHours: number; amount: number; unratedHou
 /** One tab's rows, each grouping the report's entries by that tab's dimension. */
 export type ReportRows =
   | { tab: "clients"; rows: (Totals & { name: string })[] }
-  | { tab: "projects"; rows: (Totals & { code: string; name: string; client: string })[] }
+  | {
+      tab: "projects";
+      rows: (Totals & { id: number; code: string; name: string; client: string })[];
+    }
   | { tab: "consultants"; rows: (Totals & { email: string; name: string })[] }
   | { tab: "tasks"; rows: (Totals & { name: string })[] };
 
@@ -167,7 +158,7 @@ const tabLabels: Record<Tab, string> = {
 };
 
 function ReportPage({
-  organizationSelect,
+  companySelect,
   month,
   report,
   total,
@@ -178,7 +169,7 @@ function ReportPage({
   tabHref,
   projectHref,
 }: {
-  organizationSelect: Child;
+  companySelect: Child;
   month: string;
   report: ReportRows;
   total: Totals;
@@ -187,7 +178,7 @@ function ReportPage({
   previousHref: string;
   nextHref: string;
   tabHref: (tab: Tab) => string;
-  projectHref: (code: string) => string;
+  projectHref: (projectId: number) => string;
 }) {
   const table = reportTable(report, total, currency, capacityHours, projectHref);
   return (
@@ -195,7 +186,7 @@ function ReportPage({
       title="Reports"
       actions={
         <>
-          {organizationSelect}
+          {companySelect}
           <PeriodNavigation
             previousHref={previousHref}
             nextHref={nextHref}
@@ -240,7 +231,7 @@ function reportTable(
   total: Totals,
   currency: string,
   capacityHours: number,
-  projectHref: (code: string) => string,
+  projectHref: (projectId: number) => string,
 ): ReportTable {
   switch (report.tab) {
     case "clients":
@@ -283,7 +274,7 @@ function reportTable(
             formatTotalHours(row.billableHours * 60),
             formatAmount(row.amount, currency),
           ],
-          href: projectHref(row.code),
+          href: projectHref(row.id),
         })),
         footer: [
           "Total",

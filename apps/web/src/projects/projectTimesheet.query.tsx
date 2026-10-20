@@ -4,25 +4,25 @@ import { daysOfMonth, isIsoMonth } from "@tid/calendar/isoDate";
 import { todayInOslo } from "@tid/calendar/osloClock";
 import { clients, projects, timeEntriesExport } from "@tid/db/schema";
 import { formatHours, formatTotalHours } from "@tid/elements/hours";
-import { and, between, eq, sql } from "drizzle-orm";
+import { and, between, eq, inArray, sql } from "drizzle-orm";
 import type { Context } from "hono";
 import { css } from "hono/css";
 import { formatAmount } from "../amount/amount";
 import { database } from "../database";
 import type { UserEnv } from "../login/user";
-import { findOrganizationBySlug } from "../organizations/organization";
+import { resolveCompany } from "../organizations/companyFilter";
 import { renderForPrint } from "../printLayout";
+import { reportQuery } from "../reports/period";
+import { reportPath } from "../reports/reportsUrl";
 import { VariantSymbol, VariantWordmark } from "../variantLogo";
-import { reportQuery } from "./period";
-import { reportPath } from "./reportsUrl";
 
-export const projectTimesheet = async (
-  c: Context<UserEnv, "/:organization/projects/:code/:month">,
-) => {
+export const projectTimesheet = async (c: Context<UserEnv, "/:id/timesheet/:month">) => {
+  const id = Number(c.req.param("id"));
   const month = c.req.param("month");
-  if (!isIsoMonth(month)) return c.notFound();
-  const organization = await findOrganizationBySlug(c.req.param("organization"));
-  if (!organization) return c.notFound();
+  if (!Number.isSafeInteger(id) || !isIsoMonth(month)) return c.notFound();
+  const company = await resolveCompany(c);
+  if (company instanceof Response) return company;
+  const { selected } = company;
   const [project] = await database
     .select({
       code: projects.code,
@@ -32,7 +32,7 @@ export const projectTimesheet = async (
     })
     .from(projects)
     .innerJoin(clients, eq(clients.id, projects.clientId))
-    .where(eq(projects.code, c.req.param("code")));
+    .where(eq(projects.id, id));
   if (!project) return c.notFound();
 
   const days = daysOfMonth(month);
@@ -49,7 +49,10 @@ export const projectTimesheet = async (
     .where(
       and(
         // Each organization invoices the work of its own consultants.
-        eq(view.accountName, organization.legalName),
+        inArray(
+          view.accountName,
+          selected.organizations.map((organization) => organization.legalName),
+        ),
         eq(view.projectCode, project.code),
         between(view.spentDate, days[0] ?? "", days.at(-1) ?? ""),
       ),
@@ -78,22 +81,19 @@ export const projectTimesheet = async (
       projectName={project.name}
       period={period}
       days={days}
-      calendar={calendarFor(organization.country)}
+      calendar={calendarFor(selected.country)}
       consultants={[...consultants.values()]}
       // Fixed fee and non-billable projects have no amount to show.
       amount={
         project.billing === "hourly"
           ? formatAmount(
               entries.reduce((total, entry) => total + entry.amount, 0),
-              organization.currency,
+              selected.currency,
               2,
             )
           : undefined
       }
-      reportHref={reportPath(
-        c.req.param("organization"),
-        reportQuery(`${month}-01`, "projects", todayInOslo()),
-      )}
+      reportHref={reportPath(selected.value, reportQuery(`${month}-01`, "projects", todayInOslo()))}
     />,
   );
 };
