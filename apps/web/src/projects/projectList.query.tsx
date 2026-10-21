@@ -5,7 +5,7 @@ import type { Context } from "hono";
 import { database } from "../database";
 import type { UserEnv } from "../login/user";
 import { isManager } from "../managers/manager";
-import { type Company, CompanySelect, resolveCompany } from "../organizations/companyFilter";
+import { type CompanyFilter, CompanySelect, resolveCompany } from "../organizations/companyFilter";
 import { listProjects, type ProjectSummary, ProjectTable } from "./projectSummary";
 
 export const projectList = async (c: Context<UserEnv>) => {
@@ -46,12 +46,7 @@ function ProjectListPage({
   selected,
   companies,
   canStartProjects,
-}: {
-  projects: ProjectSummary[];
-  selected: Company;
-  companies: Company[];
-  canStartProjects: boolean;
-}) {
+}: { projects: ProjectSummary[]; canStartProjects: boolean } & CompanyFilter) {
   return (
     <Page
       title="Projects"

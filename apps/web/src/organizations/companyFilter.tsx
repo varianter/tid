@@ -1,10 +1,12 @@
 import type { Country } from "@tid/calendar/publicHolidays";
 import { organizations } from "@tid/db/schema";
-import { Button, Label, Select } from "@tid/ui";
+import { Label, Select } from "@tid/ui";
 import type { Context } from "hono";
+import { z } from "zod";
 import { database } from "../database";
 import type { UserEnv } from "../login/user";
 import { countryVisibility } from "../managers/manager";
+import { FilterForm } from "../query/queryPage";
 
 type Organization = typeof organizations.$inferSelect;
 
@@ -58,17 +60,25 @@ export function listCompanies(organizations: Organization[]): Company[] {
   });
 }
 
+const field = "company";
+
+/** `?company=` names a Company's `value`. Spread into a page's query; `resolveCompany` fills it in when missing. */
+export const companyField = { [field]: z.string().optional().catch(undefined) };
+
+/** The company a list page is narrowed to, among those the user may pick. */
+export type CompanyFilter = { selected: Company; companies: Company[] };
+
 /**
  * The company a list page is narrowed to, or a response to return instead: a redirect that picks
  * the user's own organization when none is given, or not found for an unknown one or one in a
  * country the user may not see.
  */
-export async function resolveCompany(c: Context<UserEnv>) {
+export async function resolveCompany(c: Context<UserEnv>): Promise<CompanyFilter | Response> {
   const canViewCountry = await countryVisibility(c.get("user"));
   const companies = listCompanies(
     await database.select().from(organizations).orderBy(organizations.country, organizations.name),
   ).filter((company) => canViewCountry(company.country));
-  const value = c.req.query("company");
+  const value = c.req.query(field);
   if (!value) {
     const own = companies.find(
       (company) =>
@@ -76,7 +86,7 @@ export async function resolveCompany(c: Context<UserEnv>) {
     );
     if (!own) return c.notFound();
     const url = new URL(c.req.url);
-    url.searchParams.set("company", own.value);
+    url.searchParams.set(field, own.value);
     return c.redirect(`${url.pathname}${url.search}`);
   }
   const selected = companies.find((company) => company.value === value);
@@ -84,40 +94,21 @@ export async function resolveCompany(c: Context<UserEnv>) {
   return { selected, companies };
 }
 
-/** Submits `company` to the current page, alongside `keep`, so it can stay on the same period or tab. */
-export function CompanySelect({
-  selected,
-  companies,
-  keep = {},
-}: {
-  selected: Company;
-  companies: Company[];
-  keep?: Record<string, string>;
-}) {
+export function CompanySelect({ selected, companies }: CompanyFilter) {
   return (
-    <auto-submit>
-      <form method="get" class="stack-v nowrap gap-3xs">
-        {Object.entries(keep).map(([name, value]) => (
-          <input type="hidden" name={name} value={value} />
+    <FilterForm field={field}>
+      <Label for={field}>Company</Label>
+      <Select id={field} name={field} data-size="small">
+        {[...Map.groupBy(companies, (company) => company.country)].map(([country, members]) => (
+          <optgroup label={countryNames[country]}>
+            {members.map((company) => (
+              <option value={company.value} selected={company.value === selected.value}>
+                {company.name}
+              </option>
+            ))}
+          </optgroup>
         ))}
-        <Label for="company">Company</Label>
-        <Select id="company" name="company" data-size="small">
-          {[...Map.groupBy(companies, (company) => company.country)].map(([country, members]) => (
-            <optgroup label={countryNames[country]}>
-              {members.map((company) => (
-                <option value={company.value} selected={company.value === selected.value}>
-                  {company.name}
-                </option>
-              ))}
-            </optgroup>
-          ))}
-        </Select>
-        <noscript>
-          <Button type="submit" data-size="small">
-            Show
-          </Button>
-        </noscript>
-      </form>
-    </auto-submit>
+      </Select>
+    </FilterForm>
   );
 }

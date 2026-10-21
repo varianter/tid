@@ -1,7 +1,6 @@
 import { type Calendar, calendarFor } from "@tid/calendar";
 import { formatDate } from "@tid/calendar/dateDisplay";
-import { daysOfMonth, isIsoMonth } from "@tid/calendar/isoDate";
-import { todayInOslo } from "@tid/calendar/osloClock";
+import { daysOfMonth, firstDayOfMonth, isIsoMonth, lastDayOfMonth } from "@tid/calendar/isoDate";
 import { clients, projects, timeEntriesExport } from "@tid/db/schema";
 import { formatHours, formatTotalHours } from "@tid/elements/hours";
 import { and, between, eq, inArray, sql } from "drizzle-orm";
@@ -12,8 +11,7 @@ import { database } from "../database";
 import type { UserEnv } from "../login/user";
 import { resolveCompany } from "../organizations/companyFilter";
 import { renderForPrint } from "../printLayout";
-import { reportQuery } from "../reports/period";
-import { reportPath } from "../reports/reportsUrl";
+import { reportUrl } from "../reports/reportsUrl";
 import { VariantSymbol, VariantWordmark } from "../variantLogo";
 
 export const projectTimesheet = async (c: Context<UserEnv, "/:id/timesheet/:month">) => {
@@ -55,7 +53,7 @@ export const projectTimesheet = async (c: Context<UserEnv, "/:id/timesheet/:mont
           selected.organizations.map((organization) => organization.legalName),
         ),
         eq(view.projectCode, project.code),
-        between(view.spentDate, days[0] ?? "", days.at(-1) ?? ""),
+        between(view.spentDate, firstDayOfMonth(month), lastDayOfMonth(month)),
       ),
     )
     .groupBy(view.userEmail, view.userName, view.spentDate)
@@ -94,7 +92,7 @@ export const projectTimesheet = async (c: Context<UserEnv, "/:id/timesheet/:mont
             )
           : undefined
       }
-      reportHref={reportPath(selected.value, reportQuery(`${month}-01`, "projects", todayInOslo()))}
+      reportHref={reportUrl.path({ company: selected.value, month, tab: "projects" })}
     />,
   );
 };

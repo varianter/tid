@@ -13,6 +13,7 @@ import { database } from "../database";
 import type { User, UserEnv } from "../login/user";
 import { onlyRow, organizationIdBySlug } from "../testing/rows";
 import { consultants } from "./consultants.routes";
+import { consultantPath } from "./consultantsUrl";
 
 let manager: User;
 let member: User;
@@ -66,11 +67,12 @@ test("managers list a whole country's consultants", async () => {
 });
 
 test("managers see any consultant's details, members only their own", async () => {
-  const page = await (await requestAs(manager, `/consultants/${member.id}`)).text();
+  const page = await (await requestAs(manager, consultantPath(member.id))).text();
   expect(page).toContain("ola@variant.no");
-  expect((await requestAs(member, `/consultants/${member.id}`)).status).toBe(200);
-  expect((await requestAs(member, `/consultants/${manager.id}`)).status).toBe(403);
-  expect((await requestAs(manager, "/consultants/0")).status).toBe(404);
+  expect((await requestAs(member, consultantPath(member.id))).status).toBe(200);
+  expect((await requestAs(member, consultantPath(manager.id))).status).toBe(403);
+  expect((await requestAs(manager, consultantPath(0))).status).toBe(404);
+  expect((await requestAs(manager, "/consultants/someone")).status).toBe(404);
 });
 
 test("a consultant's details show the month asked for", async () => {
@@ -102,7 +104,7 @@ test("a consultant's details list the billable projects they're assigned to now"
       endsOn: project.code === "OLD1" ? "2000-01-01" : null,
     })),
   );
-  const page = await (await requestAs(member, `/consultants/${member.id}`)).text();
+  const page = await (await requestAs(member, consultantPath(member.id))).text();
   expect(page).toContain("Current job");
   expect(page).not.toContain("Finished job");
   expect(page).not.toContain("Internal job");

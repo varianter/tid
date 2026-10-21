@@ -6,7 +6,7 @@ import { and, eq, exists, inArray } from "drizzle-orm";
 import type { Context } from "hono";
 import { database } from "../database";
 import type { UserEnv } from "../login/user";
-import { type Company, CompanySelect, resolveCompany } from "../organizations/companyFilter";
+import { type CompanyFilter, CompanySelect, resolveCompany } from "../organizations/companyFilter";
 import { consultantPath } from "./consultantsUrl";
 import { loadCurrentBillableProjects } from "./currentBillableProjects";
 
@@ -63,11 +63,7 @@ function ConsultantListPage({
   consultants,
   selected,
   companies,
-}: {
-  consultants: ConsultantRow[];
-  selected: Company;
-  companies: Company[];
-}) {
+}: { consultants: ConsultantRow[] } & CompanyFilter) {
   return (
     <Page title="Consultants" actions={<CompanySelect selected={selected} companies={companies} />}>
       <DataGrid columns={[{ label: "Name" }, { label: "Billable projects" }]}>

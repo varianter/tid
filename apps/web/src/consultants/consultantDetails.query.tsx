@@ -1,83 +1,111 @@
 import { formatDate } from "@tid/calendar/dateDisplay";
-import { addMonths, daysOfMonth, isIsoMonth } from "@tid/calendar/isoDate";
+import { addMonths, firstDayOfMonth, lastDayOfMonth } from "@tid/calendar/isoDate";
 import { todayInOslo } from "@tid/calendar/osloClock";
 import { clients, organizations, projects, tasks, timeEntries, users } from "@tid/db/schema";
 import { formatTotalHours } from "@tid/elements/hours";
 import { EmptyState, Page, PeriodNavigation } from "@tid/ui";
-import { and, desc, eq, gte, lte, sql } from "drizzle-orm";
+import { and, between, desc, eq, sql } from "drizzle-orm";
 import type { Context } from "hono";
 import { database } from "../database";
 import type { UserEnv } from "../login/user";
 import { isManager } from "../managers/manager";
 import { type Billing, billingLabels } from "../projects/billing";
+import { type QueryProps, queryPage } from "../query/queryPage";
 import { capacityMinutes } from "../reports/capacity";
-import { consultantPath, consultantsPath, userIdParam } from "./consultantsUrl";
+import { consultantsPath, consultantUrl } from "./consultantsUrl";
 import { loadCurrentBillableProjects } from "./currentBillableProjects";
 
-export const consultantDetails = async (c: Context<UserEnv>) => {
-  const userId = userIdParam(c);
-  if (userId === undefined) return c.notFound();
-  const viewer = c.get("user");
-  const viewerIsManager = await isManager(viewer);
-  if (viewer.id !== userId && !viewerIsManager) {
-    return c.text("Only managers can see other users", 403);
-  }
-  const [user] = await database
-    .select({
-      id: users.id,
-      name: users.name,
-      email: users.email,
-      endsOn: users.endsOn,
-      organizationSlug: organizations.slug,
-      country: organizations.country,
-      fullDayMinutes: organizations.fullDayMinutes,
-    })
-    .from(users)
-    .innerJoin(organizations, eq(organizations.id, users.orgId))
-    .where(eq(users.id, userId));
-  if (!user) return c.notFound();
+export const consultantDetails = queryPage({
+  url: consultantUrl,
+  loader: async (c: Context<UserEnv>, { userId, month }) => {
+    const viewer = c.get("user");
+    const viewerIsManager = await isManager(viewer);
+    if (viewer.id !== userId && !viewerIsManager) {
+      return c.text("Only managers can see other users", 403);
+    }
+    const [user] = await database
+      .select({
+        id: users.id,
+        name: users.name,
+        email: users.email,
+        endsOn: users.endsOn,
+        organizationSlug: organizations.slug,
+        country: organizations.country,
+        fullDayMinutes: organizations.fullDayMinutes,
+      })
+      .from(users)
+      .innerJoin(organizations, eq(organizations.id, users.orgId))
+      .where(eq(users.id, userId));
+    if (!user) return c.notFound();
 
-  const today = todayInOslo();
-  const currentBillableProjects =
-    (await loadCurrentBillableProjects([user.id], today)).get(user.id) ?? [];
+    const currentBillableProjects =
+      (await loadCurrentBillableProjects([user.id], todayInOslo())).get(user.id) ?? [];
 
-  const monthQuery = c.req.query("month");
-  const month = monthQuery && isIsoMonth(monthQuery) ? monthQuery : today.slice(0, 7);
-  const days = daysOfMonth(month);
-  const inMonth = and(
-    eq(timeEntries.userId, user.id),
-    gte(timeEntries.spentOn, days[0] ?? ""),
-    lte(timeEntries.spentOn, days.at(-1) ?? ""),
-  );
-  const [monthTotals] = await database
-    .select({
-      minutes: sql`coalesce(sum(${timeEntries.minutes}), 0)`.mapWith(Number),
-      billableMinutes: sql`coalesce(sum(${timeEntries.minutes}) filter (
-        where ${projects.billing} <> 'non_billable'
-      ), 0)`.mapWith(Number),
-    })
-    .from(timeEntries)
-    .innerJoin(tasks, eq(tasks.id, timeEntries.taskId))
-    .innerJoin(projects, eq(projects.id, tasks.projectId))
-    .where(inMonth);
+    const inMonth = and(
+      eq(timeEntries.userId, user.id),
+      between(timeEntries.spentOn, firstDayOfMonth(month), lastDayOfMonth(month)),
+    );
+    const [monthTotals] = await database
+      .select({
+        minutes: sql`coalesce(sum(${timeEntries.minutes}), 0)`.mapWith(Number),
+        billableMinutes: sql`coalesce(sum(${timeEntries.minutes}) filter (
+          where ${projects.billing} <> 'non_billable'
+        ), 0)`.mapWith(Number),
+      })
+      .from(timeEntries)
+      .innerJoin(tasks, eq(tasks.id, timeEntries.taskId))
+      .innerJoin(projects, eq(projects.id, tasks.projectId))
+      .where(inMonth);
 
-  const entries = await database
-    .select({
-      spentOn: timeEntries.spentOn,
-      minutes: timeEntries.minutes,
-      notes: timeEntries.notes,
-      task: tasks.name,
-      project: projects.name,
-      client: clients.name,
-    })
-    .from(timeEntries)
-    .innerJoin(tasks, eq(tasks.id, timeEntries.taskId))
-    .innerJoin(projects, eq(projects.id, tasks.projectId))
-    .innerJoin(clients, eq(clients.id, projects.clientId))
-    .where(inMonth)
-    .orderBy(desc(timeEntries.spentOn), projects.name, tasks.name);
+    const entries = await database
+      .select({
+        spentOn: timeEntries.spentOn,
+        minutes: timeEntries.minutes,
+        notes: timeEntries.notes,
+        task: tasks.name,
+        project: projects.name,
+        client: clients.name,
+      })
+      .from(timeEntries)
+      .innerJoin(tasks, eq(tasks.id, timeEntries.taskId))
+      .innerJoin(projects, eq(projects.id, tasks.projectId))
+      .innerJoin(clients, eq(clients.id, projects.clientId))
+      .where(inMonth)
+      .orderBy(desc(timeEntries.spentOn), projects.name, tasks.name);
 
-  return c.render(
+    return {
+      user,
+      viewerIsManager,
+      currentBillableProjects,
+      minutes: monthTotals?.minutes ?? 0,
+      billableMinutes: monthTotals?.billableMinutes ?? 0,
+      monthCapacityMinutes: capacityMinutes(month, user.country, user.fullDayMinutes, user.endsOn),
+      entries,
+    };
+  },
+  view: ConsultantDetailsPage,
+});
+
+function ConsultantDetailsPage({
+  user,
+  viewerIsManager,
+  currentBillableProjects,
+  minutes,
+  billableMinutes,
+  monthCapacityMinutes,
+  entries,
+  query: { month },
+  href,
+}: {
+  user: { name: string; email: string; endsOn: string | null; organizationSlug: string };
+  viewerIsManager: boolean;
+  currentBillableProjects: { name: string; client: string; billing: Billing }[];
+  minutes: number;
+  billableMinutes: number;
+  monthCapacityMinutes: number;
+  entries: Entry[];
+} & QueryProps<typeof consultantUrl>) {
+  return (
     <Page
       title={user.name}
       back={
@@ -87,8 +115,8 @@ export const consultantDetails = async (c: Context<UserEnv>) => {
       }
       actions={
         <PeriodNavigation
-          previousHref={consultantPath(user.id, addMonths(month, -1))}
-          nextHref={consultantPath(user.id, addMonths(month, 1))}
+          previousHref={href({ month: addMonths(month, -1) })}
+          nextHref={href({ month: addMonths(month, 1) })}
           previousLabel="Previous month"
           nextLabel="Next month"
         >
@@ -103,17 +131,17 @@ export const consultantDetails = async (c: Context<UserEnv>) => {
       <div class="stack-h items-start gap-m">
         <div class="stack-v gap-m flex-1">
           <MonthHours
-            minutes={monthTotals?.minutes ?? 0}
-            billableMinutes={monthTotals?.billableMinutes ?? 0}
-            capacityMinutes={capacityMinutes(month, user.country, user.fullDayMinutes, user.endsOn)}
+            minutes={minutes}
+            billableMinutes={billableMinutes}
+            capacityMinutes={monthCapacityMinutes}
           />
           <CurrentProjects projects={currentBillableProjects} />
         </div>
         <MonthEntries month={month} entries={entries} />
       </div>
-    </Page>,
+    </Page>
   );
-};
+}
 
 function CurrentProjects({
   projects,
