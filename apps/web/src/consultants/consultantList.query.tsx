@@ -1,4 +1,5 @@
 import { formatDate } from "@tid/calendar/dateDisplay";
+import { todayInOslo } from "@tid/calendar/osloClock";
 import { userRoles, users } from "@tid/db/schema";
 import { Badge, DataGrid, Page } from "@tid/ui";
 import { and, eq, exists, inArray } from "drizzle-orm";
@@ -7,6 +8,7 @@ import { database } from "../database";
 import type { UserEnv } from "../login/user";
 import { type Company, CompanySelect, resolveCompany } from "../organizations/companyFilter";
 import { consultantPath } from "./consultantsUrl";
+import { loadCurrentBillableProjects } from "./currentBillableProjects";
 
 export const consultantList = async (c: Context<UserEnv>) => {
   const company = await resolveCompany(c);
@@ -33,7 +35,19 @@ export const consultantList = async (c: Context<UserEnv>) => {
       ),
     )
     .orderBy(users.name);
-  return c.render(<ConsultantListPage consultants={rows} {...company} />);
+  const projectsByUser = await loadCurrentBillableProjects(
+    rows.map((row) => row.id),
+    todayInOslo(),
+  );
+  return c.render(
+    <ConsultantListPage
+      consultants={rows.map((row) => ({
+        ...row,
+        projectNames: (projectsByUser.get(row.id) ?? []).map((project) => project.name),
+      }))}
+      {...company}
+    />,
+  );
 };
 
 type ConsultantRow = {
@@ -42,6 +56,7 @@ type ConsultantRow = {
   email: string;
   endsOn: string | null;
   isManager: boolean;
+  projectNames: string[];
 };
 
 function ConsultantListPage({
@@ -55,7 +70,7 @@ function ConsultantListPage({
 }) {
   return (
     <Page title="Consultants" actions={<CompanySelect selected={selected} companies={companies} />}>
-      <DataGrid columns={[{ label: "Name" }]}>
+      <DataGrid columns={[{ label: "Name" }, { label: "Billable projects" }]}>
         {consultants.map((consultant) => (
           <DataGrid.Row href={consultantPath(consultant.id)}>
             <DataGrid.Title
@@ -71,6 +86,7 @@ function ConsultantListPage({
                 {consultant.isManager && <Badge>Manager</Badge>}
               </span>
             </DataGrid.Title>
+            {consultant.projectNames.join(", ")}
           </DataGrid.Row>
         ))}
       </DataGrid>

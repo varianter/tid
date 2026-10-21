@@ -1,24 +1,18 @@
 import { formatDate } from "@tid/calendar/dateDisplay";
 import { addMonths, daysOfMonth, isIsoMonth } from "@tid/calendar/isoDate";
 import { todayInOslo } from "@tid/calendar/osloClock";
-import {
-  clients,
-  organizations,
-  projects,
-  tasks,
-  timeEntries,
-  userRoles,
-  users,
-} from "@tid/db/schema";
+import { clients, organizations, projects, tasks, timeEntries, users } from "@tid/db/schema";
 import { formatTotalHours } from "@tid/elements/hours";
-import { Badge, EmptyState, Page, PeriodNavigation } from "@tid/ui";
-import { and, desc, eq, exists, gte, lte, sql } from "drizzle-orm";
+import { EmptyState, Page, PeriodNavigation } from "@tid/ui";
+import { and, desc, eq, gte, lte, sql } from "drizzle-orm";
 import type { Context } from "hono";
 import { database } from "../database";
 import type { UserEnv } from "../login/user";
 import { isManager } from "../managers/manager";
+import { type Billing, billingLabels } from "../projects/billing";
 import { capacityMinutes } from "../reports/capacity";
 import { consultantPath, consultantsPath, userIdParam } from "./consultantsUrl";
+import { loadCurrentBillableProjects } from "./currentBillableProjects";
 
 export const consultantDetails = async (c: Context<UserEnv>) => {
   const userId = userIdParam(c);
@@ -37,20 +31,18 @@ export const consultantDetails = async (c: Context<UserEnv>) => {
       organizationSlug: organizations.slug,
       country: organizations.country,
       fullDayMinutes: organizations.fullDayMinutes,
-      isManager: exists(
-        database
-          .select()
-          .from(userRoles)
-          .where(and(eq(userRoles.userId, users.id), eq(userRoles.role, "manager"))),
-      ).mapWith(Boolean),
     })
     .from(users)
     .innerJoin(organizations, eq(organizations.id, users.orgId))
     .where(eq(users.id, userId));
   if (!user) return c.notFound();
 
+  const today = todayInOslo();
+  const currentBillableProjects =
+    (await loadCurrentBillableProjects([user.id], today)).get(user.id) ?? [];
+
   const monthQuery = c.req.query("month");
-  const month = monthQuery && isIsoMonth(monthQuery) ? monthQuery : todayInOslo().slice(0, 7);
+  const month = monthQuery && isIsoMonth(monthQuery) ? monthQuery : today.slice(0, 7);
   const days = daysOfMonth(month);
   const inMonth = and(
     eq(timeEntries.userId, user.id),
@@ -106,20 +98,48 @@ export const consultantDetails = async (c: Context<UserEnv>) => {
     >
       <p class="stack-h gap-xs items-center ink-subtle">
         {user.email}
-        {user.isManager && <Badge>Manager</Badge>}
         {user.endsOn && <span>· Left {formatDate(user.endsOn)}</span>}
       </p>
       <div class="stack-h items-start gap-m">
-        <MonthHours
-          minutes={monthTotals?.minutes ?? 0}
-          billableMinutes={monthTotals?.billableMinutes ?? 0}
-          capacityMinutes={capacityMinutes(month, user.country, user.fullDayMinutes, user.endsOn)}
-        />
+        <div class="stack-v gap-m flex-1">
+          <MonthHours
+            minutes={monthTotals?.minutes ?? 0}
+            billableMinutes={monthTotals?.billableMinutes ?? 0}
+            capacityMinutes={capacityMinutes(month, user.country, user.fullDayMinutes, user.endsOn)}
+          />
+          <CurrentProjects projects={currentBillableProjects} />
+        </div>
         <MonthEntries month={month} entries={entries} />
       </div>
     </Page>,
   );
 };
+
+function CurrentProjects({
+  projects,
+}: {
+  projects: { name: string; client: string; billing: Billing }[];
+}) {
+  return (
+    <section class="stack-v gap-xs">
+      <h2 class="fs-m">Billable projects</h2>
+      {projects.length === 0 ? (
+        <p class="ink-subtle">Not assigned to any billable project right now.</p>
+      ) : (
+        <ul class="stack-v gap-xs">
+          {projects.map((project) => (
+            <li>
+              <span class="fw-medium">{project.name}</span>{" "}
+              <span class="ink-subtle">
+                ({project.client}) · {billingLabels[project.billing]}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
 
 const billableColor = "var(--palette-blue-500)";
 const nonBillableColor = "var(--palette-blue-250)";

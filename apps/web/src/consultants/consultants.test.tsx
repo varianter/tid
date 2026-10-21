@@ -1,10 +1,17 @@
 import { beforeAll, expect, test } from "bun:test";
 import { rebuildDatabase } from "@tid/db/client";
-import { userRoles, users as usersTable } from "@tid/db/schema";
+import {
+  clients,
+  projectAssignments,
+  projectOrganizations,
+  projects,
+  userRoles,
+  users as usersTable,
+} from "@tid/db/schema";
 import { Hono } from "hono";
 import { database } from "../database";
 import type { User, UserEnv } from "../login/user";
-import { organizationIdBySlug } from "../testing/rows";
+import { onlyRow, organizationIdBySlug } from "../testing/rows";
 import { consultants } from "./consultants.routes";
 
 let manager: User;
@@ -70,4 +77,33 @@ test("a consultant's details show the month asked for", async () => {
   const page = await (await requestAs(member, `/consultants/${member.id}?month=2025-03`)).text();
   expect(page).toContain("March 2025");
   expect(page).toContain(`/consultants/${member.id}?month=2025-02"`);
+});
+
+test("a consultant's details list the billable projects they're assigned to now", async () => {
+  const client = onlyRow(await database.insert(clients).values({ name: "Kunde" }).returning());
+  const projectValues = [
+    { code: "NOW1", name: "Current job", billing: "hourly", currency: "NOK" },
+    { code: "OLD1", name: "Finished job", billing: "hourly", currency: "NOK" },
+    { code: "INT1", name: "Internal job", billing: "non_billable", currency: null },
+  ] as const;
+  const created = await database
+    .insert(projects)
+    .values(projectValues.map((project) => ({ ...project, clientId: client.id })))
+    .returning();
+  const orgId = member.orgId;
+  await database
+    .insert(projectOrganizations)
+    .values(created.map((project) => ({ projectId: project.id, orgId })));
+  await database.insert(projectAssignments).values(
+    created.map((project) => ({
+      projectId: project.id,
+      userId: member.id,
+      orgId,
+      endsOn: project.code === "OLD1" ? "2000-01-01" : null,
+    })),
+  );
+  const page = await (await requestAs(member, `/consultants/${member.id}`)).text();
+  expect(page).toContain("Current job");
+  expect(page).not.toContain("Finished job");
+  expect(page).not.toContain("Internal job");
 });
