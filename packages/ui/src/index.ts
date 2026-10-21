@@ -1,3 +1,4 @@
+export { ActionList, ActionListItem } from "./compositions/ActionList";
 export { DataGrid, type DataGridColumn } from "./compositions/DataGrid";
 export { Detail } from "./compositions/Detail";
 export { DetailsList, DetailsListItem } from "./compositions/DetailsList";

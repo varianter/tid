@@ -1,5 +1,5 @@
 import { formatTotalHours } from "@tid/elements/hours";
-import { Detail, Page } from "@tid/ui";
+import { ActionList, ActionListItem, Button, Detail, Page } from "@tid/ui";
 import type { Context } from "hono";
 import type { UserEnv } from "../login/user";
 import { findOrganizationBySlug, findOrganizationSlug } from "../organizations/organization";
@@ -38,8 +38,26 @@ function OrganizationOverviewPage({
         <Detail label="Currency">{organization.currency}</Detail>
         <Detail label="Full day">{formatTotalHours(organization.fullDayMinutes)}</Detail>
       </dl>
-      <a href={openProjectsPath(organization.slug)}>Projects open to everyone</a>
-      <a href={managersPath(organization.slug)}>Managers</a>
+      <ActionList>
+        <ActionListItem
+          title="Projects open to everyone"
+          description="Every member can enter hours on these"
+          action={<ManageLink href={openProjectsPath(organization.slug)} />}
+        />
+        <ActionListItem
+          title="Managers"
+          description="Who administers the organization"
+          action={<ManageLink href={managersPath(organization.slug)} />}
+        />
+      </ActionList>
     </Page>
+  );
+}
+
+function ManageLink({ href }: { href: string }) {
+  return (
+    <Button as="a" href={href} data-size="small" data-variant="outlined">
+      Manage
+    </Button>
   );
 }
