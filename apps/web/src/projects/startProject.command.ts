@@ -1,27 +1,27 @@
-import { clients, organizations, projectOrganizations, projects } from "@tid/db/schema";
+import { clients, projectOrganizations, projects } from "@tid/db/schema";
 import { eq } from "drizzle-orm";
 import { database } from "../database";
 import { formAction } from "../form/formAction";
 import type { User } from "../login/user";
+import { findOrganizationCurrency } from "../organizations/organization";
 import { listOrganizations } from "../organizations/organizationSelect";
-import { ProjectFormPage, startProjectForm } from "./project.form";
+import { ProjectFormPage, parseBilling, projectColumns, startProjectForm } from "./project.form";
 import { suggestProjectCode } from "./projectCode";
 import { listProjectCurrencies } from "./projectCurrency";
 
 export const startProject = formAction({
   schema: startProjectForm,
   loader: async (c) => {
+    const billing = parseBilling(c.req.param("billing"));
+    if (!billing) return c.notFound();
     const user: User = c.get("user");
     const codes = await database
       .select({ clientId: projects.clientId, code: projects.code })
       .from(projects);
     const allCodes = codes.map((row) => row.code);
     const clientRows = await database.select().from(clients).orderBy(clients.name);
-    const [ownOrganization] = await database
-      .select({ currency: organizations.currency })
-      .from(organizations)
-      .where(eq(organizations.id, user.orgId));
     return {
+      billing,
       clients: clientRows.map((client) => ({
         ...client,
         codeSuggestion: suggestProjectCode(
@@ -34,12 +34,16 @@ export const startProject = formAction({
       organizations: await listOrganizations(),
       currencies: await listProjectCurrencies(),
       // The user's organization is the suggested contract owner, so its currency is the likely one.
-      currency: ownOrganization?.currency ?? "",
-      contractOwnerId: user.orgId,
+      currency: (await findOrganizationCurrency(user.orgId)) ?? "",
+      // Non-billable projects usually have no one invoicing them.
+      contractOwnerId: billing === "non_billable" ? null : user.orgId,
     };
   },
-  onSubmit: async (_c, { contractOwnerId, ...project }, { clients, organizations, currencies }) => {
-    if (!currencies.includes(project.currency)) {
+  onSubmit: async (_c, form, { billing, clients, organizations, currencies }) => {
+    if (form.billing !== billing) return { formError: "The billing changed. Start over." };
+    const { contractOwnerId } = form;
+    const project = { ...projectColumns(form), clientId: form.clientId };
+    if (project.currency !== null && !currencies.includes(project.currency)) {
       return { fieldErrors: { currency: ["Pick a currency"] } };
     }
     if (!clients.some((client) => client.id === project.clientId)) {

@@ -43,7 +43,8 @@ export type ProjectSummary = {
   name: string;
   code: string;
   billing: Billing;
-  currency: string;
+  /** None for non-billable projects. */
+  currency: string | null;
   clientId: number;
   client: string;
   spentMinutes: number;

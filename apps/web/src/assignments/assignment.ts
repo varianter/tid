@@ -1,5 +1,5 @@
 import { assignmentRates, projectAssignments, projects, users } from "@tid/db/schema";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { database } from "../database";
 
 export type AssignmentIds = { projectId: number; userId: number };
@@ -35,7 +35,8 @@ export async function loadConsultant(ids: AssignmentIds): Promise<Consultant | u
       userId: projectAssignments.userId,
       name: users.name,
       projectName: projects.name,
-      currency: projects.currency,
+      // Hourly projects always have one.
+      currency: sql<string>`${projects.currency}`,
     })
     .from(projectAssignments)
     .innerJoin(users, eq(users.id, projectAssignments.userId))

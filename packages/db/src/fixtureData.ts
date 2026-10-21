@@ -1,3 +1,4 @@
+import type { Country } from "@tid/calendar/publicHolidays";
 import type { billing } from "./schema";
 import { Weekday } from "./week";
 
@@ -11,7 +12,15 @@ import { Weekday } from "./week";
 export const recentStartWeek = -17;
 
 // Organizations come from the migrations; people and projects refer to them by slug.
-export type OrganizationSlug = "trondheim" | "oslo";
+export type OrganizationSlug = "trondheim" | "oslo" | "stockholm" | "goteborg";
+
+// Mirrors the migrations, so the fixture can check its rules without a database.
+export const organizationCountries: Record<OrganizationSlug, Country> = {
+  trondheim: "NO",
+  oslo: "NO",
+  stockholm: "SE",
+  goteborg: "SE",
+};
 
 export type ProjectDefinition = {
   name: string;
@@ -20,11 +29,18 @@ export type ProjectDefinition = {
   billing: (typeof billing.enumValues)[number];
   countsTowardBillableBase?: boolean;
   endsWeek?: number;
+  // Internal projects are open to every organization in these countries. Defaults to the owner's.
+  openTo?: Country[];
 };
+
+export function openCountries(project: ProjectDefinition) {
+  return project.openTo ?? [organizationCountries[project.owner]];
+}
 
 const internal = { client: "Varianttid", owner: "trondheim", billing: "non_billable" } as const;
 
-// Varianttid's internal projects are copied from Harvest. Customer projects are made up, with
+// Varianttid's internal projects are copied from Harvest, except the ones open in every country,
+// which are named in English since no country owns them. Customer projects are made up, with
 // codes shaped like the real ones; a suffix splits a project that bills at a different rate.
 export const projectCatalog = {
   VAR1000: { ...internal, name: "Variantdrift" },
@@ -33,8 +49,14 @@ export const projectCatalog = {
   VAR2000: { ...internal, name: "Renhold" },
   VEL1000: { ...internal, name: "Velferdspermisjoner med lønn", countsTowardBillableBase: false },
   VEL1001: { ...internal, name: "Velferdspermisjoner fra NAV samt permisjon uten lønn" },
-  SYK1000: { ...internal, name: "Sykefravær - korttids" },
-  FER1000: { ...internal, name: "Ferie", countsTowardBillableBase: false },
+  SYK1000: { ...internal, name: "Sick leave", openTo: ["NO", "SE"] },
+  FER1000: {
+    ...internal,
+    name: "Vacation",
+    countsTowardBillableBase: false,
+    openTo: ["NO", "SE"],
+  },
+  INT1000: { ...internal, owner: "stockholm", name: "Interntid" },
   LYS1001: {
     name: "Kundeportal",
     client: "Lysning Energi AS",
@@ -67,6 +89,12 @@ export const projectCatalog = {
     owner: "oslo",
     billing: "hourly",
   },
+  EKD1001: {
+    name: "Skadeanmälan",
+    client: "Ekdal Försäkring AB",
+    owner: "stockholm",
+    billing: "hourly",
+  },
 } satisfies Record<string, ProjectDefinition>;
 
 export type ProjectCode = keyof typeof projectCatalog;
@@ -93,16 +121,12 @@ export const taskCatalog = {
   doctor: { project: "VEL1000", name: "Legetime" },
   parentalLeave: { project: "VEL1001", name: "Foreldrepermisjon" },
   unpaidWelfareLeave: { project: "VEL1001", name: "Velferdspermisjon uten lønn" },
-  selfCertifiedSick: { project: "SYK1000", name: "Sykefravær med egenmelding" },
-  sickChild: {
-    project: "SYK1000",
-    name: "Syke barn - hjemme med (10 dager pr år, 15 ved 3+ barn)",
-  },
-  sickLeave: {
-    project: "SYK1000",
-    name: "Sykemelding - første 16 dager (arbeidsgiverperioden)",
-  },
-  vacation: { project: "FER1000", name: "Ferie" },
+  selfCertifiedSick: { project: "SYK1000", name: "Self-certified" },
+  sickChild: { project: "SYK1000", name: "Sick child" },
+  sickLeave: { project: "SYK1000", name: "Doctor's note" },
+  vacation: { project: "FER1000", name: "Vacation" },
+  competenceDevelopment: { project: "INT1000", name: "Kompetensutveckling" },
+  betweenAssignments: { project: "INT1000", name: "Mellan uppdrag" },
   portalPrestudy: { project: "LYS1001", name: "Forstudie", endsWeek: -14 },
   portalDevelopment: { project: "LYS1001", name: "Utvikling" },
   portalProjectManagement: { project: "LYS1001", name: "Prosjektledelse" },
@@ -111,6 +135,7 @@ export const taskCatalog = {
   patientTravelUsability: { project: "FJA1001", name: "Brukskvalitet" },
   bankDevelopment: { project: "KVI1001", name: "Utvikling" },
   bankAdvisory: { project: "KVI1001-B", name: "Rådgivning" },
+  claimsDevelopment: { project: "EKD1001", name: "Utveckling" },
 } satisfies Record<string, TaskDefinition>;
 
 export type TaskKey = keyof typeof taskCatalog;
@@ -135,15 +160,17 @@ export type Person = {
   leftWeek?: number;
   weekdays?: Weekday[];
   usualDay: DayPlan;
-  // Rates in whole NOK per hour. A rate without fromWeek applies from the start.
+  // Rates per hour in whole units of the project's currency. A rate without fromWeek applies from
+  // the start.
   assignments?: { project: ProjectCode; rates: { fromWeek?: number; rate: number }[] }[];
   exceptions?: Exception[];
 };
 
-// Applies to everyone, alongside their own exceptions. A company-wide Variantdag.
-export const companyWideExceptions: Exception[] = [
-  { from: -7, weekdays: [Weekday.Friday], hours: { variantDay: 7.5 } },
-];
+// Applies to everyone in the country, alongside their own exceptions. A Variantdag in Norway.
+export const companyWideExceptions: Record<Country, Exception[]> = {
+  NO: [{ from: -7, weekdays: [Weekday.Friday], hours: { variantDay: 7.5 } }],
+  SE: [],
+};
 
 export const people: Person[] = [
   {
@@ -265,6 +292,39 @@ export const people: Person[] = [
     usualDay: { portalDevelopment: 7.5 },
     assignments: [{ project: "LYS1001", rates: [{ rate: 1500 }] }],
   },
+  {
+    name: "Astrid Lindqvist",
+    email: "astrid.lindqvist@example.com",
+    organization: "stockholm",
+    manager: true,
+    usualDay: { claimsDevelopment: 8 },
+    assignments: [{ project: "EKD1001", rates: [{ rate: 1250 }] }],
+    exceptions: [
+      { from: -9, hours: { vacation: 8 } },
+      { from: -3, weekdays: [Weekday.Thursday], hours: { sickChild: 8 } },
+    ],
+  },
+  {
+    // Works on a Stockholm project, so Göteborg participates in it.
+    name: "Erik Sjöberg",
+    email: "erik.sjoberg@example.com",
+    organization: "goteborg",
+    usualDay: { claimsDevelopment: 8 },
+    assignments: [{ project: "EKD1001", rates: [{ rate: 1150 }] }],
+    exceptions: [
+      { from: recentStartWeek, to: -12, hours: { betweenAssignments: 8 } },
+      { from: -6, weekdays: [Weekday.Friday], hours: { competenceDevelopment: 8 } },
+      { from: -2, weekdays: [Weekday.Monday], hours: { selfCertifiedSick: 8 } },
+    ],
+  },
+  {
+    // Works on an Oslo project, so Stockholm participates in it and her hours are billed in NOK.
+    name: "Maja Holm",
+    email: "maja.holm@example.com",
+    organization: "stockholm",
+    usualDay: { bankDevelopment: 8 },
+    assignments: [{ project: "KVI1001", rates: [{ rate: 1550 }] }],
+  },
 ];
 
 // Each person is assigned to one billable project and logs a full day on it, so their hours are
@@ -294,6 +354,7 @@ const syntheticTemplates: SyntheticTemplate[] = [
     rate: 1350,
   },
   { organization: "oslo", usualDay: { bankDevelopment: 7.5 }, project: "KVI1001", rate: 1600 },
+  { organization: "stockholm", usualDay: { claimsDevelopment: 8 }, project: "EKD1001", rate: 1250 },
 ];
 
 // Fills the fixture out for performance testing, taking turns on the templates.

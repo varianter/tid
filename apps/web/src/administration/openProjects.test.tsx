@@ -58,7 +58,6 @@ beforeAll(async () => {
         clientId: client.id,
         code: "INT-1",
         name: "Fagdag",
-        currency: "NOK",
         billing: "non_billable",
       },
       { clientId: client.id, code: "ACME-1", name: "Website", currency: "NOK", billing: "hourly" },

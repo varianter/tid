@@ -1,18 +1,18 @@
--- Existing projects take their contract owner's currency, or any participating organization's.
+-- Billable projects take their contract owner's currency, or any participating organization's.
+-- Non-billable projects bill nothing, so they have none.
 ALTER TABLE "projects" ADD COLUMN "currency" char(3);
 --> statement-breakpoint
-UPDATE "projects" SET "currency" = (
+UPDATE "projects" SET "currency" = coalesce((
   select organizations.currency
   from project_organizations
   join organizations on organizations.id = project_organizations.org_id
   where project_organizations.project_id = projects.id
   order by project_organizations.is_contract_owner desc, organizations.id
   limit 1
-);
+), 'NOK')
+WHERE "billing" <> 'non_billable';
 --> statement-breakpoint
-UPDATE "projects" SET "currency" = 'NOK' WHERE "currency" IS NULL;
---> statement-breakpoint
-ALTER TABLE "projects" ALTER COLUMN "currency" SET NOT NULL;
+ALTER TABLE "projects" ADD CONSTRAINT "billable_projects_have_currency" CHECK (("projects"."billing" = 'non_billable') = ("projects"."currency" is null));
 --> statement-breakpoint
 
 -- The rate a new entry on this task and day gets: the latest assignment rate that has started, in

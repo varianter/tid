@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import type { Database } from "./client";
 import {
+  openCountries,
   type Person,
   type ProjectCode,
   type ProjectDefinition,
@@ -107,7 +108,10 @@ export function seedDatabase(
           code,
           name: project.name,
           billing: project.billing,
-          currency: lookup(organizationIds, project.owner).currency,
+          currency:
+            project.billing === "non_billable"
+              ? null
+              : lookup(organizationIds, project.owner).currency,
           countsTowardBillableBase: project.countsTowardBillableBase ?? true,
           endsOn:
             project.endsWeek === undefined ? null : dayOf(now, project.endsWeek, Weekday.Friday),
@@ -117,9 +121,9 @@ export function seedDatabase(
     const projectIds = byKey(projectRows, (row) => row.code);
     const projectId = (code: ProjectCode) => lookup(projectIds, code).id;
 
-    // Internal projects are open to the members of the owner's country, since countries don't
-    // share them, and no one invoices them. Customer projects are shared by the contract owner
-    // and the organizations of the people assigned to them.
+    // Internal projects are open to the members of their countries, and no one invoices them.
+    // Customer projects are shared by the contract owner and the organizations of the people
+    // assigned to them.
     const participants = projectEntries.flatMap(([code, project]) => {
       const isBillable = project.billing !== "non_billable";
       const slugs = isBillable
@@ -132,7 +136,7 @@ export function seedDatabase(
               .map((person) => person.organization),
           ])
         : organizationRows
-            .filter((row) => row.country === lookup(organizationIds, project.owner).country)
+            .filter((row) => openCountries(project).includes(row.country))
             .map((row) => row.slug);
       return [...slugs].map((slug) => ({
         projectId: projectId(code),

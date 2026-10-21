@@ -155,7 +155,8 @@ export const monthlyReport = async (c: Context<UserEnv>) => {
 
 type Totals = { hours: number; billableHours: number; amounts: Amounts; unratedHours: number };
 
-type CurrencyTotals = Omit<Totals, "amounts"> & { currency: string; amount: number };
+// Non-billable projects have no currency, but no amount either.
+type CurrencyTotals = Omit<Totals, "amounts"> & { currency: string | null; amount: number };
 
 type Merged<Row> = Omit<Row, "currency" | "amount"> & Totals;
 
@@ -168,7 +169,7 @@ export function mergeCurrencies<Row extends CurrencyTotals>(rows: Row[]): Merged
   let previousKey: string | undefined;
   for (const { currency, amount, hours, billableHours, unratedHours, ...dimension } of rows) {
     const key = JSON.stringify(dimension);
-    const amounts = amount === 0 ? {} : { [currency]: amount };
+    const amounts = amount === 0 || currency === null ? {} : { [currency]: amount };
     const last = merged.at(-1);
     if (last && key === previousKey) {
       last.hours += hours;

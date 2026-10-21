@@ -3,13 +3,11 @@ import {
   Button,
   Checkbox,
   Field,
-  FormError,
   FormField,
   fieldErrorAttributes,
   Input,
   Label,
   Page,
-  Radio,
   Select,
 } from "@tid/ui";
 import { z } from "zod";
@@ -22,40 +20,73 @@ const checkbox = z
   .optional()
   .transform((value) => value === "on");
 
-const projectFields = z.object({
+const emptyAsMissing = (value: unknown) => (value === "" ? undefined : value);
+
+const commonFields = {
   name: z.string().trim().min(1, "Enter a name"),
   // The reporting database holds at most 16 characters.
   code: z.string().trim().min(1, "Enter a code").max(16, "At most 16 characters"),
-  billing: z.enum(billings, { error: "Choose how the project is billed" }),
-  currency: z.string().length(3, "Choose a currency"),
-  countsTowardBillableBase: checkbox,
-  // Empty when no organization invoices the client.
+};
+
+// Billable projects are invoiced, so someone invoices them in an agreed currency, and their time
+// always counts toward the billable base.
+const billableFields = z.object({
+  ...commonFields,
+  billing: z.enum(["hourly", "fixed_fee"]),
   contractOwnerId: z.preprocess(
-    (value) => (value === "" ? undefined : value),
-    z.coerce.number().int().optional(),
+    emptyAsMissing,
+    z.coerce.number({ error: "Pick the organization that invoices the client" }).int(),
   ),
+  currency: z.string().length(3, "Choose the currency agreed with the client"),
 });
 
-const billingRules = <S extends typeof projectFields>(schema: S) =>
-  schema
-    .refine((form) => form.billing === "non_billable" || form.countsTowardBillableBase, {
-      message: "Billable projects count toward the billable base",
-    })
-    .refine((form) => form.billing === "non_billable" || form.contractOwnerId !== undefined, {
-      message: "Pick the organization that invoices the client",
-      path: ["contractOwnerId"],
-    });
+const nonBillableFields = z.object({
+  ...commonFields,
+  billing: z.literal("non_billable"),
+  // Empty when no organization owns the project.
+  contractOwnerId: z.preprocess(emptyAsMissing, z.coerce.number().int().optional()),
+  countsTowardBillableBase: checkbox,
+});
 
-export const startProjectForm = billingRules(
-  projectFields.extend({ clientId: z.coerce.number().int() }),
-);
+const clientId = { clientId: z.coerce.number().int({ error: "Pick a client" }) };
+
+export const startProjectForm = z.discriminatedUnion("billing", [
+  billableFields.extend(clientId),
+  nonBillableFields.extend(clientId),
+]);
 
 // The client is fixed once the project exists.
-export const editProjectForm = billingRules(projectFields);
+export const editProjectForm = z.discriminatedUnion("billing", [billableFields, nonBillableFields]);
+
+/** The project's own columns for a valid form, whichever billing it has. */
+export function projectColumns(form: z.infer<typeof editProjectForm>) {
+  const { name, code } = form;
+  return form.billing === "non_billable"
+    ? {
+        name,
+        code,
+        billing: form.billing,
+        currency: null,
+        countsTowardBillableBase: form.countsTowardBillableBase,
+      }
+    : {
+        name,
+        code,
+        billing: form.billing,
+        currency: form.currency,
+        countsTowardBillableBase: true,
+      };
+}
+
+export function parseBilling(value: string | undefined): Billing | undefined {
+  return billings.find((billing) => billing === value);
+}
 
 type ClientOption = typeof clients.$inferSelect & { codeSuggestion?: string };
 
 type ProjectFormPageProps = {
+  /** Picked before the form, since it decides which fields the project has. */
+  billing: Billing;
   /** The project being edited. Its client can't change. Omitted when starting one. */
   project?: {
     id: number;
@@ -63,7 +94,6 @@ type ProjectFormPageProps = {
     code: string;
     client: string;
     billing: Billing;
-    currency: string;
     countsTowardBillableBase: boolean;
     /** Billing and currency are fixed once time is logged, so a project that bills differently is a new one. */
     hasLoggedTime: boolean;
@@ -79,6 +109,7 @@ type ProjectFormPageProps = {
 } & FormProps;
 
 export function ProjectFormPage({
+  billing,
   project,
   clients = [],
   suggestedClientId,
@@ -90,6 +121,7 @@ export function ProjectFormPage({
   fieldErrors,
   formError,
 }: ProjectFormPageProps) {
+  const isBillable = billing !== "non_billable";
   const selectedClientId = values?.clientId ?? suggestedClientId;
   // ponytail: follows the client selected on load only; updating on change needs client-side JS.
   const codeSuggestion = clients.find(
@@ -98,20 +130,23 @@ export function ProjectFormPage({
   const countsTowardBillableBase = values
     ? values.countsTowardBillableBase === "on"
     : (project?.countsTowardBillableBase ?? true);
-  const selectedBilling = values?.billing ?? project?.billing;
   const selectedCurrency = values?.currency ?? currency;
   const selectedContractOwnerId = values?.contractOwnerId ?? String(contractOwnerId ?? "");
+  const otherBillings = billings.filter((other) => other !== billing);
   return (
     <Page
-      title={project ? `Edit ${project.name}` : "New project"}
+      title={
+        project ? `Edit ${project.name}` : `New ${billingLabels[billing].toLowerCase()} project`
+      }
       back={
         project
           ? { href: `/projects/${project.id}`, label: "Back to project" }
-          : { href: "/projects", label: "Back to projects" }
+          : { href: "/projects/new", label: "Back to billing" }
       }
     >
       <form method="post" class="stack-v gap-m w-max-5">
         {formError && <p role="alert">{formError}</p>}
+        <input type="hidden" name="billing" value={billing} />
         {project ? (
           <div class="stack-v gap-3xs">
             <span class="fs-s ink-subtle">Client</span>
@@ -134,14 +169,38 @@ export function ProjectFormPage({
             </Select>
           </Field>
         )}
+        {project && (
+          <div class="stack-v gap-3xs">
+            <span class="fs-s ink-subtle">Billing</span>
+            <span>{billingLabels[billing]}</span>
+            {project.hasLoggedTime ? (
+              <p class="fs-s ink-subtle">
+                Time is logged on this project. Start a new project to bill it differently.
+              </p>
+            ) : (
+              <p class="fs-s">
+                Change to{" "}
+                {otherBillings.map((other, index) => (
+                  <>
+                    {index > 0 && " or "}
+                    <a href={`/projects/${project.id}/edit?billing=${other}`}>
+                      {billingLabels[other].toLowerCase()}
+                    </a>
+                  </>
+                ))}
+              </p>
+            )}
+          </div>
+        )}
         <Field name="contractOwnerId" label="Contract owner" errors={fieldErrors?.contractOwnerId}>
           <Select
             id="contractOwnerId"
             name="contractOwnerId"
+            required={isBillable}
             {...fieldErrorAttributes("contractOwnerId", fieldErrors?.contractOwnerId)}
           >
             <option value="" selected={selectedContractOwnerId === ""}>
-              None
+              {isBillable ? "Choose an organization" : "None"}
             </option>
             {organizations.map((organization) => (
               <option
@@ -153,6 +212,29 @@ export function ProjectFormPage({
             ))}
           </Select>
         </Field>
+        {isBillable &&
+          (project?.hasLoggedTime ? (
+            <div class="stack-v gap-3xs">
+              <span class="fs-s ink-subtle">Currency</span>
+              <span>{currency}</span>
+              <input type="hidden" name="currency" value={currency} />
+            </div>
+          ) : (
+            <Field name="currency" label="Currency" errors={fieldErrors?.currency}>
+              <Select
+                id="currency"
+                name="currency"
+                required
+                {...fieldErrorAttributes("currency", fieldErrors?.currency)}
+              >
+                {currencies.map((option) => (
+                  <option value={option} selected={option === selectedCurrency}>
+                    {option}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          ))}
         <FormField
           name="name"
           label="Name"
@@ -171,58 +253,12 @@ export function ProjectFormPage({
           />
           {codeSuggestion && <p class="fs-s ink-subtle mt-3xs">Suggestion: {codeSuggestion}</p>}
         </Field>
-        {project?.hasLoggedTime ? (
-          <div class="stack-v gap-3xs">
-            <span class="fs-s ink-subtle">Billing</span>
-            <span>{billingLabels[project.billing]}</span>
-            <input type="hidden" name="billing" value={project.billing} />
-            <span class="fs-s ink-subtle">Currency</span>
-            <span>{project.currency}</span>
-            <input type="hidden" name="currency" value={project.currency} />
-            <p class="fs-s ink-subtle">
-              Time is logged on this project. Start a new project to bill it differently.
-            </p>
-          </div>
-        ) : (
-          <>
-            <fieldset class="stack-v gap-2xs">
-              <legend class="v-form-label">Billing</legend>
-              {billings.map((billing) => (
-                <Label class="stack-h items-center gap-xs">
-                  <Radio
-                    name="billing"
-                    value={billing}
-                    required
-                    checked={billing === selectedBilling}
-                    {...fieldErrorAttributes("billing", fieldErrors?.billing)}
-                  />
-                  {billingLabels[billing]}
-                </Label>
-              ))}
-              {fieldErrors?.billing && (
-                <FormError id="billing-error" errors={fieldErrors.billing} />
-              )}
-            </fieldset>
-            <Field name="currency" label="Currency" errors={fieldErrors?.currency}>
-              <Select
-                id="currency"
-                name="currency"
-                required
-                {...fieldErrorAttributes("currency", fieldErrors?.currency)}
-              >
-                {currencies.map((option) => (
-                  <option value={option} selected={option === selectedCurrency}>
-                    {option}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-          </>
+        {!isBillable && (
+          <Label class="stack-h items-center gap-xs">
+            <Checkbox name="countsTowardBillableBase" checked={countsTowardBillableBase} />
+            Counts toward billable base
+          </Label>
         )}
-        <Label class="stack-h items-center gap-xs">
-          <Checkbox name="countsTowardBillableBase" checked={countsTowardBillableBase} />
-          Counts toward billable base
-        </Label>
         <Button type="submit" class="w-max-content">
           {project ? "Save changes" : "Create project"}
         </Button>

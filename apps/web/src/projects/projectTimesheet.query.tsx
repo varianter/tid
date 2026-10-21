@@ -86,7 +86,7 @@ export const projectTimesheet = async (c: Context<UserEnv, "/:id/timesheet/:mont
       consultants={[...consultants.values()]}
       // Fixed fee and non-billable projects have no amount to show.
       amount={
-        project.billing === "hourly"
+        project.billing === "hourly" && project.currency
           ? formatAmount(
               entries.reduce((total, entry) => total + entry.amount, 0),
               project.currency,

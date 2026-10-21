@@ -208,7 +208,7 @@ function ProjectDetailsPage({
         </Detail>
         <Detail label="Code">{project.code}</Detail>
         <Detail label="Billing">{billingLabels[project.billing]}</Detail>
-        <Detail label="Currency">{project.currency}</Detail>
+        <Detail label="Currency">{project.currency ?? "None"}</Detail>
         <Detail label="Contract owner">{contractOwner?.name ?? "None"}</Detail>
         <Detail label="Organizations">
           {participations.length === 0 ? (
@@ -263,7 +263,7 @@ function ProjectDetailsPage({
                 {formatTotalHours(person.lastMonth)}
                 {formatTotalHours(person.thisMonth)}
                 {isHourly &&
-                  (person.rate === null
+                  (person.rate === null || project.currency === null
                     ? "–"
                     : `${formatAmount(person.rate / 100, project.currency, 2)}/h`)}
                 {canManageProject && (

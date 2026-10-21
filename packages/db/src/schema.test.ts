@@ -109,13 +109,16 @@ test("a billable project can't be open to members, whichever side changes", asyn
   await database.transaction(async (transaction) => {
     await transaction
       .update(projects)
-      .set({ billing: "non_billable" })
+      .set({ billing: "non_billable", currency: null })
       .where(eq(projects.id, project.id));
     await transaction.update(projectOrganizations).set({ openToMembers: true }).where(owner);
   });
   expect(
     await violatedConstraint(
-      database.update(projects).set({ billing: "hourly" }).where(eq(projects.id, project.id)),
+      database
+        .update(projects)
+        .set({ billing: "hourly", currency: "NOK" })
+        .where(eq(projects.id, project.id)),
     ),
   ).toBe("open_projects_not_billable");
 });
@@ -209,7 +212,6 @@ test("moving an entry to another task picks the rate again; changing its minutes
         clientId: internalClient.id,
         code: "VAR1000",
         name: "Drift",
-        currency: "NOK",
         billing: "non_billable",
       })
       .returning(),
@@ -356,7 +358,6 @@ test("the export leaves time on projects that don't count out of billable base h
           clientId: internalClient.id,
           code,
           name: code,
-          currency: "NOK",
           billing: "non_billable",
           countsTowardBillableBase,
         })

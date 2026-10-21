@@ -70,6 +70,7 @@ beforeAll(async () => {
 
 test("members can't start projects", async () => {
   expect((await requestAs(member, "/projects/new")).status).toBe(403);
+  expect((await requestAs(member, "/projects/new/hourly")).status).toBe(403);
   expect(await database.$count(projectsTable)).toBe(0);
 });
 
@@ -82,7 +83,7 @@ test("the contract owner moves to the chosen organization on edit", async () => 
     countsTowardBillableBase: "on",
     contractOwnerId: String(oslo),
   };
-  const started = await requestAs(manager, "/projects/new", {
+  const started = await requestAs(manager, "/projects/new/hourly", {
     ...fields,
     clientId: String(clientId),
   });
@@ -101,7 +102,7 @@ test("the contract owner moves to the chosen organization on edit", async () => 
 
 test("only non-billable projects can be started without a contract owner", async () => {
   const start = (code: string, billing: string) =>
-    requestAs(manager, "/projects/new", {
+    requestAs(manager, `/projects/new/${billing}`, {
       name: code,
       code,
       billing,
@@ -125,7 +126,7 @@ test("employees see only their own country's projects, managers every country's"
 });
 
 test("only managers of a project's organizations change it, but any manager can staff it with their own consultants", async () => {
-  const started = await requestAs(manager, "/projects/new", {
+  const started = await requestAs(manager, "/projects/new/hourly", {
     name: "Intranet",
     code: "ACME-4",
     billing: "hourly",
@@ -146,4 +147,34 @@ test("only managers of a project's organizations change it, but any manager can 
   // Bergen takes part now, so its managers share the project.
   expect((await addTask(bergenManager)).status).toBe(303);
   expect((await assign(bergenManager, member)).status).toBe(303);
+});
+
+test("a project without logged time changes billing through that billing's form", async () => {
+  const started = await requestAs(manager, "/projects/new/non_billable", {
+    name: "Fagdag",
+    code: "ACME-5",
+    billing: "non_billable",
+    contractOwnerId: "",
+    clientId: String(clientId),
+  });
+  const projectId = Number(started.headers.get("location")?.split("/").at(-1));
+  const currency = async () =>
+    (
+      await database
+        .select({ currency: projectsTable.currency })
+        .from(projectsTable)
+        .where(eq(projectsTable.id, projectId))
+    )[0]?.currency;
+  expect(await currency()).toBeNull();
+
+  const hourly = {
+    name: "Fagdag",
+    code: "ACME-5",
+    billing: "hourly",
+    contractOwnerId: String(oslo),
+  };
+  const edit = `/projects/${projectId}/edit?billing=hourly`;
+  expect((await requestAs(manager, edit, { ...hourly, currency: "" })).status).toBe(422);
+  expect((await requestAs(manager, edit, { ...hourly, currency: "EUR" })).status).toBe(303);
+  expect(await currency()).toBe("EUR");
 });

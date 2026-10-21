@@ -44,7 +44,6 @@ beforeAll(async () => {
         clientId: client.id,
         code: "ACME-1",
         name: "Website",
-        currency: "NOK",
         billing: "non_billable",
       })
       .returning(),

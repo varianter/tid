@@ -33,14 +33,17 @@ export async function countryVisibility(user: User) {
 
 /**
  * Whether the user is a manager in an organization taking part in the project. They share its
- * details, tasks, consultants and rates.
+ * details, tasks, consultants and rates. A project no organization takes part in yet, like a new
+ * non-billable one, is any manager's, so it isn't left without anyone who can change it.
  */
 export async function managesProject(user: User, projectId: number) {
-  const participates = await database.$count(
-    projectOrganizations,
-    and(eq(projectOrganizations.projectId, projectId), eq(projectOrganizations.orgId, user.orgId)),
-  );
-  return participates > 0 && isManager(user);
+  const participants = await database
+    .select({ orgId: projectOrganizations.orgId })
+    .from(projectOrganizations)
+    .where(eq(projectOrganizations.projectId, projectId));
+  const takesPart =
+    participants.length === 0 || participants.some(({ orgId }) => orgId === user.orgId);
+  return takesPart && isManager(user);
 }
 
 // For pages under a project in the URL, as `:id` or, for nested routes, `:projectId`.

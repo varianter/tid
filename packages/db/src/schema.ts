@@ -118,8 +118,8 @@ export const projects = pgTable(
     // migrations/0007_project_currency.sql.
     billing: billing().notNull(),
     // ISO 4217. Agreed with the client, so it can differ from the contract owner's. Every rate and
-    // amount on the project is in it, whoever logs the time.
-    currency: char({ length: 3 }).notNull(),
+    // amount on the project is in it, whoever logs the time. Non-billable projects bill nothing.
+    currency: char({ length: 3 }),
     // Only used by reporting, to leave out time such as vacation from billable base hours.
     countsTowardBillableBase: boolean().notNull().default(true),
     startsOn: date(),
@@ -133,6 +133,10 @@ export const projects = pgTable(
       sql`${table.billing} = 'non_billable' or ${table.countsTowardBillableBase}`,
     ),
     check("ends_after_start", sql`${table.endsOn} >= ${table.startsOn}`),
+    check(
+      "billable_projects_have_currency",
+      sql`(${table.billing} = 'non_billable') = (${table.currency} is null)`,
+    ),
   ],
 );
 

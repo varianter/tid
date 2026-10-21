@@ -19,6 +19,9 @@ import {
 import { and, eq, TransactionRollbackError } from "drizzle-orm";
 import type { ImportPlan } from "./plan";
 
+// ponytail: assumes Norwegian accounts, the only ones the import maps to organizations.
+const importedCurrency = (billing: string) => (billing === "non_billable" ? null : "NOK");
+
 export type Difference = {
   // The same in a preview and the write that follows it, so an accepted difference can be named.
   id: string;
@@ -194,8 +197,7 @@ export async function writePlan(
               code,
               name,
               billing,
-              // ponytail: assumes Norwegian accounts, the only ones the import maps to organizations.
-              currency: "NOK",
+              currency: importedCurrency(billing),
               countsTowardBillableBase,
               startsOn,
               endsOn,
@@ -235,7 +237,11 @@ export async function writePlan(
         await compare(describeProject(field), row[field], project[field], () =>
           transaction
             .update(projects)
-            .set({ [field]: project[field] })
+            .set(
+              field === "billing"
+                ? { billing: project.billing, currency: importedCurrency(project.billing) }
+                : { [field]: project[field] },
+            )
             .where(eq(projects.id, row.id)),
         );
       }

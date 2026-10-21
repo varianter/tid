@@ -2,6 +2,8 @@ import { isoDateInOslo } from "@tid/calendar/osloClock";
 import {
   companyWideExceptions,
   type Exception,
+  openCountries,
+  organizationCountries,
   type Person,
   type ProjectDefinition,
   projectCatalog,
@@ -24,7 +26,9 @@ export function plannedDay(
     (exception.weekdays ?? workdays).includes(weekday);
   const exception =
     person.exceptions?.find(applies) ??
-    companyWideExceptions.find((exception) => applies(exception) && workdays.includes(weekday));
+    companyWideExceptions[organizationCountries[person.organization]].find(
+      (exception) => applies(exception) && workdays.includes(weekday),
+    );
   if (exception) return { hours: exception.hours, notes: exception.notes };
   return workdays.includes(weekday) ? { hours: person.usualDay } : undefined;
 }
@@ -48,6 +52,12 @@ export function plannedEntries(person: Person, now: Date, startWeek: number = re
         if (project.billing !== "non_billable" && !isAssigned) {
           throw new Error(
             `${person.name} logs ${task} in week ${week} (${spentOn}) without being assigned to ${definition.project}`,
+          );
+        }
+        const country = organizationCountries[person.organization];
+        if (project.billing === "non_billable" && !openCountries(project).includes(country)) {
+          throw new Error(
+            `${person.name} logs ${task} in week ${week} (${spentOn}) on ${definition.project}, which isn't open in ${country}`,
           );
         }
         const endsWeek = definition.endsWeek ?? project.endsWeek;

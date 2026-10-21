@@ -95,6 +95,11 @@ test("plannedEntries rejects billable work the person isn't assigned to", () => 
   expect(() => plannedEntries(unassigned, now)).toThrow(/without being assigned/);
 });
 
+test("plannedEntries rejects internal time in a country the project isn't open in", () => {
+  const swede = person({ organization: "stockholm", usualDay: { betweenProjects: 8 } });
+  expect(() => plannedEntries(swede, now)).toThrow(/isn't open in SE/);
+});
+
 test("plannedEntries rejects logging on a task after it ended", () => {
   const overdue = person({
     usualDay: { portalPrestudy: 7.5 },
@@ -115,6 +120,6 @@ test("syntheticPeople makes distinct people on billable projects", () => {
   expect(new Set(extra.map((person) => person.email)).size).toBe(10);
   for (const person of extra) {
     expect(person.assignments).toHaveLength(1);
-    expect(["trondheim", "oslo"]).toContain(person.organization);
+    expect(["trondheim", "oslo", "stockholm"]).toContain(person.organization);
   }
 });

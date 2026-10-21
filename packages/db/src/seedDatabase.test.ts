@@ -5,6 +5,7 @@ import { people } from "./fixtureData";
 import {
   monthLocks,
   organizations,
+  projectOrganizations,
   projects,
   timeEntries,
   timeEntriesExport,
@@ -27,7 +28,7 @@ afterAll(() => database.$client.close());
 describe("seeding", () => {
   beforeEach(() => rebuildDatabase(database));
 
-  test("the fixture logs time in Oslo and Trondheim, with a rate for every hourly hour", async () => {
+  test("the fixture logs time in Norway and Sweden, with a rate for every hourly hour", async () => {
     await seedDatabase(database, { now });
 
     const [totals] = await database
@@ -38,7 +39,12 @@ describe("seeding", () => {
       })
       .from(timeEntriesExport)
       .innerJoin(projects, eq(projects.code, timeEntriesExport.projectCode));
-    expect(totals?.accounts.sort()).toEqual(["Variant Oslo AS", "Variant Trondheim AS"]);
+    expect(totals?.accounts.sort()).toEqual([
+      "Variant Göteborg AB",
+      "Variant Oslo AS",
+      "Variant Stockholm AB",
+      "Variant Trondheim AS",
+    ]);
     expect(totals?.billableHours).toBeGreaterThan(0);
     expect(totals?.unratedHours).toBe(0);
   });
@@ -60,6 +66,38 @@ describe("seeding", () => {
       .from(timeEntriesExport)
       .innerJoin(projects, eq(projects.code, timeEntriesExport.projectCode));
     expect(unrated?.unratedHours).toBe(0);
+  });
+
+  test("internal projects are open in their own countries, and leave in both", async () => {
+    await seedDatabase(database, { now });
+
+    const openCountries = await database
+      .select({
+        code: projects.code,
+        countries: sql<
+          string[]
+        >`array_agg(distinct ${organizations.country} order by ${organizations.country})`,
+      })
+      .from(projectOrganizations)
+      .innerJoin(projects, eq(projects.id, projectOrganizations.projectId))
+      .innerJoin(organizations, eq(organizations.id, projectOrganizations.orgId))
+      .where(eq(projectOrganizations.openToMembers, true))
+      .groupBy(projects.code);
+    const countriesOf = new Map(openCountries.map((row) => [row.code, row.countries]));
+    expect(countriesOf.get("VAR1000")).toEqual(["NO"]);
+    expect(countriesOf.get("INT1000")).toEqual(["SE"]);
+    expect(countriesOf.get("FER1000")).toEqual(["NO", "SE"]);
+  });
+
+  test("a Swede on a Norwegian project logs time in the project's currency", async () => {
+    await seedDatabase(database, { now });
+
+    const currencies = await database
+      .selectDistinct({ currency: timeEntries.currency })
+      .from(timeEntries)
+      .innerJoin(users, eq(users.id, timeEntries.userId))
+      .where(eq(users.email, "maja.holm@example.com"));
+    expect(currencies).toEqual([{ currency: "NOK" }]);
   });
 
   test("the fixture locks last month in Trondheim and leaves Oslo open", async () => {

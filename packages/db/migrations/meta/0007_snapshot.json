@@ -588,7 +588,7 @@
           "name": "currency",
           "type": "char(3)",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "counts_toward_billable_base": {
           "name": "counts_toward_billable_base",
@@ -657,6 +657,10 @@
         "ends_after_start": {
           "name": "ends_after_start",
           "value": "\"projects\".\"ends_on\" >= \"projects\".\"starts_on\""
+        },
+        "billable_projects_have_currency": {
+          "name": "billable_projects_have_currency",
+          "value": "(\"projects\".\"billing\" = 'non_billable') = (\"projects\".\"currency\" is null)"
         }
       },
       "isRLSEnabled": false

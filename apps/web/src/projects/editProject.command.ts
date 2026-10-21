@@ -2,8 +2,10 @@ import { clients, projectOrganizations, projects, tasks, timeEntries } from "@ti
 import { and, eq, exists, ne } from "drizzle-orm";
 import { database } from "../database";
 import { formAction } from "../form/formAction";
+import type { User } from "../login/user";
+import { findOrganizationCurrency } from "../organizations/organization";
 import { listOrganizations } from "../organizations/organizationSelect";
-import { editProjectForm, ProjectFormPage } from "./project.form";
+import { editProjectForm, ProjectFormPage, parseBilling, projectColumns } from "./project.form";
 import { listProjectCurrencies } from "./projectCurrency";
 import {
   ensureParticipation,
@@ -45,20 +47,28 @@ export const editProject = formAction({
       )
       .where(eq(projects.id, id));
     if (!project) return c.notFound();
+    // Changing billing shows that billing's form, until time is logged.
+    const billing = parseBilling(c.req.query("billing")) ?? project.billing;
+    if (billing !== project.billing && project.hasLoggedTime) {
+      return c.redirect(`/projects/${project.id}/edit`);
+    }
+    const user: User = c.get("user");
+    // A project becoming billable likely bills in its contract owner's currency.
+    const defaultCurrency = await findOrganizationCurrency(project.contractOwnerId ?? user.orgId);
     return {
+      billing,
       project,
       organizations: await listOrganizations(),
       currencies: await listProjectCurrencies(),
-      currency: project.currency,
+      currency: project.currency ?? defaultCurrency ?? "",
       contractOwnerId: project.contractOwnerId,
     };
   },
-  onSubmit: async (
-    _c,
-    { contractOwnerId = null, ...form },
-    { project, organizations, currencies },
-  ) => {
-    if (!currencies.includes(form.currency)) {
+  onSubmit: async (_c, form, { billing, project, organizations, currencies }) => {
+    if (form.billing !== billing) return { formError: "The billing changed. Start over." };
+    const contractOwnerId = form.contractOwnerId ?? null;
+    const columns = projectColumns(form);
+    if (columns.currency !== null && !currencies.includes(columns.currency)) {
       return { fieldErrors: { currency: ["Pick a currency"] } };
     }
     if (
@@ -69,7 +79,7 @@ export const editProject = formAction({
     }
     if (
       project.hasLoggedTime &&
-      (form.billing !== project.billing || form.currency !== project.currency)
+      (columns.billing !== project.billing || columns.currency !== project.currency)
     ) {
       return {
         formError: "Time is logged on this project. Start a new project to bill it differently.",
@@ -82,12 +92,12 @@ export const editProject = formAction({
         eq(projectOrganizations.openToMembers, true),
       ),
     );
-    if (form.billing !== "non_billable" && openToMembers) {
+    if (columns.billing !== "non_billable" && openToMembers) {
       return { formError: "Only non-billable projects can be open to an organization's members" };
     }
     try {
       await database.transaction(async (transaction) => {
-        await transaction.update(projects).set(form).where(eq(projects.id, project.id));
+        await transaction.update(projects).set(columns).where(eq(projects.id, project.id));
         if (contractOwnerId === project.contractOwnerId) return;
         const previousOwnerId = project.contractOwnerId;
         // Cleared first: the unique index allows one contract owner per project.
@@ -115,7 +125,7 @@ export const editProject = formAction({
       // ponytail: assumes a unique violation; any other failure reads as a name clash.
       const codeTaken = await database.$count(
         projects,
-        and(eq(projects.code, form.code), ne(projects.id, project.id)),
+        and(eq(projects.code, columns.code), ne(projects.id, project.id)),
       );
       return codeTaken
         ? { fieldErrors: { code: ["Already in use"] } }
