@@ -18,6 +18,7 @@ import type { Context } from "hono";
 import { formatAmount } from "../amount/amount";
 import { AssignConsultantForm } from "../assignments/assignConsultant.command";
 import { RemoveConsultantForm } from "../assignments/removeConsultant.command";
+import { consultantPath } from "../consultants/consultantsUrl";
 import { database } from "../database";
 import type { UserEnv } from "../login/user";
 import { isManager, managesProject } from "../managers/manager";
@@ -143,6 +144,7 @@ export const projectDetails = async (c: Context<UserEnv>) => {
       participations={participations}
       canManageProject={canManageProject}
       canAssign={viewerIsManager}
+      canOpenConsultants={viewerIsManager}
     />,
   );
 };
@@ -176,6 +178,8 @@ type ProjectDetailsPageProps = {
   canManageProject: boolean;
   /** Any manager may assign their own organization's consultants. */
   canAssign: boolean;
+  /** Only managers may open a consultant's page. */
+  canOpenConsultants: boolean;
 };
 
 function ProjectDetailsPage({
@@ -187,6 +191,7 @@ function ProjectDetailsPage({
   participations,
   canManageProject,
   canAssign,
+  canOpenConsultants,
 }: ProjectDetailsPageProps) {
   const isHourly = project.billing === "hourly";
   const contractOwner = participations.find((participation) => participation.isContractOwner);
@@ -258,7 +263,13 @@ function ProjectDetailsPage({
           >
             {assignedPeople.map((person) => (
               <DataGrid.Row>
-                <DataGrid.Title>{person.name}</DataGrid.Title>
+                <DataGrid.Title>
+                  {canOpenConsultants ? (
+                    <a href={consultantPath(person.id)}>{person.name}</a>
+                  ) : (
+                    person.name
+                  )}
+                </DataGrid.Title>
                 {formatTotalHours(person.total)}
                 {formatTotalHours(person.lastMonth)}
                 {formatTotalHours(person.thisMonth)}

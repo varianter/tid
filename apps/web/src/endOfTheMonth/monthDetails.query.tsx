@@ -6,9 +6,10 @@ import { formatHours } from "@tid/elements/hours";
 import { DataGrid, Page, PeriodNavigation } from "@tid/ui";
 import { and, between, eq, gte, isNull, or, sql } from "drizzle-orm";
 import type { Context } from "hono";
+import { consultantPath } from "../consultants/consultantsUrl";
 import { database } from "../database";
 import type { UserEnv } from "../login/user";
-import { countryVisibility, managesOrganization } from "../managers/manager";
+import { countryVisibility, isManager, managesOrganization } from "../managers/manager";
 import { findOrganizationSlug } from "../organizations/organization";
 import {
   listOrganizations,
@@ -83,6 +84,7 @@ export const monthDetails = async (c: Context<UserEnv>) => {
       until,
     );
     return {
+      id: consultant.id,
       name: consultant.name,
       minutes: consultant.minutes,
       billableMinutes: consultant.billableMinutes,
@@ -91,18 +93,21 @@ export const monthDetails = async (c: Context<UserEnv>) => {
     };
   });
 
-  const [activeLock, canChangeLock, organizationOptions, canViewCountry] = await Promise.all([
-    findActiveLock(organization.id, month),
-    managesOrganization(c.get("user"), organization.id),
-    listOrganizations(),
-    countryVisibility(c.get("user")),
-  ]);
+  const [activeLock, canChangeLock, organizationOptions, canViewCountry, viewerIsManager] =
+    await Promise.all([
+      findActiveLock(organization.id, month),
+      managesOrganization(c.get("user"), organization.id),
+      listOrganizations(),
+      countryVisibility(c.get("user")),
+      isManager(c.get("user")),
+    ]);
   return c.render(
     <MonthDetailsPage
       organizations={organizationOptions.filter((option) => canViewCountry(option.country))}
       organizationSlug={organization.slug}
       month={month}
       rows={rows}
+      canOpenConsultants={viewerIsManager}
       activeLock={activeLock}
       canChangeLock={canChangeLock}
       previousHref={monthPath(organization.slug, addMonths(month, -1))}
@@ -112,6 +117,7 @@ export const monthDetails = async (c: Context<UserEnv>) => {
 };
 
 type ConsultantRow = {
+  id: number;
   name: string;
   minutes: number;
   billableMinutes: number;
@@ -124,6 +130,7 @@ function MonthDetailsPage({
   organizationSlug,
   month,
   rows,
+  canOpenConsultants,
   activeLock,
   canChangeLock,
   previousHref,
@@ -133,6 +140,7 @@ function MonthDetailsPage({
   organizationSlug: string;
   month: string;
   rows: ConsultantRow[];
+  canOpenConsultants: boolean;
   activeLock?: { lockedAt: Date; lockedByName: string };
   canChangeLock: boolean;
   previousHref: string;
@@ -176,12 +184,16 @@ function MonthDetailsPage({
       <ConsultantTable
         title="Still missing hours"
         showMissing
+        month={month}
+        canOpenConsultants={canOpenConsultants}
         rows={rows
           .filter((row) => row.missingMinutes > 0)
           .sort((a, b) => b.missingMinutes - a.missingMinutes)}
       />
       <ConsultantTable
         title="All hours logged"
+        month={month}
+        canOpenConsultants={canOpenConsultants}
         rows={rows.filter((row) => row.missingMinutes === 0)}
       />
     </Page>
@@ -191,10 +203,14 @@ function MonthDetailsPage({
 function ConsultantTable({
   title,
   rows,
+  month,
+  canOpenConsultants,
   showMissing = false,
 }: {
   title: string;
   rows: ConsultantRow[];
+  month: string;
+  canOpenConsultants: boolean;
   showMissing?: boolean;
 }) {
   if (rows.length === 0) return null;
@@ -211,7 +227,7 @@ function ConsultantTable({
         ]}
       >
         {rows.map((row) => (
-          <DataGrid.Row>
+          <DataGrid.Row href={canOpenConsultants ? consultantPath(row.id, month) : undefined}>
             <DataGrid.Title>{row.name}</DataGrid.Title>
             {formatTotal(row.minutes)}
             {formatShare(row.billableMinutes, row.minutes)}
