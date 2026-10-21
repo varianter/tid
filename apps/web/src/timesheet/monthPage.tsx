@@ -1,6 +1,13 @@
 import { type Calendar, calendarFor } from "@tid/calendar";
 import { formatDate } from "@tid/calendar/dateDisplay";
-import { addMonths, daysOfMonth, isWeekend, mondayOf } from "@tid/calendar/isoDate";
+import {
+  addMonths,
+  daysOfMonth,
+  firstDayOfMonth,
+  isWeekend,
+  lastDayOfMonth,
+  mondayOf,
+} from "@tid/calendar/isoDate";
 import { todayInOslo } from "@tid/calendar/osloClock";
 import type { SpecialDay } from "@tid/calendar/publicHolidays";
 import { timeEntries } from "@tid/db/schema";
@@ -49,8 +56,8 @@ export async function renderMonth(c: Context<UserEnv>, month: string, error?: Mo
   const monthDays = daysOfMonth(month);
   const { tasks, entries } = await loadTimesheet(
     c.get("user").id,
-    monthDays[0] ?? "",
-    monthDays.at(-1) ?? "",
+    firstDayOfMonth(month),
+    lastDayOfMonth(month),
   );
   // A weekend with hours stays visible, so hiding weekends never hides time.
   const days = monthDays.filter(
@@ -63,7 +70,7 @@ export async function renderMonth(c: Context<UserEnv>, month: string, error?: Mo
   return c.render(
     <MonthPage
       month={month}
-      locked={await isLockedOn(c.get("user").orgId, `${month}-01`)}
+      locked={await isLockedOn(c.get("user").orgId, firstDayOfMonth(month))}
       showWeekends={showWeekends}
       previousHref={monthPath(addMonths(month, -1), showWeekends)}
       nextHref={monthPath(addMonths(month, 1), showWeekends)}

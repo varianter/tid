@@ -32,17 +32,28 @@ export function isWeekend(isoDate: string) {
 }
 
 export function isIsoMonth(value: string) {
-  return /^\d{4}-\d{2}$/.test(value) && isIsoDate(`${value}-01`);
+  return /^\d{4}-\d{2}$/.test(value) && isIsoDate(firstDayOfMonth(value));
 }
 
 export function addMonths(month: string, months: number) {
-  const date = parseIsoDate(`${month}-01`);
+  const date = parseIsoDate(firstDayOfMonth(month));
   date.setUTCMonth(date.getUTCMonth() + months);
-  return formatIsoDate(date).slice(0, 7);
+  return monthOf(formatIsoDate(date));
+}
+
+export function monthOf(isoDate: string) {
+  return isoDate.slice(0, 7);
+}
+
+export function firstDayOfMonth(month: string) {
+  return `${month}-01`;
+}
+
+export function lastDayOfMonth(month: string) {
+  return addDays(firstDayOfMonth(addMonths(month, 1)), -1);
 }
 
 export function daysOfMonth(month: string) {
-  const firstDay = `${month}-01`;
-  const dayCount = Number(addDays(`${addMonths(month, 1)}-01`, -1).slice(8));
-  return Array.from({ length: dayCount }, (_, index) => addDays(firstDay, index));
+  const dayCount = Number(lastDayOfMonth(month).slice(8));
+  return Array.from({ length: dayCount }, (_, index) => addDays(firstDayOfMonth(month), index));
 }

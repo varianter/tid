@@ -1,4 +1,4 @@
-import { parseIsoDate } from "./isoDate";
+import { firstDayOfMonth, monthOf, parseIsoDate } from "./isoDate";
 
 const longFormat = new Intl.DateTimeFormat("en-GB", { dateStyle: "long", timeZone: "UTC" });
 const dayFormat = new Intl.DateTimeFormat("en-GB", {
@@ -21,7 +21,7 @@ const styles = {
   /** Like "Sat 3", for where the month is already shown. */
   day: (isoDate: string) => dayFormat.format(parseIsoDate(isoDate)),
   /** Like "October 2026". Takes a month as well as a day. */
-  month: (isoDate: string) => monthFormat.format(parseIsoDate(`${isoDate.slice(0, 7)}-01`)),
+  month: (isoDate: string) => monthFormat.format(parseIsoDate(firstDayOfMonth(monthOf(isoDate)))),
 };
 
 export type DateStyle = keyof typeof styles;

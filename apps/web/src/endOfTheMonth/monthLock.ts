@@ -1,3 +1,4 @@
+import { firstDayOfMonth } from "@tid/calendar/isoDate";
 import { monthLocks, users } from "@tid/db/schema";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { database } from "../database";
@@ -6,7 +7,7 @@ import { database } from "../database";
 const isActiveLock = (orgId: number, month: string) =>
   and(
     eq(monthLocks.orgId, orgId),
-    eq(monthLocks.month, `${month}-01`),
+    eq(monthLocks.month, firstDayOfMonth(month)),
     isNull(monthLocks.unlockedAt),
   );
 
@@ -22,7 +23,7 @@ export async function findActiveLock(orgId: number, month: string) {
 export async function addLock(orgId: number, month: string, userId: number) {
   await database
     .insert(monthLocks)
-    .values({ orgId, month: `${month}-01`, lockedBy: userId })
+    .values({ orgId, month: firstDayOfMonth(month), lockedBy: userId })
     // Already locked, by someone else or a double-submitted form.
     .onConflictDoNothing();
 }

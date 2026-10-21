@@ -1,4 +1,4 @@
-import { addMonths } from "@tid/calendar/isoDate";
+import { addMonths, firstDayOfMonth, monthOf } from "@tid/calendar/isoDate";
 import { todayInOslo } from "@tid/calendar/osloClock";
 import {
   assignmentRates,
@@ -30,8 +30,8 @@ type HoursSpent = { total: number; lastMonth: number; thisMonth: number };
 
 // Minutes in each period, summed over the time entries that `where` keeps.
 const hoursSpent = (today: string) => {
-  const thisMonthStart = `${today.slice(0, 7)}-01`;
-  const lastMonthStart = `${addMonths(today.slice(0, 7), -1)}-01`;
+  const thisMonthStart = firstDayOfMonth(monthOf(today));
+  const lastMonthStart = firstDayOfMonth(addMonths(monthOf(today), -1));
   const minutesFrom = (condition?: SQL) =>
     sql`coalesce(sum(${timeEntries.minutes}) ${condition ? sql`filter (where ${condition})` : sql``}, 0)`.mapWith(
       Number,

@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { addMonths, daysOfMonth, isIsoDate, isWeekend, mondayOf } from "./isoDate";
+import { addMonths, daysOfMonth, isIsoDate, isWeekend, lastDayOfMonth, mondayOf } from "./isoDate";
 
 test("mondayOf snaps any day, Sunday included, to the Monday before it", () => {
   expect(mondayOf("2026-09-28")).toBe("2026-09-28");
@@ -19,6 +19,12 @@ test("daysOfMonth covers every day of the month, leap days included", () => {
   expect(daysOfMonth("2026-09")).toHaveLength(30);
   expect(daysOfMonth("2028-02").at(-1)).toBe("2028-02-29");
   expect(daysOfMonth("2026-12").at(-1)).toBe("2026-12-31");
+});
+
+test("lastDayOfMonth knows month lengths, leap years included", () => {
+  expect(lastDayOfMonth("2026-09")).toBe("2026-09-30");
+  expect(lastDayOfMonth("2028-02")).toBe("2028-02-29");
+  expect(lastDayOfMonth("2026-12")).toBe("2026-12-31");
 });
 
 test("addMonths crosses years", () => {

@@ -1,3 +1,5 @@
+import { monthOf } from "./isoDate";
+
 // The business runs on Oslo time, wherever the server is.
 
 export function isoDateInOslo(moment: Date) {
@@ -7,4 +9,8 @@ export function isoDateInOslo(moment: Date) {
 
 export function todayInOslo() {
   return isoDateInOslo(new Date());
+}
+
+export function thisMonthInOslo() {
+  return monthOf(todayInOslo());
 }
