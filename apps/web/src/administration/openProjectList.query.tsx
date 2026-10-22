@@ -7,8 +7,8 @@ import type { UserEnv } from "../login/user";
 import { findOrganizationBySlug } from "../organizations/organization";
 import { participation } from "../projects/projectParticipation";
 import { administrationPath } from "./administrationUrl";
-import { CloseProjectToMembersForm } from "./closeProjectToMembers.command";
-import { OpenProjectToMembersForm } from "./openProjectToMembers.command";
+import { CloseProjectToMembersForm } from "./closeProjectToMembers.form";
+import { OpenProjectToMembersForm } from "./openProjectToMembers.form";
 
 const projectRow = {
   id: projects.id,
@@ -81,27 +81,20 @@ function OpenProjectListPage({
     >
       {openProjects.length === 0 ? (
         <EmptyState emoji="🔓" title="No open projects">
-          Members log time only on projects they're assigned to.
+          Members log hours only on projects they're assigned to.
         </EmptyState>
       ) : (
-        <DataGrid
-          columns={[
-            { label: "Client" },
-            { label: "Project" },
-            { label: "Code", kind: "fit" },
-            { kind: "action" },
-          ]}
-        >
+        <DataGrid columns={[{ label: "Project" }, { label: "Client" }, { kind: "action" }]}>
           {openProjects.map((project) => (
             <DataGrid.Row>
+              <DataGrid.Title secondary={project.code}>
+                <a href={`/projects/${project.id}`}>{project.name}</a>
+              </DataGrid.Title>
               {project.client}
-              <a href={`/projects/${project.id}`} class="fw-medium">
-                {project.name}
-              </a>
-              <span class="ink-subtle">{project.code}</span>
               <CloseProjectToMembersForm
                 organizationSlug={organization.slug}
                 projectId={project.id}
+                name={project.name}
               />
             </DataGrid.Row>
           ))}

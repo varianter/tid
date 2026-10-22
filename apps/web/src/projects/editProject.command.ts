@@ -65,24 +65,27 @@ export const editProject = formAction({
     };
   },
   onSubmit: async (_c, form, { billing, project, organizations, currencies }) => {
-    if (form.billing !== billing) return { formError: "The billing changed. Start over." };
+    if (form.billing !== billing)
+      return { formError: "The billing doesn't match. Go back and choose it again." };
     const contractOwnerId = form.contractOwnerId ?? null;
     const columns = projectColumns(form);
     if (columns.currency !== null && !currencies.includes(columns.currency)) {
-      return { fieldErrors: { currency: ["Pick a currency"] } };
+      return { fieldErrors: { currency: ["Choose the currency agreed with the client"] } };
     }
     if (
       contractOwnerId !== null &&
       !organizations.some((organization) => organization.id === contractOwnerId)
     ) {
-      return { fieldErrors: { contractOwnerId: ["Pick an organization"] } };
+      return {
+        fieldErrors: { contractOwnerId: ["Choose the organization that invoices the client"] },
+      };
     }
     if (
       project.hasLoggedTime &&
       (columns.billing !== project.billing || columns.currency !== project.currency)
     ) {
       return {
-        formError: "Time is logged on this project. Start a new project to bill it differently.",
+        formError: "Hours are logged on this project. Start a new project to bill it differently.",
       };
     }
     const openToMembers = await database.$count(
@@ -93,7 +96,7 @@ export const editProject = formAction({
       ),
     );
     if (columns.billing !== "non_billable" && openToMembers) {
-      return { formError: "Only non-billable projects can be open to an organization's members" };
+      return { formError: "Only non-billable projects can be open to everyone" };
     }
     try {
       await database.transaction(async (transaction) => {
@@ -128,7 +131,7 @@ export const editProject = formAction({
         and(eq(projects.code, columns.code), ne(projects.id, project.id)),
       );
       return codeTaken
-        ? { fieldErrors: { code: ["Already in use"] } }
+        ? { fieldErrors: { code: ["Another project uses this code"] } }
         : { fieldErrors: { name: ["The client already has a project with this name"] } };
     }
     return { redirect: `/projects/${project.id}` };

@@ -6,7 +6,8 @@ import { chooseBilling } from "./chooseBilling.query";
 import { editProject } from "./editProject.command";
 import { projectDetails } from "./projectDetails.query";
 import { projectList } from "./projectList.query";
-import { projectTimesheet } from "./projectTimesheet.query";
+import { projectReport } from "./projectReport.query";
+import { projectReportPrint } from "./projectReportPrint.query";
 import { startProject } from "./startProject.command";
 
 export const projects = new Hono<UserEnv>()
@@ -14,6 +15,7 @@ export const projects = new Hono<UserEnv>()
   .get("/new", managersOnly, chooseBilling)
   .on(["GET", "POST"], "/new/:billing", managersOnly, startProject)
   .get("/:id", projectDetails)
-  .get("/:id/timesheet/:month", projectTimesheet)
+  .get("/:projectId/report", projectReport)
+  .get("/:projectId/report/print", projectReportPrint)
   .on(["GET", "POST"], "/:id/edit", projectManagersOnly, editProject)
   .post("/:id/tasks", projectManagersOnly, addTask);

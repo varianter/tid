@@ -1,5 +1,4 @@
 import { userRoles } from "@tid/db/schema";
-import { Button } from "@tid/ui";
 import type { Context } from "hono";
 import { database } from "../database";
 import type { UserEnv } from "../login/user";
@@ -15,19 +14,3 @@ export const makeManager = async (c: Context<UserEnv>) => {
     .onConflictDoNothing();
   return c.redirect(managersPath(member.organization.slug), 303);
 };
-
-export function MakeManagerForm({
-  organizationSlug,
-  userId,
-}: {
-  organizationSlug: string;
-  userId: number;
-}) {
-  return (
-    <form method="post" action={`${managersPath(organizationSlug)}/${userId}`}>
-      <Button type="submit" data-variant="plain" data-size="small">
-        Make manager
-      </Button>
-    </form>
-  );
-}

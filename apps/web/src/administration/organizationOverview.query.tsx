@@ -36,12 +36,12 @@ function OrganizationOverviewPage({
         <Detail label="Legal name">{organization.legalName}</Detail>
         <Detail label="Country">{organization.country}</Detail>
         <Detail label="Currency">{organization.currency}</Detail>
-        <Detail label="Full day">{formatTotalHours(organization.fullDayMinutes)}</Detail>
+        <Detail label="Working day">{formatTotalHours(organization.fullDayMinutes)}</Detail>
       </dl>
       <ActionList>
         <ActionListItem
           title="Projects open to everyone"
-          description="Every member can enter hours on these"
+          description="Everyone can log hours on these"
           action={<ManageLink href={openProjectsPath(organization.slug)} />}
         />
         <ActionListItem
@@ -56,7 +56,7 @@ function OrganizationOverviewPage({
 
 function ManageLink({ href }: { href: string }) {
   return (
-    <Button as="a" href={href} data-size="small" data-variant="outlined">
+    <Button as="a" href={href} data-size="small" data-variant="plain">
       Manage
     </Button>
   );

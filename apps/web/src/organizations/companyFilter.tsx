@@ -100,7 +100,8 @@ export function CompanySelect({ selected, companies }: CompanyFilter) {
       <Label for={field}>Company</Label>
       <Select id={field} name={field} data-size="small">
         {[...Map.groupBy(companies, (company) => company.country)].map(([country, members]) => (
-          <optgroup label={countryNames[country]}>
+          <optgroup>
+            <legend>{countryNames[country]}</legend>
             {members.map((company) => (
               <option value={company.value} selected={company.value === selected.value}>
                 {company.name}

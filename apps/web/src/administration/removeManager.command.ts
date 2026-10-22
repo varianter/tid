@@ -1,5 +1,4 @@
 import { userRoles } from "@tid/db/schema";
-import { Button } from "@tid/ui";
 import { and, eq } from "drizzle-orm";
 import type { Context } from "hono";
 import { database } from "../database";
@@ -16,19 +15,3 @@ export const removeManager = async (c: Context<UserEnv>) => {
     .where(and(eq(userRoles.userId, member.userId), eq(userRoles.role, "manager")));
   return c.redirect(managersPath(member.organization.slug), 303);
 };
-
-export function RemoveManagerForm({
-  organizationSlug,
-  userId,
-}: {
-  organizationSlug: string;
-  userId: number;
-}) {
-  return (
-    <form method="post" action={`${managersPath(organizationSlug)}/${userId}/delete`}>
-      <Button type="submit" data-variant="plain" data-size="small">
-        Remove manager
-      </Button>
-    </form>
-  );
-}

@@ -1,6 +1,6 @@
 import { projects } from "@tid/db/schema";
 import { formatTotalHours } from "@tid/elements/hours";
-import { Button, Detail, Page } from "@tid/ui";
+import { Button, Detail, Page, Section } from "@tid/ui";
 import { eq } from "drizzle-orm";
 import type { Context } from "hono";
 import type { UserEnv } from "../login/user";
@@ -39,27 +39,29 @@ function ClientDetailsPage({
       back={{ href: "/clients", label: "Back to clients" }}
       actions={
         canChange && (
-          <span class="stack-h gap-xs">
+          <>
             <Button as="a" href={`/clients/${client.id}/edit`} data-variant="tinted">
               Edit
             </Button>
             <Button as="a" href={`/projects/new?client=${client.id}`} data-variant="tinted">
               New project
             </Button>
-          </span>
+          </>
         )
       }
     >
       <dl class="stack-h items-start gap-xl b-all bc-default br-l p-m">
         <Detail label="Projects">{projects.length}</Detail>
         <Detail label="Organizations">{organizations.join(", ") || "None"}</Detail>
-        <Detail label="Spent">{formatTotalHours(spentMinutes)}</Detail>
+        <Detail label="Hours logged">{formatTotalHours(spentMinutes)}</Detail>
       </dl>
-      {projects.length === 0 ? (
-        <p class="ink-subtle">No projects yet.</p>
-      ) : (
-        <ProjectTable projects={projects} groupByClient={false} />
-      )}
+      <Section title="Projects">
+        {projects.length === 0 ? (
+          <p class="ink-subtle">No projects yet.</p>
+        ) : (
+          <ProjectTable projects={projects} groupByClient={false} />
+        )}
+      </Section>
     </Page>
   );
 }

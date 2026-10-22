@@ -31,6 +31,13 @@ export async function countryVisibility(user: User) {
   return (country: Country) => userIsManager || country === ownCountry;
 }
 
+/** The organization, unless it's in a country the user may not see. */
+export async function findVisibleOrganization(user: User, slug: string) {
+  const organization = await findOrganizationBySlug(slug);
+  const canViewCountry = await countryVisibility(user);
+  return organization && canViewCountry(organization.country) ? organization : undefined;
+}
+
 /**
  * Whether the user is a manager in an organization taking part in the project. They share its
  * details, tasks, consultants and rates. A project no organization takes part in yet, like a new

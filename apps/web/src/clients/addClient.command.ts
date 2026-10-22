@@ -1,7 +1,7 @@
 import { clients } from "@tid/db/schema";
 import { database } from "../database";
 import { formAction } from "../form/formAction";
-import { alreadyExists, ClientFormPage, clientFields } from "./clientForm";
+import { alreadyExists, ClientFormPage, clientFields } from "./client.form";
 
 export const addClient = formAction({
   schema: clientFields,

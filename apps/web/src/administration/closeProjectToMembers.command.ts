@@ -1,5 +1,4 @@
 import { projectOrganizations } from "@tid/db/schema";
-import { Button } from "@tid/ui";
 import type { Context } from "hono";
 import { database } from "../database";
 import type { UserEnv } from "../login/user";
@@ -20,19 +19,3 @@ export const closeProjectToMembers = async (c: Context<UserEnv>) => {
   });
   return c.redirect(openProjectsPath(organization.slug), 303);
 };
-
-export function CloseProjectToMembersForm({
-  organizationSlug,
-  projectId,
-}: {
-  organizationSlug: string;
-  projectId: number;
-}) {
-  return (
-    <form method="post" action={`${openProjectsPath(organizationSlug)}/${projectId}/delete`}>
-      <Button type="submit" data-variant="plain" data-size="small">
-        Remove
-      </Button>
-    </form>
-  );
-}

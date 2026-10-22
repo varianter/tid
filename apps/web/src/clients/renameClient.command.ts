@@ -3,7 +3,7 @@ import { and, eq, ne } from "drizzle-orm";
 import { database } from "../database";
 import { formAction } from "../form/formAction";
 import { findClient } from "./client";
-import { alreadyExists, ClientFormPage, clientFields } from "./clientForm";
+import { alreadyExists, ClientFormPage, clientFields } from "./client.form";
 
 export const renameClient = formAction({
   schema: clientFields,

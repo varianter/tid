@@ -10,8 +10,8 @@ export function ErrorPage({
   report?: string;
 }) {
   return (
-    <Page title={String(status)}>
-      <h2 class="fs-l ink-prominent">{message}</h2>
+    <Page title={message}>
+      <p class="ink-subtle">Error {status}</p>
       {report && (
         <>
           <p class="ink-subtle">
@@ -22,7 +22,7 @@ export function ErrorPage({
       )}
       <div>
         <Button as="a" href="/" data-variant="tinted">
-          Back to start
+          Go to timesheet
         </Button>
       </div>
     </Page>

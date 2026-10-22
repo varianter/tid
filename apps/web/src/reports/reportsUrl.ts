@@ -4,7 +4,7 @@ import { companyField } from "../organizations/companyFilter";
 import { monthField } from "../query/pageMonth";
 import { pageUrl } from "../query/pageUrl";
 
-export const tabs = ["clients", "projects", "consultants", "tasks"] as const;
+export const tabs = ["projects", "consultants", "tasks"] as const;
 export type Tab = (typeof tabs)[number];
 
 export const reportUrl = pageUrl(

@@ -1,4 +1,4 @@
-import { clients, projectOrganizations, projects } from "@tid/db/schema";
+import { clients, projectOrganizations, projects, tasks } from "@tid/db/schema";
 import { eq } from "drizzle-orm";
 import { database } from "../database";
 import { formAction } from "../form/formAction";
@@ -40,20 +40,23 @@ export const startProject = formAction({
     };
   },
   onSubmit: async (_c, form, { billing, clients, organizations, currencies }) => {
-    if (form.billing !== billing) return { formError: "The billing changed. Start over." };
+    if (form.billing !== billing)
+      return { formError: "The billing doesn't match. Go back and choose it again." };
     const { contractOwnerId } = form;
     const project = { ...projectColumns(form), clientId: form.clientId };
     if (project.currency !== null && !currencies.includes(project.currency)) {
-      return { fieldErrors: { currency: ["Pick a currency"] } };
+      return { fieldErrors: { currency: ["Choose the currency agreed with the client"] } };
     }
     if (!clients.some((client) => client.id === project.clientId)) {
-      return { fieldErrors: { clientId: ["Pick a client"] } };
+      return { fieldErrors: { clientId: ["Choose a client"] } };
     }
     if (
       contractOwnerId !== undefined &&
       !organizations.some((organization) => organization.id === contractOwnerId)
     ) {
-      return { fieldErrors: { contractOwnerId: ["Pick an organization"] } };
+      return {
+        fieldErrors: { contractOwnerId: ["Choose the organization that invoices the client"] },
+      };
     }
     const [inserted] = await database.transaction(async (transaction) => {
       const rows = await transaction
@@ -61,11 +64,14 @@ export const startProject = formAction({
         .values(project)
         .onConflictDoNothing()
         .returning();
+      if (!rows[0]) return rows;
+      const projectId = rows[0].id;
+      await transaction.insert(tasks).values({ projectId, name: form.firstTask });
       // Without a contract owner, the project joins organizations as people are assigned to it.
-      if (rows[0] && contractOwnerId !== undefined) {
+      if (contractOwnerId !== undefined) {
         await transaction
           .insert(projectOrganizations)
-          .values({ projectId: rows[0].id, orgId: contractOwnerId, isContractOwner: true });
+          .values({ projectId, orgId: contractOwnerId, isContractOwner: true });
       }
       return rows;
     });
@@ -73,7 +79,7 @@ export const startProject = formAction({
 
     const codeTaken = await database.$count(projects, eq(projects.code, project.code));
     return codeTaken
-      ? { fieldErrors: { code: ["Already in use"] } }
+      ? { fieldErrors: { code: ["Another project uses this code"] } }
       : { fieldErrors: { name: ["The client already has a project with this name"] } };
   },
   view: ProjectFormPage,

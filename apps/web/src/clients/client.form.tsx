@@ -5,7 +5,7 @@ import type { Client } from "./client";
 
 export const clientFields = z.object({ name: z.string().trim().min(1, "Enter a name") });
 
-export const alreadyExists = { fieldErrors: { name: ["Already exists"] } };
+export const alreadyExists = { fieldErrors: { name: ["A client with this name already exists"] } };
 
 /** Creates a client, or renames `client` when given. */
 export function ClientFormPage({ client, values, fieldErrors }: { client?: Client } & FormProps) {

@@ -50,7 +50,11 @@ export const requireProxyUser = (tenantId: string) =>
       if (!userWithEmail) return c.redirect(signupPath);
       user = await linkIdentity(tenantId, subject, userWithEmail);
     }
-    if (!user) return c.text(`${email} belongs to another login`, 403);
+    if (!user)
+      return c.text(
+        `${email} is already linked to a different sign-in. Ask the developers for help.`,
+        403,
+      );
 
     c.set("user", user);
     await next();

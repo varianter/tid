@@ -1,5 +1,6 @@
 import { bundleElements } from "@tid/elements/bundle";
 import { Hono } from "hono";
+import { serveStatic } from "hono/bun";
 import { csrf } from "hono/csrf";
 import { HTTPException } from "hono/http-exception";
 import { jsxRenderer } from "hono/jsx-renderer";
@@ -10,7 +11,6 @@ import { assignments } from "./assignments/assignments.routes";
 import { clients } from "./clients/clients.routes";
 import { consultants } from "./consultants/consultants.routes";
 import { dev, devLogoutUrl, devTenantId, readDevIdentity, requireDevUser } from "./dev/dev.routes";
-import { endOfTheMonth } from "./endOfTheMonth/endOfTheMonth.routes";
 import { ErrorPage } from "./errors/errorPage";
 import { errorReport } from "./errors/errorReport";
 import { harvestImport } from "./harvestImport/harvestImport.routes";
@@ -20,6 +20,7 @@ import { proxyLogoutUrl, requireProxyUser } from "./login/proxyLogin.middleware"
 import { signupPath } from "./login/signupUrl";
 import type { PublicEnv } from "./login/user";
 import { isManager } from "./managers/manager";
+import { monthClose } from "./monthClose/monthClose.routes";
 import { projects } from "./projects/projects.routes";
 import { reports } from "./reports/reports.routes";
 import { reportDatabaseTiming, reportRenderTiming, timeMiddleware } from "./serverTiming";
@@ -73,7 +74,6 @@ app.use(
     const user = c.get("user");
     return (
       <Layout
-        title="Tid"
         currentPath={c.req.path}
         user={user}
         isManager={user ? await isManager(user) : false}
@@ -104,6 +104,14 @@ app.onError((error, c) => {
 });
 
 app.get("/health", (c) => c.text("ok"));
+app.use(
+  "/icons/*",
+  serveStatic({
+    root: "./public",
+    // Uncached, every page load refetches the icons and they flicker in.
+    onFound: (_path, c) => c.header("Cache-Control", "public, max-age=86400"),
+  }),
+);
 app.get(elements.path, (c) =>
   c.body(elements.code, 200, {
     "Content-Type": "text/javascript",
@@ -122,7 +130,7 @@ app.route("/clients", clients);
 app.route("/projects", projects);
 app.route("/projects/:projectId/assignments", assignments);
 app.route("/reports", reports);
-app.route("/end-of-the-month", endOfTheMonth);
+app.route("/month-close", monthClose);
 app.route("/consultants", consultants);
 app.route("/administration", administration);
 // Only needed until Tid takes over from Harvest.

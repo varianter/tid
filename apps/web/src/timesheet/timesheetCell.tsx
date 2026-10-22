@@ -1,7 +1,7 @@
 import { formatDate } from "@tid/calendar/dateDisplay";
 import { isIsoDate } from "@tid/calendar/isoDate";
 import { formatHours } from "@tid/elements/hours";
-import { ColorMode, Input, Popover } from "@tid/ui";
+import { ColorMode, Icon, Input, Popover } from "@tid/ui";
 import { z } from "zod";
 import type { Task } from "./loggableTasks";
 
@@ -12,12 +12,20 @@ export const cellFields = z.object({
 
 export const hoursHint = "Enter hours, like 7,5";
 
+// Decimal hours ("7,5" or "7.5") or a clock duration ("7:30").
+const hoursPattern = "[0-9]+([.,][0-9]+|:[0-5][0-9])?";
+
 /** Hours as typed, in half hours up to a day, as minutes. Blank or zero clears the cell. */
 export const cellHours = z
   .string()
   .trim()
-  .regex(/^(\d+([.,]\d+)?)?$/, hoursHint)
-  .transform((text) => Number(text.replace(",", ".")))
+  .regex(new RegExp(`^(${hoursPattern})?$`), hoursHint)
+  .transform((text) => {
+    const [hours, minutes] = text.split(":");
+    return minutes === undefined
+      ? Number(text.replace(",", "."))
+      : Number(hours) + Number(minutes) / 60;
+  })
   .refine((hours) => hours <= 24, "At most 24 hours")
   .refine((hours) => Number.isInteger(hours * 2), "Use half hours, like 1,5")
   .transform((hours) => hours * 60);
@@ -60,7 +68,7 @@ export function TimesheetCell({
       aria-label={`${task.projectName}, ${task.name}, ${formatDate(day)}`}
       aria-invalid={error ? "true" : undefined}
       aria-describedby={error ? errorId : undefined}
-      pattern="[0-9]+([.,:][0-9]+)?"
+      pattern={hoursPattern}
       disabled={locked}
     />
   );
@@ -85,7 +93,7 @@ export function TimesheetCell({
             aria-label="Show error"
             class="m-2xs pos-absolute"
           >
-            <ErrorIcon />
+            <Icon name="error" />
           </button>
           <Popover id={errorId} data-type="tooltip" class="px-2xs py-2xs">
             <div class="b-all bc-subtle px-xs py-2xs surface-base br-m shadow-mid fs-s">
@@ -97,25 +105,5 @@ export function TimesheetCell({
         input
       )}
     </form>
-  );
-}
-
-function ErrorIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      aria-hidden="true"
-    >
-      <circle cx="12" cy="12" r="10" />
-      <line x1="12" y1="8" x2="12" y2="12" />
-      <line x1="12" y1="16" x2="12.01" y2="16" />
-    </svg>
   );
 }

@@ -12,23 +12,33 @@ import { todayInOslo } from "@tid/calendar/osloClock";
 import type { SpecialDay } from "@tid/calendar/publicHolidays";
 import { timeEntries } from "@tid/db/schema";
 import { formatHours } from "@tid/elements/hours";
-import { Button, Checkbox, ColorMode, Input, Label, Page, PeriodNavigation, Select } from "@tid/ui";
+import {
+  Button,
+  Checkbox,
+  ColorMode,
+  Input,
+  Label,
+  Page,
+  PeriodNavigation,
+  Section,
+  Select,
+} from "@tid/ui";
 import { and, between, eq } from "drizzle-orm";
 import type { Context } from "hono";
 import { css, cx } from "hono/css";
 import type { PropsWithChildren } from "hono/jsx";
 import { database } from "../database";
-import { isLockedOn } from "../endOfTheMonth/monthLock";
 import type { UserEnv } from "../login/user";
+import { isLockedOn } from "../monthClose/monthLock.data";
 import { findOrganizationCountry } from "../organizations/organization";
-import { loggableBy, type Task, userTasks } from "./loggableTasks";
+import { offeredTo, type Task, userTasks } from "./loggableTasks";
 import { type CellError, inputWidth, TimesheetCell } from "./timesheetCell";
 
 type TimeEntry = { taskId: number; spentOn: string; minutes: number };
 /** A failed save on the month, naming the cell to show it on. */
 export type MonthError = CellError & { taskId: number; day: string };
 
-/** The user's entries between from and till, and every task they may log on. */
+/** The user's entries between from and till, and the tasks the timesheet offers them. */
 async function loadTimesheet(userId: number, from: string, till: string) {
   const entries = await database
     .select({
@@ -38,7 +48,7 @@ async function loadTimesheet(userId: number, from: string, till: string) {
     })
     .from(timeEntries)
     .where(and(eq(timeEntries.userId, userId), between(timeEntries.spentOn, from, till)));
-  return { tasks: await userTasks().where(loggableBy(userId)), entries };
+  return { tasks: await userTasks().where(offeredTo(userId, from, till)), entries };
 }
 const addedTaskIdsOf = (queries: string[] | undefined) => (queries ?? []).map(Number);
 
@@ -131,7 +141,7 @@ function MonthPage({
               <Label for="weekends">Show weekends</Label>
               <noscript>
                 <Button type="submit" data-size="small">
-                  Apply
+                  Show
                 </Button>
               </noscript>
             </form>
@@ -268,7 +278,8 @@ function TimesheetGrid({
                     Add task…
                   </option>
                   {addableByProject.map(([projectName, projectTasks]) => (
-                    <optgroup label={projectName}>
+                    <optgroup>
+                      <legend>{projectName}</legend>
                       {projectTasks?.map((task) => (
                         <option value={task.id}>{task.name}</option>
                       ))}
@@ -334,24 +345,25 @@ function ProjectTotals({
 }) {
   const projects = Map.groupBy(rows, (task) => task.projectId);
   return (
-    <section class="stack-v w-max-5 fs-s t-tabular">
-      <h2 class="fs-m fw-medium mb-2xs">Project totals</h2>
-      {[...projects].map(([projectId, tasks]) => {
-        const taskIds = tasks.map((task) => task.id);
-        return (
-          <div class="stack-h justify-between gap-s py-2xs b-b bc-subtle">
-            <a href={`/projects/${projectId}`}>{tasks[0]?.projectName}</a>
-            <span data-project-total={projectId}>
-              {formatHours(sumMinutes((entry) => taskIds.includes(entry.taskId)))}
-            </span>
-          </div>
-        );
-      })}
-      <div class="stack-h justify-between gap-s py-2xs fw-medium">
-        <span>Total</span>
-        <span data-grand-total>{formatHours(sumMinutes(() => true))}</span>
+    <Section title="Project totals" class="w-max-5">
+      <div class="stack-v fs-s t-tabular">
+        {[...projects].map(([projectId, tasks]) => {
+          const taskIds = tasks.map((task) => task.id);
+          return (
+            <div class="stack-h justify-between gap-s py-2xs b-b bc-subtle">
+              <a href={`/projects/${projectId}`}>{tasks[0]?.projectName}</a>
+              <span data-project-total={projectId}>
+                {formatHours(sumMinutes((entry) => taskIds.includes(entry.taskId)))}
+              </span>
+            </div>
+          );
+        })}
+        <div class="stack-h justify-between gap-s py-2xs fw-medium">
+          <span>Total</span>
+          <span data-grand-total>{formatHours(sumMinutes(() => true))}</span>
+        </div>
       </div>
-    </section>
+    </Section>
   );
 }
 

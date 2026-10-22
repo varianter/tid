@@ -90,7 +90,9 @@ test("sign-up prefills the name from the Entra ID token", async () => {
 
 test("sign-up turns away email domains that aren't Variant's", async () => {
   const guest = { "x-auth-request-user": "guest-sub", "x-auth-request-email": "guest@example.com" };
-  expect((await requestAs(guest, "/signup")).status).toBe(403);
+  const response = await requestAs(guest, "/signup");
+  expect(response.status).toBe(403);
+  expect(await response.text()).toContain("Tid is for Variant employees");
 });
 
 test("sign-up rejects an organization in another country", async () => {
