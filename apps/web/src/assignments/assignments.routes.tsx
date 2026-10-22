@@ -4,6 +4,7 @@ import { managersOnly, projectManagersOnly } from "../managers/manager";
 import { addRate } from "./addRate.command";
 import { assignConsultant } from "./assignConsultant.command";
 import { deleteRate } from "./deleteRate.command";
+import { endAssignment } from "./endAssignment.command";
 import { removeConsultant } from "./removeConsultant.command";
 import { repriceEntries } from "./repriceEntries.command";
 
@@ -13,6 +14,7 @@ import { repriceEntries } from "./repriceEntries.command";
 export const assignments = new Hono<UserEnv>()
   .post("/", managersOnly, assignConsultant)
   .use("/:userId/*", projectManagersOnly)
+  .post("/:userId/end", endAssignment)
   .post("/:userId/delete", removeConsultant)
   .on(["GET", "POST"], "/:userId/rates", addRate)
   .on(["GET", "POST"], "/:userId/rates/reprice", repriceEntries)

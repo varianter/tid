@@ -7,6 +7,7 @@ export async function loadCurrentBillableProjects(userIds: number[], today: stri
   const rows = await database
     .select({
       userId: projectAssignments.userId,
+      id: projects.id,
       name: projects.name,
       client: clients.name,
       billing: projects.billing,

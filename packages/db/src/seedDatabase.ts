@@ -1,3 +1,5 @@
+import { addMonths, firstDayOfMonth, monthOf } from "@tid/calendar/isoDate";
+import { isoDateInOslo } from "@tid/calendar/osloClock";
 import { sql } from "drizzle-orm";
 import type { Database } from "./client";
 import {
@@ -31,9 +33,7 @@ import { dayOf, Weekday } from "./week";
 
 // As YYYY-MM-01. The seed locks it so a locked month can be compared against an open one.
 export function startOfLastMonth(now: Date) {
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1))
-    .toISOString()
-    .slice(0, 10);
+  return firstDayOfMonth(addMonths(monthOf(isoDateInOslo(now)), -1));
 }
 
 function byKey<Row>(rows: Row[], key: (row: Row) => string) {
@@ -151,11 +151,7 @@ export function seedDatabase(
     const taskRows = await transaction
       .insert(tasks)
       .values(
-        taskEntries.map(([, task]) => ({
-          projectId: projectId(task.project),
-          name: task.name,
-          endsOn: task.endsWeek === undefined ? null : dayOf(now, task.endsWeek, Weekday.Friday),
-        })),
+        taskEntries.map(([, task]) => ({ projectId: projectId(task.project), name: task.name })),
       )
       .returning();
     const taskIdsByName = byKey(taskRows, (row) => `${row.projectId}/${row.name}`);

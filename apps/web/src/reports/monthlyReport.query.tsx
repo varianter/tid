@@ -1,19 +1,31 @@
 import { formatDate } from "@tid/calendar/dateDisplay";
 import { addMonths, firstDayOfMonth, lastDayOfMonth } from "@tid/calendar/isoDate";
-import { projects, timeEntriesExport } from "@tid/db/schema";
+import { projects, timeEntriesExport, users } from "@tid/db/schema";
 import { formatTotalHours } from "@tid/elements/hours";
-import { DataGrid, type DataGridColumn, EmptyState, Page, PeriodNavigation, Tabs } from "@tid/ui";
-import { and, between, eq, inArray, sql } from "drizzle-orm";
+import {
+  DataGrid,
+  type DataGridColumn,
+  EmptyState,
+  Page,
+  PeriodNavigation,
+  Stat,
+  StatList,
+  Tabs,
+} from "@tid/ui";
+import { and, between, eq, gte, inArray, isNull, or, sql } from "drizzle-orm";
 import type { Child } from "hono/jsx";
 import { type Amounts, addAmounts, formatAmounts } from "../amount/amount";
+import { BillableBar } from "../billable/billableBar";
 import { BillableSelect, billableCondition } from "../billable/billableFilter";
+import { consultantPath } from "../consultants/consultantsUrl";
 import { database } from "../database";
 import { type CompanyFilter, CompanySelect, resolveCompany } from "../organizations/companyFilter";
-import { projectTimesheetPath } from "../projects/projectsUrl";
+import { projectReportUrl } from "../projects/projectsUrl";
 import { type QueryProps, queryPage } from "../query/queryPage";
 import { formatShare } from "../share/share";
 import { capacityMinutes } from "./capacity";
 import { reportUrl, type Tab, tabs } from "./reportsUrl";
+import { UtilizationBar } from "./utilizationBar";
 
 export const monthlyReport = queryPage({
   url: reportUrl,
@@ -45,23 +57,9 @@ export const monthlyReport = queryPage({
     };
     // Shown as the amount when nothing was billed, since there's no currency to show it in.
     const currency = selected.currency;
-    const capacityHours = capacityMinutes(month, selected.country, selected.fullDayMinutes) / 60;
 
     const report = await (async (): Promise<ReportRows> => {
       switch (tab) {
-        case "clients":
-          return {
-            tab,
-            rows: mergeCurrencies(
-              await database
-                .select({ name: view.clientName, ...totals })
-                .from(view)
-                .innerJoin(projects, eq(projects.code, view.projectCode))
-                .where(inReport)
-                .groupBy(view.clientName, projects.currency)
-                .orderBy(view.clientName),
-            ),
-          };
         case "projects":
           return {
             tab,
@@ -87,19 +85,32 @@ export const monthlyReport = queryPage({
                 .orderBy(view.projectName),
             ),
           };
-        case "consultants":
+        case "consultants": {
+          const rows = mergeCurrencies(
+            await database
+              .select({
+                id: users.id,
+                email: view.userEmail,
+                name: view.userName,
+                endsOn: users.endsOn,
+                ...totals,
+              })
+              .from(view)
+              .innerJoin(projects, eq(projects.code, view.projectCode))
+              .innerJoin(users, eq(users.email, view.userEmail))
+              .where(inReport)
+              .groupBy(users.id, view.userEmail, view.userName, projects.currency)
+              .orderBy(view.userName),
+          );
           return {
             tab,
-            rows: mergeCurrencies(
-              await database
-                .select({ email: view.userEmail, name: view.userName, ...totals })
-                .from(view)
-                .innerJoin(projects, eq(projects.code, view.projectCode))
-                .where(inReport)
-                .groupBy(view.userEmail, view.userName, projects.currency)
-                .orderBy(view.userName),
-            ),
+            rows: rows.map(({ endsOn, ...row }) => ({
+              ...row,
+              capacityHours:
+                capacityMinutes(month, selected.country, selected.fullDayMinutes, endsOn) / 60,
+            })),
           };
+        }
         case "tasks":
           return {
             tab,
@@ -126,7 +137,26 @@ export const monthlyReport = queryPage({
       amounts: rows.reduce<Amounts>((total, row) => addAmounts(total, row.amounts), {}),
       unratedHours: sumOf("unratedHours"),
     };
-    return { company, report, total, currency, capacityHours };
+    // Everyone employed in the month, including those who logged nothing.
+    const employed = await database
+      .select({ endsOn: users.endsOn })
+      .from(users)
+      .where(
+        and(
+          inArray(
+            users.orgId,
+            selected.organizations.map((organization) => organization.id),
+          ),
+          or(isNull(users.endsOn), gte(users.endsOn, firstDayOfMonth(month))),
+        ),
+      );
+    const capacityHours =
+      employed.reduce(
+        (sum, { endsOn }) =>
+          sum + capacityMinutes(month, selected.country, selected.fullDayMinutes, endsOn),
+        0,
+      ) / 60;
+    return { company, report, total, capacityHours, currency };
   },
   view: ReportPage,
 });
@@ -164,12 +194,14 @@ export function mergeCurrencies<Row extends CurrencyTotals>(rows: Row[]): Merged
 
 /** One tab's rows, each grouping the report's entries by that tab's dimension. */
 export type ReportRows =
-  | { tab: "clients"; rows: (Totals & { name: string })[] }
   | {
       tab: "projects";
       rows: (Totals & { id: number; code: string; name: string; client: string })[];
     }
-  | { tab: "consultants"; rows: (Totals & { email: string; name: string })[] }
+  | {
+      tab: "consultants";
+      rows: (Totals & { id: number; email: string; name: string; capacityHours: number })[];
+    }
   | { tab: "tasks"; rows: (Totals & { name: string })[] };
 
 type ReportTable = {
@@ -179,7 +211,6 @@ type ReportTable = {
 };
 
 const tabLabels: Record<Tab, string> = {
-  clients: "Clients",
   projects: "Projects",
   consultants: "Consultants",
   tasks: "Tasks",
@@ -189,21 +220,22 @@ function ReportPage({
   company,
   report,
   total,
-  currency,
   capacityHours,
+  currency,
   query,
   href,
 }: {
   company: CompanyFilter;
   report: ReportRows;
   total: Totals;
-  currency: string;
   capacityHours: number;
+  currency: string;
 } & QueryProps<typeof reportUrl>) {
   const { month } = query;
   const projectHref = (projectId: number) =>
-    projectTimesheetPath(projectId, month, company.selected.value);
-  const table = reportTable(report, total, currency, capacityHours, projectHref);
+    projectReportUrl.path({ projectId, month, company: company.selected.value });
+  const consultantHref = (userId: number) => consultantPath(userId, month);
+  const table = reportTable(report, total, currency, projectHref, consultantHref);
   return (
     <Page
       title="Reports"
@@ -222,7 +254,7 @@ function ReportPage({
         </>
       }
     >
-      <Summary {...total} currency={currency} />
+      <Summary {...total} capacityHours={capacityHours} currency={currency} />
       <section>
         <Tabs aria-label="Group by">
           {tabs.map((tabName) => (
@@ -254,33 +286,10 @@ function reportTable(
   report: ReportRows,
   total: Totals,
   currency: string,
-  capacityHours: number,
   projectHref: (projectId: number) => string,
+  consultantHref: (userId: number) => string,
 ): ReportTable {
   switch (report.tab) {
-    case "clients":
-      return {
-        columns: [
-          { label: "Name" },
-          { label: "Hours", kind: "number" },
-          { label: "Billable hours", kind: "number" },
-          { label: "Billable amount", kind: "number" },
-        ],
-        rows: report.rows.map((row) => ({
-          cells: [
-            <DataGrid.Title>{row.name}</DataGrid.Title>,
-            formatTotalHours(row.hours * 60),
-            formatTotalHours(row.billableHours * 60),
-            formatAmounts(row.amounts, currency),
-          ],
-        })),
-        footer: [
-          "Total",
-          formatTotalHours(total.hours * 60),
-          formatTotalHours(total.billableHours * 60),
-          formatAmounts(total.amounts, currency),
-        ],
-      };
     case "projects":
       return {
         columns: [
@@ -321,10 +330,11 @@ function reportTable(
           cells: [
             <DataGrid.Title>{row.name}</DataGrid.Title>,
             formatTotalHours(row.hours * 60),
-            formatShare(row.hours, capacityHours),
+            <Utilization hours={row.hours} capacityHours={row.capacityHours} />,
             <BillableHours hours={row.hours} billableHours={row.billableHours} />,
             formatAmounts(row.amounts, currency),
           ],
+          href: consultantHref(row.id),
         })),
         // Utilization has no total, since consultants who started or left mid-month skew any sum.
         footer: [
@@ -363,64 +373,67 @@ function Summary({
   billableHours,
   amounts,
   unratedHours,
+  capacityHours,
   currency,
-}: Totals & { currency: string }) {
-  const nonBillableHours = hours - billableHours;
-
+}: Totals & { capacityHours: number; currency: string }) {
   return (
-    <dl class="stack-h items-start gap-xl b-all bc-default br-l p-m t-tabular">
-      <Stat label="Total" value={formatTotalHours(hours * 60)} />
+    <StatList>
+      <Stat
+        label="Logged"
+        value={formatTotalHours(hours * 60)}
+        share={formatShare(hours, capacityHours)}
+        note={`of ${formatTotalHours(capacityHours * 60)} capacity`}
+      >
+        <UtilizationBar logged={hours} capacity={capacityHours} />
+      </Stat>
       <Stat
         label="Billable"
         value={formatTotalHours(billableHours * 60)}
         share={formatShare(billableHours, hours)}
-      />
+        note={`${formatTotalHours((hours - billableHours) * 60)} non-billable`}
+      >
+        <BillableBar
+          billable={billableHours}
+          nonBillable={hours - billableHours}
+          capacity={hours}
+        />
+      </Stat>
+      <Stat label="Billable amount" value={formatAmounts(amounts, currency)} />
       <Stat
-        label="Non-billable"
-        value={formatTotalHours(nonBillableHours * 60)}
-        share={formatShare(nonBillableHours, hours)}
+        label="Without a rate"
+        value={formatTotalHours(unratedHours * 60)}
+        note={unratedHours > 0 ? "Hourly time that bills nothing" : "Everyone has a rate"}
       />
-      <Stat
-        label="Billable amount"
-        value={formatAmounts(amounts, currency)}
-        note={
-          unratedHours > 0
-            ? `${formatTotalHours(unratedHours * 60)} logged without a rate`
-            : undefined
-        }
-      />
-    </dl>
+    </StatList>
   );
 }
 
-function Stat({
-  label,
-  value,
-  share,
-  note,
-}: {
-  label: string;
-  value: string;
-  share?: string;
-  note?: string;
-}) {
-  return (
-    <div class="stack-v gap-3xs flex-1">
-      <dt class="fs-s ink-subtle">{label}</dt>
-      <dd class="stack-h nowrap items-baseline gap-xs">
-        <span class="fs-l fw-medium">{value}</span>
-        {share && <span class="ink-subtle">{share}</span>}
-      </dd>
-      {note && <dd class="fs-xs ink-subtle">{note}</dd>}
-    </div>
-  );
-}
+// In em so the bars scale with the table text.
+const barWidth = "width: 6em;";
 
 function BillableHours({ hours, billableHours }: { hours: number; billableHours: number }) {
   return (
-    <span class="stack-h nowrap justify-end gap-xs">
+    <span class="stack-h nowrap items-center justify-end gap-xs">
       {formatTotalHours(billableHours * 60)}
       <span class="ink-subtle fw-regular">{formatShare(billableHours, hours)}</span>
+      <span style={barWidth}>
+        <BillableBar
+          billable={billableHours}
+          nonBillable={hours - billableHours}
+          capacity={hours}
+        />
+      </span>
+    </span>
+  );
+}
+
+function Utilization({ hours, capacityHours }: { hours: number; capacityHours: number }) {
+  return (
+    <span class="stack-h nowrap items-center justify-end gap-xs">
+      {formatShare(hours, capacityHours)}
+      <span style={barWidth}>
+        <UtilizationBar logged={hours} capacity={capacityHours} />
+      </span>
     </span>
   );
 }

@@ -6,6 +6,11 @@ const dayFormat = new Intl.DateTimeFormat("en-GB", {
   day: "numeric",
   timeZone: "UTC",
 });
+const dayAndMonthFormat = new Intl.DateTimeFormat("en-GB", {
+  day: "numeric",
+  month: "long",
+  timeZone: "UTC",
+});
 const monthFormat = new Intl.DateTimeFormat("en-GB", {
   month: "long",
   year: "numeric",
@@ -18,6 +23,8 @@ const styles = {
   full: (isoDate: string) => longFormat.format(parseIsoDate(isoDate)),
   /** Like "2026.10.03", for table columns, where dates line up and sort by eye. */
   numeric: (isoDate: string) => isoDate.replaceAll("-", "."),
+  /** Like "3 October", for dates near enough that the year goes without saying. */
+  dayAndMonth: (isoDate: string) => dayAndMonthFormat.format(parseIsoDate(isoDate)),
   /** Like "Sat 3", for where the month is already shown. */
   day: (isoDate: string) => dayFormat.format(parseIsoDate(isoDate)),
   /** Like "October 2026". Takes a month as well as a day. */

@@ -3,15 +3,20 @@ import { addMonths, firstDayOfMonth, lastDayOfMonth } from "@tid/calendar/isoDat
 import { todayInOslo } from "@tid/calendar/osloClock";
 import { clients, organizations, projects, tasks, timeEntries, users } from "@tid/db/schema";
 import { formatTotalHours } from "@tid/elements/hours";
-import { EmptyState, Page, PeriodNavigation } from "@tid/ui";
+import { Badge, DataGrid, Page, PeriodNavigation, Section, Stat, StatList } from "@tid/ui";
 import { and, between, desc, eq, sql } from "drizzle-orm";
 import type { Context } from "hono";
+import { BillableBar } from "../billable/billableBar";
 import { database } from "../database";
 import type { UserEnv } from "../login/user";
 import { isManager } from "../managers/manager";
 import { type Billing, billingLabels } from "../projects/billing";
+import { projectReportUrl } from "../projects/projectsUrl";
 import { type QueryProps, queryPage } from "../query/queryPage";
 import { capacityMinutes } from "../reports/capacity";
+import { UtilizationBar } from "../reports/utilizationBar";
+import { formatShare } from "../share/share";
+import { MonthEntries, type MonthEntry } from "../timeEntries/monthEntries";
 import { consultantsPath, consultantUrl } from "./consultantsUrl";
 import { loadCurrentBillableProjects } from "./currentBillableProjects";
 
@@ -63,8 +68,8 @@ export const consultantDetails = queryPage({
         minutes: timeEntries.minutes,
         notes: timeEntries.notes,
         task: tasks.name,
-        project: projects.name,
-        client: clients.name,
+        title: projects.name,
+        subtitle: clients.name,
       })
       .from(timeEntries)
       .innerJoin(tasks, eq(tasks.id, timeEntries.taskId))
@@ -99,15 +104,21 @@ function ConsultantDetailsPage({
 }: {
   user: { name: string; email: string; endsOn: string | null; organizationSlug: string };
   viewerIsManager: boolean;
-  currentBillableProjects: { name: string; client: string; billing: Billing }[];
+  currentBillableProjects: CurrentProject[];
   minutes: number;
   billableMinutes: number;
   monthCapacityMinutes: number;
-  entries: Entry[];
+  entries: MonthEntry[];
 } & QueryProps<typeof consultantUrl>) {
   return (
     <Page
       title={user.name}
+      description={
+        <>
+          {user.email}
+          {user.endsOn && <Badge>Left Variant {formatDate(user.endsOn)}</Badge>}
+        </>
+      }
       back={
         viewerIsManager
           ? { href: consultantsPath(user.organizationSlug), label: "Consultants" }
@@ -124,10 +135,6 @@ function ConsultantDetailsPage({
         </PeriodNavigation>
       }
     >
-      <p class="stack-h gap-xs items-center ink-subtle">
-        {user.email}
-        {user.endsOn && <span>· Left {formatDate(user.endsOn)}</span>}
-      </p>
       <div class="stack-h items-start gap-m">
         <div class="stack-v gap-m flex-1">
           <MonthHours
@@ -135,42 +142,45 @@ function ConsultantDetailsPage({
             billableMinutes={billableMinutes}
             capacityMinutes={monthCapacityMinutes}
           />
-          <CurrentProjects projects={currentBillableProjects} />
+          <CurrentProjects
+            projects={currentBillableProjects}
+            projectHref={(projectId) =>
+              projectReportUrl.path({ projectId, month, company: user.organizationSlug })
+            }
+          />
         </div>
-        <MonthEntries month={month} entries={entries} />
+        <MonthEntries month={month} entries={entries} titleLabel="Project" />
       </div>
     </Page>
   );
 }
 
+type CurrentProject = { id: number; name: string; client: string; billing: Billing };
+
 function CurrentProjects({
   projects,
+  projectHref,
 }: {
-  projects: { name: string; client: string; billing: Billing }[];
+  projects: CurrentProject[];
+  projectHref: (projectId: number) => string;
 }) {
   return (
-    <section class="stack-v gap-xs">
-      <h2 class="fs-m">Billable projects</h2>
+    <Section title="Billable projects">
       {projects.length === 0 ? (
         <p class="ink-subtle">Not assigned to any billable project right now.</p>
       ) : (
-        <ul class="stack-v gap-xs">
+        <DataGrid columns={[{ label: "Project" }, { label: "Billing", kind: "fit" }]}>
           {projects.map((project) => (
-            <li>
-              <span class="fw-medium">{project.name}</span>{" "}
-              <span class="ink-subtle">
-                ({project.client}) · {billingLabels[project.billing]}
-              </span>
-            </li>
+            <DataGrid.Row href={projectHref(project.id)}>
+              <DataGrid.Title secondary={project.client}>{project.name}</DataGrid.Title>
+              {billingLabels[project.billing]}
+            </DataGrid.Row>
           ))}
-        </ul>
+        </DataGrid>
       )}
-    </section>
+    </Section>
   );
 }
-
-const billableColor = "var(--palette-blue-500)";
-const nonBillableColor = "var(--palette-blue-250)";
 
 function MonthHours({
   minutes,
@@ -182,95 +192,28 @@ function MonthHours({
   capacityMinutes: number;
 }) {
   const nonBillableMinutes = minutes - billableMinutes;
-  // Overtime stretches the bar past capacity rather than spilling out of it.
-  const scale = Math.max(minutes, capacityMinutes) || 1;
-  const width = (part: number) => `${(part / scale) * 100}%`;
   return (
-    <section class="stack-v gap-m flex-1 b-all bc-default br-l p-m t-tabular">
-      <dl class="stack-h items-start gap-xl">
-        <div class="stack-v gap-3xs flex-1">
-          <dt class="fs-s ink-subtle">Total hours</dt>
-          <dd class="fs-l fw-medium">{formatTotalHours(minutes)}</dd>
-        </div>
-        <div class="stack-v gap-3xs flex-1">
-          <dt class="fs-s ink-subtle">Capacity</dt>
-          <dd class="fs-l fw-medium">{formatTotalHours(capacityMinutes)}</dd>
-        </div>
-      </dl>
-      <div
-        class="stack-h nowrap gap-none br-s of-hidden b-all bc-subtle"
-        style="height: 1.5rem;"
-        aria-hidden="true"
+    <StatList>
+      <Stat
+        label="Logged"
+        value={formatTotalHours(minutes)}
+        share={formatShare(minutes, capacityMinutes)}
+        note={`of ${formatTotalHours(capacityMinutes)} capacity`}
       >
-        <span
-          style={`height: 100%; width: ${width(billableMinutes)}; background: ${billableColor};`}
+        <UtilizationBar logged={minutes} capacity={capacityMinutes} />
+      </Stat>
+      <Stat
+        label="Billable"
+        value={formatTotalHours(billableMinutes)}
+        share={formatShare(billableMinutes, minutes)}
+        note={`${formatTotalHours(nonBillableMinutes)} non-billable`}
+      >
+        <BillableBar
+          billable={billableMinutes}
+          nonBillable={nonBillableMinutes}
+          capacity={minutes}
         />
-        <span
-          style={`height: 100%; width: ${width(nonBillableMinutes)}; background: ${nonBillableColor};`}
-        />
-      </div>
-      <dl class="stack-v gap-xs">
-        <LegendRow color={billableColor} label="Billable" minutes={billableMinutes} />
-        <LegendRow color={nonBillableColor} label="Non-billable" minutes={nonBillableMinutes} />
-      </dl>
-    </section>
-  );
-}
-
-function LegendRow({ color, label, minutes }: { color: string; label: string; minutes: number }) {
-  return (
-    <div class="stack-h nowrap items-center gap-xs">
-      <dt class="stack-h nowrap items-center gap-xs flex-1">
-        <span class="br-xs" style={`width: 1rem; height: 1rem; background: ${color};`} />
-        {label}
-      </dt>
-      <dd class="fw-medium">{formatTotalHours(minutes)}</dd>
-    </div>
-  );
-}
-
-type Entry = {
-  spentOn: string;
-  minutes: number;
-  notes: string | null;
-  task: string;
-  project: string;
-  client: string;
-};
-
-function MonthEntries({ month, entries }: { month: string; entries: Entry[] }) {
-  const days = Map.groupBy(entries, (entry) => entry.spentOn);
-  return (
-    <section class="stack-v gap-m flex-1">
-      <h2 class="fs-m">Entries</h2>
-      {days.size === 0 ? (
-        <EmptyState emoji="🗓️" title="No hours logged">
-          No time was logged in {formatDate(month, "month")}.
-        </EmptyState>
-      ) : (
-        [...days].map(([day, dayEntries]) => (
-          <div class="stack-v b-all bc-subtle br-l p-xs t-tabular">
-            <h3 class="stack-h items-baseline b-b bc-subtle p-xs fs-s fw-bold">
-              <span class="flex-1">{formatDate(day)}</span>
-              <span>
-                {formatTotalHours(dayEntries.reduce((sum, entry) => sum + entry.minutes, 0))}
-              </span>
-            </h3>
-            {dayEntries.map((entry) => (
-              <div class="stack-h nowrap items-start gap-m p-xs fs-s">
-                <span class="stack-v gap-4xs flex-1">
-                  <span class="fw-medium">
-                    {entry.project} <span class="ink-subtle fw-regular">({entry.client})</span>
-                  </span>
-                  <span>{entry.task}</span>
-                  {entry.notes && <span class="ink-subtle">{entry.notes}</span>}
-                </span>
-                <span>{formatTotalHours(entry.minutes)}</span>
-              </div>
-            ))}
-          </div>
-        ))
-      )}
-    </section>
+      </Stat>
+    </StatList>
   );
 }

@@ -1,36 +1,14 @@
 import { formatDate } from "@tid/calendar/dateDisplay";
-import { isIsoDate } from "@tid/calendar/isoDate";
 import { formatHours } from "@tid/elements/hours";
 import { Badge, Button, DataGrid, Page } from "@tid/ui";
 import { z } from "zod";
 import { formatAmount } from "../amount/amount";
-import { type FormProps, formAction } from "../form/formAction";
-import { type Consultant, idParams, loadConsultant, ratesPath } from "./assignment";
-import { addRateAndReprice, entriesToReprice, type NewRate } from "./repricing";
+import type { FormProps } from "../form/formAction";
+import { type Consultant, ratesPath } from "./assignment";
+import type { NewRate } from "./repricing";
 
-// The rate in minor units, as the rates form passes it on.
-const repriceQuery = z.object({
-  rate: z.coerce.number().int().min(0),
-  validFrom: z.string().refine(isIsoDate),
-});
-
-export const repriceEntries = formAction({
-  schema: z.object({}),
-  loader: async (c) => {
-    const ids = idParams(c.req.param());
-    const query = repriceQuery.safeParse(c.req.query());
-    if (!ids || !query.success) return c.notFound();
-    const consultant = await loadConsultant(ids);
-    if (!consultant) return c.notFound();
-    const newRate = { ...query.data, currency: consultant.currency };
-    return { consultant, newRate, entries: await entriesToReprice(ids, newRate) };
-  },
-  onSubmit: async (_c, _form, { consultant, newRate }) => {
-    await addRateAndReprice(consultant, newRate);
-    return { redirect: ratesPath(consultant) };
-  },
-  view: RepricePage,
-});
+// Confirming takes no fields; what to reprice comes from the query.
+export const repriceEntriesForm = z.object({});
 
 type RepricePageProps = {
   consultant: Consultant;
@@ -45,7 +23,7 @@ type RepricePageProps = {
   }[];
 } & FormProps;
 
-function RepricePage({ consultant, newRate, entries }: RepricePageProps) {
+export function RepricePage({ consultant, newRate, entries }: RepricePageProps) {
   const money = (minorUnits: number) => formatAmount(minorUnits / 100, newRate.currency, 2);
   const difference = (entry: RepricePageProps["entries"][number]) =>
     (entry.minutes / 60) * (newRate.rate - (entry.rate ?? 0));

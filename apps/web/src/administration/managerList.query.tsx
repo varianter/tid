@@ -8,8 +8,8 @@ import { database } from "../database";
 import type { UserEnv } from "../login/user";
 import { findOrganizationBySlug } from "../organizations/organization";
 import { administrationPath } from "./administrationUrl";
-import { MakeManagerForm } from "./makeManager.command";
-import { RemoveManagerForm } from "./removeManager.command";
+import { MakeManagerForm } from "./makeManager.form";
+import { RemoveManagerForm } from "./removeManager.form";
 
 export const managerList = async (c: Context<UserEnv>) => {
   const organization = await findOrganizationBySlug(c.req.param("organization") ?? "");
@@ -58,7 +58,10 @@ function ManagerListPage({
         {members.map((member) => (
           <DataGrid.Row>
             <DataGrid.Title
-              secondary={[member.email, member.endsOn && `Left ${formatDate(member.endsOn)}`]
+              secondary={[
+                member.email,
+                member.endsOn && `Left Variant ${formatDate(member.endsOn)}`,
+              ]
                 .filter(Boolean)
                 .join(" · ")}
             >
@@ -68,9 +71,17 @@ function ManagerListPage({
               </span>
             </DataGrid.Title>
             {member.isManager ? (
-              <RemoveManagerForm organizationSlug={organization.slug} userId={member.id} />
+              <RemoveManagerForm
+                organizationSlug={organization.slug}
+                userId={member.id}
+                name={member.name}
+              />
             ) : (
-              <MakeManagerForm organizationSlug={organization.slug} userId={member.id} />
+              <MakeManagerForm
+                organizationSlug={organization.slug}
+                userId={member.id}
+                name={member.name}
+              />
             )}
           </DataGrid.Row>
         ))}

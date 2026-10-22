@@ -5,6 +5,7 @@ import { and, eq } from "drizzle-orm";
 import { database } from "../database";
 import { onlyRow, organizationIdBySlug } from "../testing/rows";
 import { assignToProject } from "./assignConsultant.command";
+import { assignmentState } from "./assignment";
 import { unassignFromProject } from "./removeConsultant.command";
 
 let projectId: number;
@@ -85,4 +86,15 @@ test("an organization open to members stays after its last consultant leaves", a
 test("assigning a user or project that doesn't exist fails", async () => {
   expect(await assignToProject({ projectId, userId: 999999 })).toBe(false);
   expect(await assignToProject({ projectId: 999999, userId: guestId })).toBe(false);
+});
+
+test("an assignment counts until its last day, and leaving the company overrides it", () => {
+  const today = "2026-10-22";
+  expect(assignmentState({ endsOn: null, leftOn: null }, today)).toBe("onProject");
+  expect(assignmentState({ endsOn: today, leftOn: null }, today)).toBe("onProject");
+  expect(assignmentState({ endsOn: "2026-10-21", leftOn: null }, today)).toBe("offProject");
+  expect(assignmentState({ endsOn: null, leftOn: "2026-10-21" }, today)).toBe("leftCompany");
+  expect(assignmentState({ endsOn: "2026-09-30", leftOn: "2026-10-21" }, today)).toBe(
+    "leftCompany",
+  );
 });

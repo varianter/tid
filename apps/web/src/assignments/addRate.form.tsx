@@ -1,19 +1,14 @@
 import { formatDate } from "@tid/calendar/dateDisplay";
 import { isIsoDate } from "@tid/calendar/isoDate";
-import { todayInOslo } from "@tid/calendar/osloClock";
-import { assignmentRates } from "@tid/db/schema";
 import { Badge, Button, DataGrid, EmptyState, FormField, Page } from "@tid/ui";
-import { desc } from "drizzle-orm";
 import { z } from "zod";
 import { formatAmount } from "../amount/amount";
-import { database } from "../database";
-import { type FormProps, formAction } from "../form/formAction";
-import { type Consultant, idParams, loadConsultant, ratesOf, ratesPath } from "./assignment";
-import { DeleteRateForm } from "./deleteRate.command";
+import type { FormProps } from "../form/formAction";
+import type { Consultant } from "./assignment";
+import { DeleteRateForm } from "./deleteRate.form";
 import { ratePeriods } from "./ratePeriods";
-import { addRateAndReprice, entriesToReprice } from "./repricing";
 
-const addRateForm = z.object({
+export const addRateForm = z.object({
   rate: z
     .string()
     .trim()
@@ -22,34 +17,7 @@ const addRateForm = z.object({
     .pipe(z.number("Enter a number").min(0, "Can't be negative"))
     // Stored in minor units.
     .transform((rate) => Math.round(rate * 100)),
-  validFrom: z.string().refine(isIsoDate, "Pick a date"),
-});
-
-export const addRate = formAction({
-  schema: addRateForm,
-  loader: async (c) => {
-    const ids = idParams(c.req.param());
-    if (!ids) return c.notFound();
-    const consultant = await loadConsultant(ids);
-    if (!consultant) return c.notFound();
-    const rates = await database
-      .select({ validFrom: assignmentRates.validFrom, rate: assignmentRates.rate })
-      .from(assignmentRates)
-      .where(ratesOf(ids))
-      .orderBy(desc(assignmentRates.validFrom));
-    return { consultant, rates, today: todayInOslo() };
-  },
-  // A rate that changes logged time is confirmed on its own page first.
-  onSubmit: async (_c, form, { consultant }) => {
-    const newRate = { ...form, currency: consultant.currency };
-    if ((await entriesToReprice(consultant, newRate)).length > 0) {
-      const query = new URLSearchParams({ validFrom: form.validFrom, rate: String(form.rate) });
-      return { redirect: `${ratesPath(consultant)}/reprice?${query}` };
-    }
-    await addRateAndReprice(consultant, newRate);
-    return { redirect: ratesPath(consultant) };
-  },
-  view: RatesPage,
+  validFrom: z.string().refine(isIsoDate, "Choose a date"),
 });
 
 type RatesPageProps = {
@@ -58,7 +26,7 @@ type RatesPageProps = {
   today: string;
 } & FormProps;
 
-function RatesPage({ consultant, rates, today, values, fieldErrors }: RatesPageProps) {
+export function RatesPage({ consultant, rates, today, values, fieldErrors }: RatesPageProps) {
   return (
     <Page
       title={`Billable rates for ${consultant.name}`}
@@ -86,11 +54,11 @@ function RatesPage({ consultant, rates, today, values, fieldErrors }: RatesPageP
           errors={fieldErrors?.validFrom}
           required
         />
-        <Button type="submit">New billable rate</Button>
+        <Button type="submit">Add rate</Button>
       </form>
       {rates.length === 0 ? (
         <EmptyState emoji="💰" title="No rates yet">
-          Time logged on this project has no billable amount until it has a rate.
+          Hours logged on this project have no billable amount until it has a rate.
         </EmptyState>
       ) : (
         <DataGrid
@@ -108,7 +76,7 @@ function RatesPage({ consultant, rates, today, values, fieldErrors }: RatesPageP
                 {period.isCurrent && <Badge class="ml-xs">Current</Badge>}
               </span>
               {formatDate(period.validFrom, "numeric")}
-              {period.validUntil ? formatDate(period.validUntil, "numeric") : "All future"}
+              {period.validUntil ? formatDate(period.validUntil, "numeric") : "No end date"}
               {period.validFrom > today ? (
                 <DeleteRateForm ids={consultant} validFrom={period.validFrom} />
               ) : (

@@ -1,3 +1,4 @@
+import { formatDate } from "@tid/calendar/dateDisplay";
 import { addMonths, firstDayOfMonth, monthOf } from "@tid/calendar/isoDate";
 import { todayInOslo } from "@tid/calendar/osloClock";
 import {
@@ -12,12 +13,14 @@ import {
   users,
 } from "@tid/db/schema";
 import { formatTotalHours } from "@tid/elements/hours";
-import { Badge, Button, DataGrid, Detail, Page } from "@tid/ui";
+import { Badge, Button, DataGrid, Detail, Page, Section, Stat, StatList } from "@tid/ui";
 import { and, desc, eq, lte, notExists, type SQL, sql } from "drizzle-orm";
 import type { Context } from "hono";
 import { formatAmount } from "../amount/amount";
-import { AssignConsultantForm } from "../assignments/assignConsultant.command";
-import { RemoveConsultantForm } from "../assignments/removeConsultant.command";
+import { AssignConsultantForm, ReassignConsultantForm } from "../assignments/assignConsultant.form";
+import { type AssignmentState, assignmentState, stateOrder } from "../assignments/assignment";
+import { EndAssignmentForm } from "../assignments/endAssignment.form";
+import { RemoveConsultantForm } from "../assignments/removeConsultant.form";
 import { consultantPath } from "../consultants/consultantsUrl";
 import { database } from "../database";
 import type { UserEnv } from "../login/user";
@@ -25,6 +28,7 @@ import { isManager, managesProject } from "../managers/manager";
 import { AddTaskForm } from "./addTask.form";
 import { billingLabels } from "./billing";
 import { type ProjectSummary, projectSummary } from "./projectSummary";
+import { projectReportUrl } from "./projectsUrl";
 
 type HoursSpent = { total: number; lastMonth: number; thisMonth: number };
 
@@ -88,6 +92,8 @@ export const projectDetails = async (c: Context<UserEnv>) => {
       id: users.id,
       name: users.name,
       rate: currentRate(assignmentRates.rate),
+      endsOn: projectAssignments.endsOn,
+      leftOn: users.endsOn,
       ...hoursSpent(today),
     })
     .from(projectAssignments)
@@ -95,7 +101,7 @@ export const projectDetails = async (c: Context<UserEnv>) => {
     .leftJoin(tasks, eq(tasks.projectId, projectAssignments.projectId))
     .leftJoin(timeEntries, and(eq(timeEntries.taskId, tasks.id), eq(timeEntries.userId, users.id)))
     .where(eq(projectAssignments.projectId, id))
-    .groupBy(users.id)
+    .groupBy(users.id, projectAssignments.endsOn)
     .orderBy(users.name);
 
   const participations = await database
@@ -139,7 +145,10 @@ export const projectDetails = async (c: Context<UserEnv>) => {
       project={project}
       hours={projectHours ?? { total: 0, lastMonth: 0, thisMonth: 0 }}
       tasks={projectTasks}
-      assignedPeople={assignedPeople}
+      assignedPeople={assignedPeople
+        .map((person) => ({ ...person, state: assignmentState(person, today) }))
+        .toSorted((a, b) => stateOrder.indexOf(a.state) - stateOrder.indexOf(b.state))}
+      today={today}
       assignablePeople={assignablePeople}
       participations={participations}
       canManageProject={canManageProject}
@@ -149,6 +158,18 @@ export const projectDetails = async (c: Context<UserEnv>) => {
   );
 };
 
+// A badge per state; only an ongoing assignment without an end date goes without one.
+function stateBadge({ endsOn, state }: Pick<Consultant, "endsOn" | "state">) {
+  if (state === "leftCompany") return <Badge class="mt-3xs d-inline-block">Has left Variant</Badge>;
+  if (!endsOn) return undefined;
+  const verb = state === "offProject" ? "Left project" : "Last day on the project";
+  return (
+    <Badge class="mt-3xs d-inline-block">
+      {verb} {formatDate(endsOn, "numeric")}
+    </Badge>
+  );
+}
+
 type TaskTotal = { name: string; spentMinutes: number };
 
 type Person = { id: number; name: string };
@@ -157,6 +178,10 @@ type Consultant = Person &
   HoursSpent & {
     /** In minor units of the project's currency; none when no rate has started yet. */
     rate: number | null;
+    endsOn: string | null;
+    /** The day they left the company. */
+    leftOn: string | null;
+    state: AssignmentState;
   };
 
 type Participation = {
@@ -169,7 +194,9 @@ type ProjectDetailsPageProps = {
   project: ProjectSummary;
   hours: HoursSpent;
   tasks: TaskTotal[];
+  /** On the project first, then those who rolled off, then those who left the company. */
   assignedPeople: Consultant[];
+  today: string;
   /** Everyone not assigned yet, sorted by organization so the picker can group them. */
   assignablePeople: (Person & { orgName: string })[];
   /** The contract owner first, so it reads as the lead organization. */
@@ -187,6 +214,7 @@ function ProjectDetailsPage({
   hours,
   tasks,
   assignedPeople,
+  today,
   assignablePeople,
   participations,
   canManageProject,
@@ -200,11 +228,20 @@ function ProjectDetailsPage({
       title={project.name}
       back={{ href: "/projects", label: "Back to projects" }}
       actions={
-        canManageProject && (
-          <Button as="a" href={`/projects/${project.id}/edit`} data-variant="tinted">
-            Edit
+        <>
+          <Button
+            as="a"
+            href={projectReportUrl.path({ projectId: project.id, month: monthOf(todayInOslo()) })}
+            data-variant="tinted"
+          >
+            Report
           </Button>
-        )
+          {canManageProject && (
+            <Button as="a" href={`/projects/${project.id}/edit`} data-variant="tinted">
+              Edit
+            </Button>
+          )}
+        </>
       }
     >
       <dl class="stack-h items-start gap-xl gap-row-s b-all bc-default br-l p-m">
@@ -225,7 +262,7 @@ function ProjectDetailsPage({
                 <span>
                   {participation.name}
                   {participation.openToMembers && (
-                    <Badge class="ml-xs" title="Everyone in the organization may log time here">
+                    <Badge class="ml-xs" title="Everyone in the organization may log hours here">
                       Open
                     </Badge>
                   )}
@@ -236,18 +273,20 @@ function ProjectDetailsPage({
           )}
         </Detail>
       </dl>
-      <div class="stack-h wrap gap-m">
-        <HoursCard label="Total hours" minutes={hours.total} />
-        <HoursCard label="Last month" minutes={hours.lastMonth} />
-        <HoursCard label="This month so far" minutes={hours.thisMonth} />
-      </div>
-      <section class="stack-v gap-s">
-        <div class="stack-h items-center justify-between gap-m wrap">
-          <h2 class="fs-l fw-bold">Consultants</h2>
-          {canAssign && assignablePeople.length > 0 && (
+      <StatList>
+        <Stat label="Total hours" value={formatTotalHours(hours.total)} />
+        <Stat label="Last month" value={formatTotalHours(hours.lastMonth)} />
+        <Stat label="This month so far" value={formatTotalHours(hours.thisMonth)} />
+      </StatList>
+      <Section
+        title="Consultants"
+        actions={
+          canAssign &&
+          assignablePeople.length > 0 && (
             <AssignConsultantForm projectId={project.id} assignablePeople={assignablePeople} />
-          )}
-        </div>
+          )
+        }
+      >
         {assignedPeople.length === 0 ? (
           <p class="ink-subtle">No one is assigned yet.</p>
         ) : (
@@ -262,9 +301,13 @@ function ProjectDetailsPage({
             ]}
           >
             {assignedPeople.map((person) => (
-              <DataGrid.Row>
-                <DataGrid.Title>
-                  {canOpenConsultants ? (
+              <DataGrid.Row
+                href={
+                  canOpenConsultants && !canManageProject ? consultantPath(person.id) : undefined
+                }
+              >
+                <DataGrid.Title secondary={stateBadge(person)}>
+                  {canOpenConsultants && canManageProject ? (
                     <a href={consultantPath(person.id)}>{person.name}</a>
                   ) : (
                     person.name
@@ -285,45 +328,53 @@ function ProjectDetailsPage({
                         href={`/projects/${project.id}/assignments/${person.id}/rates`}
                         data-variant="plain"
                         data-size="small"
+                        aria-label={`${person.name}'s rates`}
                       >
-                        Edit rate
+                        Rates
                       </Button>
                     )}
-                    <RemoveConsultantForm projectId={project.id} userId={person.id} />
+                    {person.state === "onProject" && (
+                      <EndAssignmentForm
+                        ids={{ projectId: project.id, userId: person.id }}
+                        name={person.name}
+                        today={today}
+                      />
+                    )}
+                    {person.state === "onProject" && person.total === 0 && (
+                      <RemoveConsultantForm
+                        projectId={project.id}
+                        userId={person.id}
+                        name={person.name}
+                      />
+                    )}
+                    {person.state === "offProject" && (
+                      <ReassignConsultantForm
+                        projectId={project.id}
+                        userId={person.id}
+                        name={person.name}
+                      />
+                    )}
                   </span>
                 )}
               </DataGrid.Row>
             ))}
           </DataGrid>
         )}
-      </section>
-      <section class="stack-v gap-s">
-        <div class="stack-h items-center justify-between gap-m wrap">
-          <h2 class="fs-l fw-bold">Tasks</h2>
-          {canManageProject && <AddTaskForm projectId={project.id} />}
-        </div>
+      </Section>
+      <Section title="Tasks" actions={canManageProject && <AddTaskForm projectId={project.id} />}>
         {tasks.length === 0 ? (
           <p class="ink-subtle">No tasks yet.</p>
         ) : (
-          <ul class="stack-v gap-3xs b-all bc-subtle p-2xs t-tabular">
+          <DataGrid columns={[{ label: "Name" }, { label: "Spent", kind: "number" }]}>
             {tasks.map((task) => (
-              <li class="stack-h justify-between p-xs px-m surface-tinted">
-                {task.name}
-                <span class="ink-subtle">{formatTotalHours(task.spentMinutes)}</span>
-              </li>
+              <DataGrid.Row>
+                <DataGrid.Title>{task.name}</DataGrid.Title>
+                {formatTotalHours(task.spentMinutes)}
+              </DataGrid.Row>
             ))}
-          </ul>
+          </DataGrid>
         )}
-      </section>
+      </Section>
     </Page>
-  );
-}
-
-function HoursCard({ label, minutes }: { label: string; minutes: number }) {
-  return (
-    <div class="stack-v gap-3xs b-all bc-default br-l p-m">
-      <span class="fs-s ink-subtle">{label}</span>
-      <span class="fs-xl fw-bold t-tabular">{formatTotalHours(minutes)}</span>
-    </div>
   );
 }

@@ -6,43 +6,68 @@ import {
   timeEntries,
   users,
 } from "@tid/db/schema";
-import { and, eq, exists, or } from "drizzle-orm";
+import { and, between, eq, exists, gte, isNull, or } from "drizzle-orm";
 import { database } from "../database";
 
 export type Task = { id: number; name: string; projectId: number; projectName: string };
 
-/** Tasks the user may log on: projects open to their organization's members, assigned ones, and any they already have time on. */
-export const loggableBy = (userId: number) =>
-  or(
-    exists(
-      database
-        .select()
-        .from(projectOrganizations)
-        .innerJoin(users, eq(users.orgId, projectOrganizations.orgId))
-        .where(
-          and(
-            eq(projectOrganizations.projectId, projects.id),
-            eq(projectOrganizations.openToMembers, true),
-            eq(users.id, userId),
-          ),
+const openToOrganizationOf = (userId: number) =>
+  exists(
+    database
+      .select()
+      .from(projectOrganizations)
+      .innerJoin(users, eq(users.orgId, projectOrganizations.orgId))
+      .where(
+        and(
+          eq(projectOrganizations.projectId, projects.id),
+          eq(projectOrganizations.openToMembers, true),
+          eq(users.id, userId),
         ),
-    ),
-    exists(
-      database
-        .select()
-        .from(projectAssignments)
-        .where(
-          and(eq(projectAssignments.projectId, projects.id), eq(projectAssignments.userId, userId)),
-        ),
-    ),
-    // Keeps rows for tasks the user is no longer assigned to, so they can still correct them.
-    exists(
-      database
-        .select()
-        .from(timeEntries)
-        .where(and(eq(timeEntries.taskId, tasks.id), eq(timeEntries.userId, userId))),
-    ),
+      ),
   );
+
+/** Assigned to the project, and when `endedBefore` is given, not rolled off before it. */
+const assignedTo = (userId: number, endedBefore?: string) =>
+  exists(
+    database
+      .select()
+      .from(projectAssignments)
+      .where(
+        and(
+          eq(projectAssignments.projectId, projects.id),
+          eq(projectAssignments.userId, userId),
+          endedBefore === undefined
+            ? undefined
+            : or(isNull(projectAssignments.endsOn), gte(projectAssignments.endsOn, endedBefore)),
+        ),
+      ),
+  );
+
+const loggedOn = (userId: number, from?: string, till?: string) =>
+  exists(
+    database
+      .select()
+      .from(timeEntries)
+      .where(
+        and(
+          eq(timeEntries.taskId, tasks.id),
+          eq(timeEntries.userId, userId),
+          from && till ? between(timeEntries.spentOn, from, till) : undefined,
+        ),
+      ),
+  );
+
+/**
+ * Tasks the user may log on: projects open to their organization's members, assigned ones, and any
+ * they already have time on. An ended assignment still counts, since its end date is a record,
+ * not a lock.
+ */
+export const loggableBy = (userId: number) =>
+  or(openToOrganizationOf(userId), assignedTo(userId), loggedOn(userId));
+
+/** Tasks the timesheet offers between from and till: loggable ones, less projects the user rolled off before then. */
+export const offeredTo = (userId: number, from: string, till: string) =>
+  or(openToOrganizationOf(userId), assignedTo(userId, from), loggedOn(userId, from, till));
 
 export const userTasks = () =>
   database

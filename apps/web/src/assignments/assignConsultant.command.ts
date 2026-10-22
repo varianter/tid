@@ -1,5 +1,4 @@
 import { projectAssignments, projects, users } from "@tid/db/schema";
-import { Button, Select } from "@tid/ui";
 import { eq } from "drizzle-orm";
 import type { Context } from "hono";
 import { database } from "../database";
@@ -25,7 +24,7 @@ export const assignConsultant = async (c: Context<UserEnv>) => {
 
 /**
  * Assigns the user, bringing their organization into the project if it isn't already.
- * Returns false when the user or project doesn't exist.
+ * Reassigning reopens an ended assignment, keeping its rates. Returns false when the user or project doesn't exist.
  */
 export async function assignToProject(ids: AssignmentIds) {
   const [user] = await database
@@ -42,38 +41,10 @@ export async function assignToProject(ids: AssignmentIds) {
     await transaction
       .insert(projectAssignments)
       .values({ ...ids, orgId: user.orgId })
-      .onConflictDoNothing();
+      .onConflictDoUpdate({
+        target: [projectAssignments.projectId, projectAssignments.userId],
+        set: { endsOn: null },
+      });
   });
   return true;
-}
-
-export type AssignablePerson = { id: number; name: string; orgName: string };
-
-export function AssignConsultantForm({
-  projectId,
-  assignablePeople,
-}: {
-  projectId: number;
-  assignablePeople: AssignablePerson[];
-}) {
-  const peopleByOrganization = Map.groupBy(assignablePeople, (person) => person.orgName);
-  return (
-    <form
-      method="post"
-      action={`/projects/${projectId}/assignments`}
-      class="stack-h items-center gap-xs"
-    >
-      <Select name="userId" aria-label="Consultant to assign" required>
-        <option value="">Choose a consultant</option>
-        {[...peopleByOrganization].map(([orgName, people]) => (
-          <optgroup label={orgName}>
-            {people.map((person) => (
-              <option value={person.id}>{person.name}</option>
-            ))}
-          </optgroup>
-        ))}
-      </Select>
-      <Button type="submit">Assign</Button>
-    </form>
-  );
 }

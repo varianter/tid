@@ -21,6 +21,19 @@ export const ratesOf = ({ projectId, userId }: AssignmentIds) =>
 export const ratesPath = ({ projectId, userId }: AssignmentIds) =>
   `/projects/${projectId}/assignments/${userId}/rates`;
 
+export const stateOrder = ["onProject", "offProject", "leftCompany"] as const;
+export type AssignmentState = (typeof stateOrder)[number];
+
+// Leaving the company ends every assignment, so it wins over the assignment's own end.
+export function assignmentState(
+  { endsOn, leftOn }: { endsOn: string | null; leftOn: string | null },
+  today: string,
+): AssignmentState {
+  if (leftOn && leftOn < today) return "leftCompany";
+  if (endsOn && endsOn < today) return "offProject";
+  return "onProject";
+}
+
 export type Consultant = AssignmentIds & {
   name: string;
   projectName: string;

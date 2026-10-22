@@ -120,3 +120,8 @@ test("startOfLastMonth steps back across the year boundary", () => {
   expect(startOfLastMonth(new Date("2026-10-14T00:00:00Z"))).toBe("2026-09-01");
   expect(startOfLastMonth(new Date("2026-01-05T00:00:00Z"))).toBe("2025-12-01");
 });
+
+test("startOfLastMonth goes by the month in Oslo", () => {
+  // 31 October 23:30 UTC is already 1 November in Oslo.
+  expect(startOfLastMonth(new Date("2026-10-31T23:30:00Z"))).toBe("2026-10-01");
+});

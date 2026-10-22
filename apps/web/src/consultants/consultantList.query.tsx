@@ -1,7 +1,7 @@
 import { formatDate } from "@tid/calendar/dateDisplay";
 import { todayInOslo } from "@tid/calendar/osloClock";
 import { userRoles, users } from "@tid/db/schema";
-import { Badge, DataGrid, Page } from "@tid/ui";
+import { Badge, DataGrid, EmptyState, Page } from "@tid/ui";
 import { and, eq, exists, inArray } from "drizzle-orm";
 import type { Context } from "hono";
 import { database } from "../database";
@@ -66,26 +66,30 @@ function ConsultantListPage({
 }: { consultants: ConsultantRow[] } & CompanyFilter) {
   return (
     <Page title="Consultants" actions={<CompanySelect selected={selected} companies={companies} />}>
-      <DataGrid columns={[{ label: "Name" }, { label: "Billable projects" }]}>
-        {consultants.map((consultant) => (
-          <DataGrid.Row href={consultantPath(consultant.id)}>
-            <DataGrid.Title
-              secondary={[
-                consultant.email,
-                consultant.endsOn && `Left ${formatDate(consultant.endsOn)}`,
-              ]
-                .filter(Boolean)
-                .join(" · ")}
-            >
-              <span class="stack-h gap-xs items-center">
-                <span class="fw-medium">{consultant.name}</span>
-                {consultant.isManager && <Badge>Manager</Badge>}
-              </span>
-            </DataGrid.Title>
-            {consultant.projectNames.join(", ")}
-          </DataGrid.Row>
-        ))}
-      </DataGrid>
+      {consultants.length === 0 ? (
+        <EmptyState emoji="👥" title="No consultants yet" />
+      ) : (
+        <DataGrid columns={[{ label: "Name" }, { label: "Billable projects" }]}>
+          {consultants.map((consultant) => (
+            <DataGrid.Row href={consultantPath(consultant.id)}>
+              <DataGrid.Title
+                secondary={[
+                  consultant.email,
+                  consultant.endsOn && `Left Variant ${formatDate(consultant.endsOn)}`,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
+              >
+                <span class="stack-h gap-xs items-center">
+                  <span class="fw-medium">{consultant.name}</span>
+                  {consultant.isManager && <Badge>Manager</Badge>}
+                </span>
+              </DataGrid.Title>
+              {consultant.projectNames.join(", ")}
+            </DataGrid.Row>
+          ))}
+        </DataGrid>
+      )}
     </Page>
   );
 }

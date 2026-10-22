@@ -167,7 +167,6 @@ export const tasks = pgTable(
     id: id(),
     projectId: reference().references(() => projects.id),
     name: text().notNull(),
-    endsOn: date(),
   },
   (table) => [unique().on(table.projectId, table.name)],
 );
