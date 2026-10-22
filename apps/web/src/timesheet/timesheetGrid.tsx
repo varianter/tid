@@ -4,7 +4,7 @@ import { mondayOf } from "@tid/calendar/isoDate";
 import { todayInOslo } from "@tid/calendar/osloClock";
 import type { SpecialDay } from "@tid/calendar/publicHolidays";
 import { formatHours } from "@tid/elements/hours";
-import { Button, ColorMode, Select } from "@tid/ui";
+import { Button, ColorMode, EmptyState, Select } from "@tid/ui";
 import { cx } from "hono/css";
 import type { PropsWithChildren } from "hono/jsx";
 import type { Task } from "./loggableTasks";
@@ -25,6 +25,8 @@ export type TimesheetGridProps = {
   entries: TimeEntry[];
   cellsAction: string;
   addedTaskIds: number[];
+  /** Tasks shown even without hours, since the user is assigned to their project. */
+  assignedTaskIds: number[];
   /** The current query string, kept when adding a row. */
   search: string;
   error?: MonthError;
@@ -40,6 +42,7 @@ export function TimesheetGrid({
   entries,
   cellsAction,
   addedTaskIds,
+  assignedTaskIds,
   search,
   error,
   locked = false,
@@ -63,7 +66,10 @@ export function TimesheetGrid({
   // ponytail: added rows live only in the URL, so they vanish on navigation until they're stored.
   const rows = tasks
     .filter(
-      (task) => addedTaskIds.includes(task.id) || entries.some((entry) => entry.taskId === task.id),
+      (task) =>
+        addedTaskIds.includes(task.id) ||
+        assignedTaskIds.includes(task.id) ||
+        entries.some((entry) => entry.taskId === task.id),
     )
     .sort(byProjectThenName);
   const addableByProject = Object.entries(
@@ -73,35 +79,12 @@ export function TimesheetGrid({
     ),
   );
   const addable = !locked && addableByProject.length > 0;
+  if (rows.length === 0)
+    return <NoRows locked={locked} addableByProject={addableByProject} search={search} />;
   return (
     <>
       {addable && (
-        // Picking a task adds `add` to the query, like the hidden inputs already there.
-        <auto-submit>
-          <form method="get" class="stack-h nowrap items-center gap-2xs w-max-5 mt-s mb-m">
-            {[...new URLSearchParams(search)].map(([name, value]) => (
-              <input type="hidden" name={name} value={value} />
-            ))}
-            <Select name="add" class="w-full" data-size="small" aria-label="Add task">
-              <option value="" selected disabled>
-                Add task…
-              </option>
-              {addableByProject.map(([projectName, projectTasks]) => (
-                <optgroup>
-                  <legend>{projectName}</legend>
-                  {projectTasks?.map((task) => (
-                    <option value={task.id}>{task.name}</option>
-                  ))}
-                </optgroup>
-              ))}
-            </Select>
-            <noscript>
-              <Button type="submit" data-size="small">
-                Add
-              </Button>
-            </noscript>
-          </form>
-        </auto-submit>
+        <AddTaskForm addableByProject={addableByProject} search={search} class="mt-s mb-m" />
       )}
       <div
         class={cx("d-grid t-tabular my-s gap-column-3xs", sheetLayout)}
@@ -176,6 +159,74 @@ export function TimesheetGrid({
       </div>
       <ProjectTotals rows={rows} sumMinutes={sumMinutes} expectedMinutes={expectedMinutes} />
     </>
+  );
+}
+
+type AddableTasks = [projectName: string, tasks: Task[] | undefined][];
+
+function NoRows({
+  locked,
+  addableByProject,
+  search,
+}: {
+  locked: boolean;
+  addableByProject: AddableTasks;
+  search: string;
+}) {
+  if (locked) return <EmptyState emoji="🔒" title="Closed, and not a minute logged" />;
+  if (addableByProject.length === 0)
+    return (
+      <EmptyState emoji="🏝️" title="Nowhere to put your hours">
+        You're not on any projects yet. Nudge a manager to put you on one.
+      </EmptyState>
+    );
+  return (
+    <EmptyState
+      emoji="📝"
+      title="Fresh month, empty sheet"
+      action={<AddTaskForm addableByProject={addableByProject} search={search} />}
+    >
+      Pick a task to get going. The hours won't log themselves.
+    </EmptyState>
+  );
+}
+
+function AddTaskForm({
+  addableByProject,
+  search,
+  class: className,
+}: {
+  addableByProject: AddableTasks;
+  search: string;
+  class?: string;
+}) {
+  return (
+    // Picking a task adds `add` to the query, like the hidden inputs already there.
+    <auto-submit>
+      <form method="get" class={cx("stack-h nowrap items-center gap-2xs w-max-5", className)}>
+        {[...new URLSearchParams(search)].map(([name, value]) => (
+          <input type="hidden" name={name} value={value} />
+        ))}
+        <Select name="add" class="w-full" data-size="small" aria-label="Add task">
+          <option value="" selected disabled>
+            Add task…
+          </option>
+          {addableByProject.map(([projectName, projectTasks]) => (
+            <optgroup>
+              <legend>{projectName}</legend>
+              {projectTasks?.map((task) => (
+                <option value={task.id}>{task.name}</option>
+              ))}
+            </optgroup>
+          ))}
+        </Select>
+        <noscript>
+          <Button type="submit" data-size="small">
+            Add
+          </Button>
+        </noscript>
+      </form>
+    </auto-submit>
   );
 }
 

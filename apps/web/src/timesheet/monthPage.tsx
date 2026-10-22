@@ -18,10 +18,10 @@ import { isLockedOn } from "../monthClose/monthLock.data";
 import { findOrganization } from "../organizations/organization";
 import { capacityMinutes } from "../reports/capacity";
 import { CellShortcuts } from "./cellShortcuts";
-import { offeredTo, userTasks } from "./loggableTasks";
+import { offeredTo, onBillableAssignment, userTasks } from "./loggableTasks";
 import { type MonthError, TimesheetGrid, type TimesheetGridProps } from "./timesheetGrid";
 
-/** The user's entries between from and till, and the tasks the timesheet offers them. */
+/** The user's entries between from and till, the tasks the timesheet offers them, and those it shows unasked. */
 async function loadTimesheet(userId: number, from: string, till: string) {
   const entries = await database
     .select({
@@ -31,7 +31,12 @@ async function loadTimesheet(userId: number, from: string, till: string) {
     })
     .from(timeEntries)
     .where(and(eq(timeEntries.userId, userId), between(timeEntries.spentOn, from, till)));
-  return { tasks: await userTasks().where(offeredTo(userId, from, till)), entries };
+  const assignedTasks = await userTasks().where(onBillableAssignment(userId, from));
+  return {
+    tasks: await userTasks().where(offeredTo(userId, from, till)),
+    entries,
+    assignedTaskIds: assignedTasks.map((task) => task.id),
+  };
 }
 const addedTaskIdsOf = (queries: string[] | undefined) => (queries ?? []).map(Number);
 
@@ -48,7 +53,7 @@ export async function renderMonth(c: Context<UserEnv>, month: string, error?: Mo
   const showWeekends = c.req.query("weekends") === "on";
   const addedTaskIds = addedTaskIdsOf(c.req.queries("add"));
   const monthDays = daysOfMonth(month);
-  const { tasks, entries } = await loadTimesheet(
+  const { tasks, entries, assignedTaskIds } = await loadTimesheet(
     c.get("user").id,
     firstDayOfMonth(month),
     lastDayOfMonth(month),
@@ -79,6 +84,7 @@ export async function renderMonth(c: Context<UserEnv>, month: string, error?: Mo
       cellAction={`/timesheet/month/${month}/cell${search}`}
       fullDayMinutes={fullDayMinutes}
       addedTaskIds={addedTaskIds}
+      assignedTaskIds={assignedTaskIds}
       search={search}
       error={error}
     />,

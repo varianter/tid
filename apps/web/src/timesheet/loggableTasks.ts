@@ -6,7 +6,7 @@ import {
   timeEntries,
   users,
 } from "@tid/db/schema";
-import { and, between, eq, exists, gte, isNull, or } from "drizzle-orm";
+import { and, between, eq, exists, gte, isNull, ne, or } from "drizzle-orm";
 import { database } from "../database";
 
 export type Task = { id: number; name: string; projectId: number; projectName: string };
@@ -68,6 +68,17 @@ export const loggableBy = (userId: number) =>
 /** Tasks the timesheet offers between from and till: loggable ones, less projects the user rolled off before then. */
 export const offeredTo = (userId: number, from: string, till: string) =>
   or(openToOrganizationOf(userId), assignedTo(userId, from), loggedOn(userId, from, till));
+
+/**
+ * Tasks the timesheet shows from the start: billable projects the user is assigned to, unless the
+ * assignment or the project ended before from. Start dates are ignored.
+ */
+export const onBillableAssignment = (userId: number, from: string) =>
+  and(
+    assignedTo(userId, from),
+    ne(projects.billing, "non_billable"),
+    or(isNull(projects.endsOn), gte(projects.endsOn, from)),
+  );
 
 export const userTasks = () =>
   database
