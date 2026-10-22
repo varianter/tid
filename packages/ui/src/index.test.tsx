@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { Button, DataGrid, FormField, Page, Tabs } from "./index";
+import { BarChart, Button, DataGrid, FormField, Page, Tabs } from "./index";
 
 test("Button renders a button by default and a link with as='a'", () => {
   expect(
@@ -18,6 +18,30 @@ test("Button renders a button by default and a link with as='a'", () => {
   ).toBe('<a class="v-button px-l" href="/clients">Clients</a>');
 });
 
+test("BarChart sizes bars against max and labels each column with its date", () => {
+  const chart = String(
+    <BarChart
+      points={[
+        { label: "2026-05-16", value: 5 },
+        { label: "2026-05-17", value: 10 },
+      ]}
+      max={10}
+    />,
+  );
+  expect(chart).toContain("grid-template-columns: repeat(2, 1fr);");
+  expect(chart).toContain('style="height: 50%;"');
+  expect(chart).toContain('style="height: 100%;"');
+  expect(chart).toContain(
+    '<time class="ta-center ink-subtle t-tabular" datetime="2026-05-16">2026-05-16</time>',
+  );
+});
+
+test("BarChart stretches the scale when a value exceeds max", () => {
+  const chart = String(<BarChart points={[{ label: "2026-05-16", value: 20 }]} max={10} />);
+  expect(chart).toContain('style="height: 100%;"');
+  expect(chart).not.toContain("110");
+});
+
 test("attributes are checked per element", () => {
   // @ts-expect-error a button has no href
   <Button href="/clients">Clients</Button>;
@@ -31,7 +55,8 @@ test("attributes are checked per element", () => {
 
 test("Page renders the back link and actions only when given", () => {
   const plain = String(<Page title="Clients">Body</Page>);
-  expect(plain).toContain('<h1 class="fs-m">Clients</h1>');
+  expect(plain).toContain('<h1 class="fs-xl fw-bold">Clients</h1>');
+  expect(plain).not.toContain("<p");
   expect(plain).not.toContain("<a");
   expect(plain).not.toContain("ml-auto");
 
@@ -47,6 +72,18 @@ test("Page renders the back link and actions only when given", () => {
   expect(full).toContain('href="/clients"');
   expect(full).toContain("Back to clients");
   expect(full).toContain('<button class="v-button">Edit</button>');
+});
+
+test("Page puts its title in the document's head", () => {
+  const document = String(
+    <html lang="en">
+      <head />
+      <body>
+        <Page title="Clients">Body</Page>
+      </body>
+    </html>,
+  );
+  expect(document).toContain("<head><title>Clients</title></head>");
 });
 
 test("FormField links its errors to the input, and shows nothing without errors", () => {

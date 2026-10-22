@@ -26,7 +26,8 @@ const ColumnsContext = createContext<DataGridColumn[]>([]);
 
 /**
  * `columns` describes the header, widths and alignment once. A falsy column is dropped, so
- * `showRate && { … }` hides it, and rows drop the falsy cell that goes with it.
+ * `showRate && { … }` hides it, and rows drop the falsy cell that goes with it. The grid sits
+ * straight on the page; only one under `Tabs` sits in a box, which ties it to its tab.
  */
 function DataGridTable({
   columns,
@@ -71,7 +72,10 @@ function Cells({ children }: PropsWithChildren) {
 
 const rowClass = "grid-all-columns grid-subgrid items-center b-b bc-subtle bg-wash:hover p-xs fs-s";
 
-/** With `href` the whole row is a link; with `for` it's the label of that form control. */
+/**
+ * With `href` the whole row is a link; with `for` it's the label of that form control. A row with
+ * actions of its own links from its title instead, since a link can't hold buttons.
+ */
 function DataGridRow({
   href,
   for: labelFor,
@@ -95,15 +99,33 @@ function DataGridRow({
   return <div class={rowClass}>{cells}</div>;
 }
 
-/** A heading that spans every column, linking to what the rows below it share. */
-function DataGridGroup({ href, children }: PropsWithChildren<{ href: string }>) {
-  return (
-    <a
-      href={href}
-      class="grid-all-columns b-b bc-subtle surface-tinted p-xs py-2xs fs-xs ink-subtle fw-bold"
-    >
-      {children}
+const groupClass =
+  "grid-all-columns b-b bc-subtle surface-tinted p-xs py-2xs fs-xs ink-subtle fw-bold";
+
+/**
+ * A heading that spans every column, naming what the rows below it share. With `href` it links
+ * there. An `icon` takes the first column, so the heading lines up with the second.
+ */
+function DataGridGroup({
+  href,
+  icon,
+  children,
+}: PropsWithChildren<{ href?: string; icon?: Child }>) {
+  const className = icon ? `${groupClass} grid-subgrid items-center` : groupClass;
+  const content = icon ? (
+    <>
+      {icon}
+      <span style="grid-column: 2 / -1;">{children}</span>
+    </>
+  ) : (
+    children
+  );
+  return href ? (
+    <a href={href} class={className}>
+      {content}
     </a>
+  ) : (
+    <div class={className}>{content}</div>
   );
 }
 

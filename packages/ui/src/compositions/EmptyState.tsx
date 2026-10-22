@@ -2,6 +2,7 @@ import type { Child, PropsWithChildren } from "hono/jsx";
 
 type EmptyStateProps = PropsWithChildren<{ emoji: string; title: string; action?: Child }>;
 
+/** What a page shows when its main content is empty. Inside a `Section`, say so in a sentence instead. */
 export function EmptyState({ emoji, title, action, children }: EmptyStateProps) {
   return (
     <div class="surface-tinted b-all bc-subtle br-xl p-xl stack-v items-center w-max-7 mx-auto">

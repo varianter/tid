@@ -1,22 +1,32 @@
 import type { Child, PropsWithChildren } from "hono/jsx";
 import { Button } from "../primitives/Button";
+import { Icon } from "../primitives/Icon";
 
 type PageProps = PropsWithChildren<{
   title: string;
+  /** A line under the title about what the page shows, such as an email or a status. */
+  description?: Child;
   back?: { href: string; label: string };
   actions?: Child;
 }>;
 
-export function Page({ title, back, actions, children }: PageProps) {
-  const heading = <h1 class="fs-m">{title}</h1>;
+export function Page({ title, description, back, actions, children }: PageProps) {
+  const heading = (
+    <div class="stack-v gap-3xs">
+      <h1 class="fs-xl fw-bold">{title}</h1>
+      {description && <p class="stack-h items-center gap-xs ink-subtle">{description}</p>}
+    </div>
+  );
   return (
     <main class="py-xl px-s stack-v nowrap gap-xl">
+      {/* Hono moves a title rendered in the body into the head. */}
+      <title>{title}</title>
       <header class="stack-v gap-2xs">
         {/* The actions share the top row, which is the back link when there is one. */}
         <div class="stack-h items-center gap-m">
           {back ? (
             <Button as="a" href={back.href} data-variant="plain" data-size="small">
-              <div class="v-icon" data-v-icon="chevron-left" />
+              <Icon name="chevron_left" />
               {back.label}
             </Button>
           ) : (

@@ -1,7 +1,13 @@
 import type { PropsWithChildren } from "hono/jsx";
 import { type AttributesOf, classes, type Props, type Sized } from "./attributes";
 
-type ButtonData = Sized & { "data-variant"?: "filled" | "tinted" | "outlined" | "plain" };
+type ButtonData = Sized & {
+  /**
+   * Filled, the default, submits a form. Tinted leads somewhere from a page's or section's header.
+   * Plain, small, acts on one row of a list, whatever it does.
+   */
+  "data-variant"?: "filled" | "tinted" | "outlined" | "plain";
+};
 
 // Without `as`, TypeScript can't tell the branches apart and would accept a
 // link's attributes on a button. `never` closes that gap for link-only ones.

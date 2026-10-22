@@ -18,11 +18,14 @@ src/<feature>/
   <verb><Noun>.command.ts      # command: its rules and writes, no markup
   <verb><Noun>.form.tsx        # form: schema and markup, no database
   <noun><View>.query.tsx       # query
-  <noun>.ts(x)                 # domain file
+  <noun>.data.ts               # data: the database reads and writes for a noun
+  <noun>.ts(x)                 # domain file: pure rules, or a component
   <noun>.test.ts               # tests sit next to the code they cover
 ```
 
 A suffix names a file's role. A file without one is a domain file. A command is `.ts`, so it can't hold markup.
+
+Only `.routes`, `.command`, `.query`, `.middleware` and `.data` files do I/O: they read the database or the request. Every other file is pure, so it can be tested without a database. Building SQL is pure; running it isn't.
 
 ## Slices
 
@@ -44,11 +47,13 @@ Name a query after what the page shows: `<noun>List`, `<noun>Details`.
 
 ## Domain files
 
-A domain file is named after a domain noun, never `shared`, `utils` or `services`. Code moves from a slice into one when a second slice needs it, or when it's a rule worth testing on its own with no database or HTTP code.
+A domain file is named after a domain noun, never `shared`, `utils` or `services`. Code moves from a slice into one when a second slice needs it, or when it's a rule worth testing on its own with no database or HTTP code. Database calls that several slices share move into the noun's `.data.ts` instead.
 
 ## Imports
 
-Only routes import a slice. Pages import forms, and forms never import the database. Only `server.tsx` imports routes. Slices may import domain files from any feature. `src/architecture.test.ts` checks this.
+Only routes import a slice. Pages import forms. Only `server.tsx` imports routes. Slices may import domain and data files from any feature. Pure files import only pure files. `src/architecture.test.ts` checks this.
+
+Plumbing that every feature builds on, like `formAction` and the database client, isn't a feature and sits outside these rules.
 
 Generic code stays generic: `packages/ui/AGENTS.md` says what counts as domain knowledge.
 

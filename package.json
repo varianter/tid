@@ -21,10 +21,12 @@
     "test": "bun test",
     "typecheck": "bun check --no-pretty && bun --filter @tid/elements typecheck",
     "lint": "biome check .",
+    "knip": "knip",
     "verify": "bun run typecheck && bun run lint && bun run test"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.14",
-    "@types/bun": "1.4.2"
+    "@types/bun": "1.4.2",
+    "knip": "6.42.1"
   }
 }
