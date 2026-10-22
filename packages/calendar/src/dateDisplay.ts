@@ -16,6 +16,7 @@ const monthFormat = new Intl.DateTimeFormat("en-GB", {
   year: "numeric",
   timeZone: "UTC",
 });
+const monthNameFormat = new Intl.DateTimeFormat("en-GB", { month: "long", timeZone: "UTC" });
 
 // Every date reads one way, in one of these styles. Pick one of them over adding another.
 const styles = {
@@ -29,6 +30,9 @@ const styles = {
   day: (isoDate: string) => dayFormat.format(parseIsoDate(isoDate)),
   /** Like "October 2026". Takes a month as well as a day. */
   month: (isoDate: string) => monthFormat.format(parseIsoDate(firstDayOfMonth(monthOf(isoDate)))),
+  /** Like "October", for where the year is already shown. Takes a month as well as a day. */
+  monthName: (isoDate: string) =>
+    monthNameFormat.format(parseIsoDate(firstDayOfMonth(monthOf(isoDate)))),
 };
 
 export type DateStyle = keyof typeof styles;

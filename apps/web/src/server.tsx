@@ -7,6 +7,7 @@ import { jsxRenderer } from "hono/jsx-renderer";
 import { secureHeaders } from "hono/secure-headers";
 import { timing } from "hono/timing";
 import { administration } from "./administration/administration.routes";
+import { applesauce } from "./applesauce/applesauce.routes";
 import { assignments } from "./assignments/assignments.routes";
 import { clients } from "./clients/clients.routes";
 import { consultants } from "./consultants/consultants.routes";
@@ -133,6 +134,7 @@ app.route("/reports", reports);
 app.route("/month-close", monthClose);
 app.route("/consultants", consultants);
 app.route("/administration", administration);
+app.route("/applesauce", applesauce);
 // Only needed until Tid takes over from Harvest.
 app.route("/harvest-import", harvestImport);
 

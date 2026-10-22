@@ -60,6 +60,11 @@ export function plannedEntries(person: Person, now: Date, startWeek: number = re
             `${person.name} logs ${task} in week ${week} (${spentOn}) on ${definition.project}, which isn't open in ${country}`,
           );
         }
+        if (!Number.isInteger(hours * 2)) {
+          throw new Error(
+            `${person.name} logs ${hours} hours of ${task} in week ${week} (${spentOn}), which isn't in half hours`,
+          );
+        }
         const endsWeek = definition.endsWeek ?? project.endsWeek;
         if (endsWeek !== undefined && week > endsWeek) {
           throw new Error(

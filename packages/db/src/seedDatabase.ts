@@ -182,15 +182,20 @@ export function seedDatabase(
       ),
     );
 
-    await transaction.insert(timeEntries).values(
-      allPeople.flatMap((person) =>
-        plannedEntries(person, now, startWeek).map(({ task, ...entry }) => ({
-          ...entry,
-          userId: userId(person),
-          taskId: taskId(task),
-        })),
-      ),
+    const entryRows = allPeople.flatMap((person) =>
+      plannedEntries(person, now, startWeek).map(({ task, ...entry }) => ({
+        ...entry,
+        userId: userId(person),
+        taskId: taskId(task),
+      })),
     );
+    // Postgres takes at most 65535 parameters per statement, so large seeds go in batches.
+    const entriesPerInsert = 5000;
+    for (let start = 0; start < entryRows.length; start += entriesPerInsert) {
+      await transaction
+        .insert(timeEntries)
+        .values(entryRows.slice(start, start + entriesPerInsert));
+    }
     // Each entry gets the rate a new entry would, like time logged in the app.
     await transaction.execute(
       sql`update time_entries set (rate, currency) = (select rate, currency from entry_rate(user_id, task_id, spent_on))`,

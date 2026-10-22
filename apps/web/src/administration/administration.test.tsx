@@ -48,7 +48,7 @@ test("administration opens on the user's own organization", async () => {
 
 test("only the organization's managers administer it", async () => {
   const response = await requestAs(manager, "/administration/trondheim");
-  expect(await response.text()).toContain("7,5 h");
+  expect(await response.text()).toContain("7,5\u00a0h");
   expect((await requestAs(member, "/administration/trondheim")).status).toBe(403);
   expect((await requestAs(osloManager, "/administration/trondheim")).status).toBe(403);
   expect((await requestAs(manager, "/administration/nowhere")).status).toBe(404);

@@ -11,4 +11,6 @@ test("dates read the same everywhere, whatever the ICU version", () => {
 test("the month style takes a month or a day in it", () => {
   expect(formatDate("2026-10", "month")).toBe("October 2026");
   expect(formatDate("2026-10-31", "month")).toBe("October 2026");
+  expect(formatDate("2026-10", "monthName")).toBe("October");
+  expect(formatDate("2026-10-31", "monthName")).toBe("October");
 });

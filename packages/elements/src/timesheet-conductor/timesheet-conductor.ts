@@ -1,5 +1,6 @@
 // The server renders hours with the same function, so a total reads the same before and after a reload.
 import { formatHours } from "../hours";
+import { CellKeys } from "./cellKeys";
 
 /**
  * Saves timesheet cells as you leave them, without reloading the page.
@@ -10,16 +11,19 @@ import { formatHours } from "../hours";
 class TimesheetConductor extends HTMLElement {
   /** The latest save per cell, so a newer value never lands before an older one. */
   #saves = new Map<string, Promise<void>>();
+  #keys = new CellKeys(this);
 
   connectedCallback() {
     // `focusout` rather than `change`, so leaving a cell retries a save that failed.
     this.addEventListener("focusout", this.#onFocusOut);
     this.addEventListener("submit", this.#onSubmit);
+    this.#keys.connect();
   }
 
   disconnectedCallback() {
     this.removeEventListener("focusout", this.#onFocusOut);
     this.removeEventListener("submit", this.#onSubmit);
+    this.#keys.disconnect();
   }
 
   #onFocusOut = (event: FocusEvent) => {

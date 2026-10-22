@@ -45,6 +45,7 @@ const navigation: NavigationSection[] = [
 const managerNavigation: NavigationSection = {
   heading: "Admin",
   links: [
+    { href: "/applesauce", label: "Applesauce", icon: "bar_chart" },
     { href: "/consultants", label: "Consultants", icon: "group" },
     { href: "/administration", label: "Administration", icon: "settings" },
   ],
@@ -77,16 +78,16 @@ export function Layout({
             [hidden] { display: none !important; }
             /* The nav's margin is set here, next to the height calc that
                subtracts it, so the two can't drift apart. */
-            #nav-popover nav { margin: var(--spacing-s); }
+            #nav-popover nav { margin: var(--spacing-2xs); }
             @media (min-width: 900px) {
               #nav-popover { display: contents; }
               /* items-stretch on body would otherwise stretch the nav to the
                  full page height; a viewport height plus sticky keeps it a
                  sidebar that stays in view on pages taller than the screen. */
               #nav-popover nav {
-                height: calc(100vh - 2 * var(--spacing-s));
+                height: calc(100vh - 2 * var(--spacing-2xs));
                 position: sticky;
-                top: var(--spacing-s);
+                top: var(--spacing-2xs);
               }
               .menu-toggle { display: none; }
             }
@@ -145,20 +146,18 @@ export function Layout({
       <body class="stack-h nowrap items-stretch">
         <Popover id="nav-popover" data-type="drawer" data-position="left">
           <nav
-            class="stack-v gap-4xs b-all br-xl bc-subtle p-2xs w-max-4 w-full surface-tinted"
+            class="stack-v gap-4xs b-all br-xl bc-subtle p-2xs w-max-content w-full surface-tinted"
+            style="min-width: 200px;"
             aria-label="Main"
           >
             <span class="stack-h nowrap items-center gap-2xs fs-l fw-bold px-xs py-2xs mb-xs">
               <TidSymbol time={timeOfDayInOslo(new Date())} />
-              Tid
             </span>
             {[...navigation, ...(isManager ? [managerNavigation] : [])].map(
               ({ heading, links }) => (
                 <>
                   {heading && (
-                    <span class="fs-xs tt-uppercase ink-subtle px-xs pt-s pb-4xs fw-medium">
-                      {heading}
-                    </span>
+                    <span class="fs-xs  ink-subtle px-xs pt-s pb-4xs fw-medium">{heading}</span>
                   )}
                   {links.map(({ href, label, icon }) => {
                     const active = isActive(href, currentPath);
@@ -169,7 +168,7 @@ export function Layout({
                         class={`stack-h nowrap items-center gap-xs px-xs py-2xs br-m ${active ? "surface-tinted ink-prominent" : "ink-subtle bg-wash:hover"}`}
                       >
                         <Icon name={icon} class="lh-snug fs-xs" />
-                        {label}
+                        <p class="fs-s">{label}</p>
                       </a>
                     );
                   })}

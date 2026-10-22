@@ -261,12 +261,12 @@ export const people: Person[] = [
     email: "henrik.vik@example.com",
     organization: "trondheim",
     manager: true,
-    usualDay: { administration: 3.75, portalProjectManagement: 3.75 },
+    usualDay: { administration: 4, portalProjectManagement: 3.5 },
     // The future rate can still be deleted.
     assignments: [{ project: "LYS1001", rates: [{ rate: 1650 }, { fromWeek: 2, rate: 1700 }] }],
     exceptions: [
       { from: -4, weekdays: [Weekday.Monday, Weekday.Tuesday], hours: { selfCertifiedSick: 7.5 } },
-      { from: -1, weekdays: [Weekday.Tuesday], hours: { administration: 3.75, interviews: 3.75 } },
+      { from: -1, weekdays: [Weekday.Tuesday], hours: { administration: 4, interviews: 3.5 } },
     ],
   },
   {

@@ -33,9 +33,6 @@ export const cellHours = z
 /** A save that failed, shown on its cell with what the user typed. */
 export type CellError = { typed: string; message: string };
 
-// Caps the inputs, which in turn size the day columns.
-export const inputWidth = "8ch";
-
 /**
  * One day of one task: the unit a save swaps. `data-minutes` holds what's stored,
  * so totals can be summed without parsing the typed text.
@@ -62,8 +59,8 @@ export function TimesheetCell({
       type="text"
       value={error ? error.typed : formatHours(minutes)}
       class="ta-right w-min-0 w-full"
-      data-size="small"
-      style={`max-width: ${inputWidth}`}
+      data-size="large"
+      style={`height: 100%;`}
       inputmode="decimal"
       aria-label={`${task.projectName}, ${task.name}, ${formatDate(day)}`}
       aria-invalid={error ? "true" : undefined}
@@ -77,6 +74,8 @@ export function TimesheetCell({
       method="post"
       action={action}
       class="d-block"
+      // The one fixed width in the sheet: day columns take theirs from it in every layout.
+      style="height: 100%; inline-size: 14ch;"
       data-cell={`${task.id}:${day}`}
       data-project={task.projectId}
       data-day={day}
