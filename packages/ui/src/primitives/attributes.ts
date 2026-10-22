@@ -12,7 +12,7 @@ export type AttributesOf<T extends Tag> = {
 
 // `class` is narrowed to string because Hono also allows a Promise there.
 export type Props<T extends Tag, Data = object> = Omit<AttributesOf<T>, "class" | keyof Data> &
-  Data & { class?: string };
+  Data & { class?: string; "composite-component"?: string };
 
 type Size = "small" | "medium" | "large";
 export type Sized = { "data-size"?: Size };

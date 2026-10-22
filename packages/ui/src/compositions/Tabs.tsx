@@ -3,13 +3,20 @@ import { classes, type Props } from "../primitives/attributes";
 import { Button } from "../primitives/Button";
 
 function TabList({ class: className, ...attributes }: PropsWithChildren<Props<"nav">>) {
-  return <nav class={classes("b-all br-l gap-xs p-3xs stack-h", className)} {...attributes} />;
+  return (
+    <nav
+      composite-component="Tabs"
+      class={classes("b-all br-l gap-xs p-3xs stack-h", className)}
+      {...attributes}
+    />
+  );
 }
 
 function TabLink({ href, active, children }: PropsWithChildren<{ href: string; active: boolean }>) {
   return (
     <Button
       as="a"
+      composite-component="Tabs.Link"
       href={href}
       aria-current={active ? "page" : undefined}
       class="flex-1"

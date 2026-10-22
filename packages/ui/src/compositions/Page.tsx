@@ -18,12 +18,12 @@ export function Page({ title, description, back, actions, children }: PageProps)
     </div>
   );
   return (
-    <main class="py-xl px-s stack-v nowrap gap-xl">
+    <main composite-component="Page" class="py-xl px-s">
       {/* Hono moves a title rendered in the body into the head. */}
       <title>{title}</title>
-      <header class="stack-v gap-2xs">
+      <header class="b-b bc-subtle gap-2xs pb-s stack-h mb-s">
         {/* The actions share the top row, which is the back link when there is one. */}
-        <div class="stack-h items-center gap-m">
+        <div class="stack-h items-end gap-m flex-1">
           {back ? (
             <Button as="a" href={back.href} data-variant="plain" data-size="small">
               <Icon name="chevron_left" />
@@ -32,11 +32,13 @@ export function Page({ title, description, back, actions, children }: PageProps)
           ) : (
             heading
           )}
-          {actions && <div class="stack-h items-center gap-m ml-auto">{actions}</div>}
+          {actions && <div class="ml-auto stack-h items-center gap-m ml-auto">{actions}</div>}
         </div>
         {back && heading}
       </header>
-      {children}
+      <div data-transition="content" class="stack-v nowrap gap-xl">
+        {children}
+      </div>
     </main>
   );
 }

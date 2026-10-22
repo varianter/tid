@@ -24,7 +24,11 @@ export function Section({
   ...attributes
 }: SectionProps) {
   return (
-    <section class={classes("stack-v gap-s", className)} {...attributes}>
+    <section
+      composite-component="Section"
+      class={classes("stack-v gap-s", className)}
+      {...attributes}
+    >
       <div class="stack-h items-center justify-between gap-m wrap">
         <h2 class="fs-l fw-bold">{title}</h2>
         {actions}

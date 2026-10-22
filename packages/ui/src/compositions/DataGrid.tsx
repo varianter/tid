@@ -38,6 +38,7 @@ function DataGridTable({
   return (
     <ColumnsContext.Provider value={shown}>
       <div
+        composite-component="DataGrid"
         class="d-grid gap-column-l lh-snug t-tabular"
         style={`grid-template-columns: ${template}; overflow: auto; overflow-wrap: anywhere;`}
       >
@@ -84,19 +85,23 @@ function DataGridRow({
   const cells = <Cells>{children}</Cells>;
   if (href) {
     return (
-      <a href={href} class={rowClass}>
+      <a composite-component="DataGrid.Row" href={href} class={rowClass}>
         {cells}
       </a>
     );
   }
   if (labelFor) {
     return (
-      <label for={labelFor} class={rowClass}>
+      <label composite-component="DataGrid.Row" for={labelFor} class={rowClass}>
         {cells}
       </label>
     );
   }
-  return <div class={rowClass}>{cells}</div>;
+  return (
+    <div composite-component="DataGrid.Row" class={rowClass}>
+      {cells}
+    </div>
+  );
 }
 
 const groupClass =
@@ -121,17 +126,22 @@ function DataGridGroup({
     children
   );
   return href ? (
-    <a href={href} class={className}>
+    <a composite-component="DataGrid.Group" href={href} class={className}>
       {content}
     </a>
   ) : (
-    <div class={className}>{content}</div>
+    <div composite-component="DataGrid.Group" class={className}>
+      {content}
+    </div>
   );
 }
 
 function DataGridFooter({ children }: PropsWithChildren) {
   return (
-    <div class="grid-all-columns grid-subgrid items-center p-xs fs-s fw-medium">
+    <div
+      composite-component="DataGrid.Footer"
+      class="grid-all-columns grid-subgrid items-center p-xs fs-s fw-medium"
+    >
       <Cells>{children}</Cells>
     </div>
   );
@@ -140,7 +150,7 @@ function DataGridFooter({ children }: PropsWithChildren) {
 /** What a row is about, with an optional detail such as a code or email under it. */
 function DataGridTitle({ secondary, children }: PropsWithChildren<{ secondary?: Child }>) {
   return (
-    <span class="stack-v nowrap gap-4xs">
+    <span composite-component="DataGrid.Title" class="stack-v nowrap gap-4xs">
       <span class="fw-medium">{children}</span>
       {secondary && <span class="fs-xs ink-subtle">{secondary}</span>}
     </span>

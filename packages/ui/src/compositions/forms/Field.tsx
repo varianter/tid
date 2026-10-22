@@ -15,7 +15,7 @@ export function Field({ label, name, id, errors, children }: FieldProps) {
   const inputId = id ?? name;
 
   return (
-    <div class="stack-v gap-2xs">
+    <div composite-component="Field" class="stack-v gap-2xs">
       <Label for={inputId}>{label}</Label>
       {children}
       {errors && <FormError id={`${inputId}-error`} errors={errors} />}

@@ -12,6 +12,8 @@ export const iconNames = [
   "event_available",
   "folder",
   "group",
+  "lock",
+  "lock_open",
   "menu",
   "settings",
   "table",

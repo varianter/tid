@@ -2,7 +2,11 @@ import type { Child, PropsWithChildren } from "hono/jsx";
 
 /** A row of `Stat` cards that share its height. */
 export function StatList({ children }: PropsWithChildren) {
-  return <dl class="stack-h items-stretch gap-s t-tabular">{children}</dl>;
+  return (
+    <dl composite-component="StatList" class="stack-h items-stretch gap-s t-tabular">
+      {children}
+    </dl>
+  );
 }
 
 type StatProps = {
@@ -19,7 +23,7 @@ type StatProps = {
 /** One figure in a `StatList`. */
 export function Stat({ label, value, share, note, children }: StatProps) {
   return (
-    <div class="stack-v gap-3xs flex-1 b-all bc-default br-l p-m">
+    <div composite-component="Stat" class="stack-v gap-3xs flex-1 b-all bc-subtle br-l p-s">
       <dt class="fs-s ink-subtle">{label}</dt>
       <dd class="stack-h nowrap items-baseline gap-xs">
         <span class="fs-l fw-medium">{value}</span>

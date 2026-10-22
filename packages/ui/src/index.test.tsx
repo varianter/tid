@@ -42,6 +42,13 @@ test("BarChart stretches the scale when a value exceeds max", () => {
   expect(chart).not.toContain("110");
 });
 
+test("BarChart with a track puts each bar in a full-height column", () => {
+  const chart = String(<BarChart points={[{ label: "2026-05", value: 25 }]} max={100} track />);
+  expect(chart).toContain(
+    '<div class="d-grid items-end surface-tinted br-s of-hidden"><div class="bg-currentcolor ink-default" style="height: 25%;"></div></div>',
+  );
+});
+
 test("attributes are checked per element", () => {
   // @ts-expect-error a button has no href
   <Button href="/clients">Clients</Button>;

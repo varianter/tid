@@ -16,14 +16,15 @@ export function PeriodNavigation({
 }>) {
   return (
     <nav
-      class="stack-h nowrap b-all bc-default br-l p-4xs justify-between"
+      composite-component="PeriodNavigation"
+      class="stack-h nowrap b-all bc-subtle br-l p-4xs justify-between"
       style="width: 30ch; min-width: max-content;"
     >
       <Button
         as="a"
         href={previousHref}
         class="aspect-square p-0"
-        data-variant="plain"
+        data-variant="tinted"
         data-size="small"
         aria-label={previousLabel}
       >
@@ -37,7 +38,7 @@ export function PeriodNavigation({
         as="a"
         href={nextHref}
         class="aspect-square p-0"
-        data-variant="plain"
+        data-variant="tinted"
         data-size="small"
         aria-label={nextLabel}
       >

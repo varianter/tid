@@ -3,7 +3,11 @@ import { Icon } from "../primitives/Icon";
 
 /** A bordered list of collapsible sections. Put `DetailsListItem`s inside. */
 export function DetailsList({ children }: PropsWithChildren) {
-  return <div class="b-all bc-subtle br-m of-clip">{children}</div>;
+  return (
+    <div composite-component="DetailsList" class="b-all bc-subtle br-m of-clip">
+      {children}
+    </div>
+  );
 }
 
 type DetailsListItemProps = PropsWithChildren<{
@@ -15,7 +19,11 @@ type DetailsListItemProps = PropsWithChildren<{
 
 export function DetailsListItem({ title, aside, open, children }: DetailsListItemProps) {
   return (
-    <details class="b-b bc-subtle b-none:last-child" open={open}>
+    <details
+      composite-component="DetailsListItem"
+      class="b-b bc-subtle b-none:last-child"
+      open={open}
+    >
       <summary class="stack-h items-center gap-xs px-s py-xs bg-wash:hover">
         <Icon name="chevron_right" class="ink-subtle fs-xs" />
         <span class="fw-medium">{title}</span>
