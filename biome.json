@@ -17,6 +17,12 @@
   "linter": {
     "enabled": true
   },
+  "overrides": [
+    {
+      "includes": ["packages/ui/icons/**"],
+      "linter": { "rules": { "a11y": { "noSvgWithoutTitle": "off" } } }
+    }
+  ],
   "assist": {
     "enabled": true,
     "actions": {
