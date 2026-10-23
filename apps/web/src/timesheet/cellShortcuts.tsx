@@ -20,12 +20,14 @@ export function CellShortcuts({ fullDayMinutes }: { fullDayMinutes: number }) {
               <span>Move to the next cell. ← and → move once the caret is at the edge.</span>
             </DataGrid.Row>
             <DataGrid.Row>
-              <Keys keys={["Shift", "T"]} />
+              <Keys keys={["T"]} />
               <span>Go to today on the same task</span>
             </DataGrid.Row>
             <DataGrid.Row>
               <Keys keys={["F"]} />
-              <span>Fill in a full day ({formatTotalHours(fullDayMinutes)})</span>
+              <span>
+                Fill in what's left of the day ({formatTotalHours(fullDayMinutes)} in all)
+              </span>
             </DataGrid.Row>
             <DataGrid.Row>
               <Keys keys={["Shift", "↑"]} />

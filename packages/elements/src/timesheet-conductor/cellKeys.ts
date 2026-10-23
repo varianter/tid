@@ -12,9 +12,14 @@ export function stepHalfHour(minutes: number, direction: 1 | -1) {
   return Math.min(Math.max(stepped, 0), wholeDay);
 }
 
+/** What's left of the day after the other cells, never below zero. */
+export function remainingMinutes(fullDay: number, others: number[]) {
+  return Math.max(fullDay - others.reduce((total, minutes) => total + minutes, 0), 0);
+}
+
 /**
- * Spreadsheet keys for the timesheet's cells: arrows move between cells, shift+T jumps to today,
- * shift+↑/↓ steps half an hour, and F fills in a full day. Values only change in the input;
+ * Spreadsheet keys for the timesheet's cells: arrows move between cells, T jumps to today,
+ * shift+↑/↓ steps half an hour, and F fills in what's left of the day. Values only change in the input;
  * leaving the cell saves.
  */
 export class CellKeys {
@@ -57,13 +62,16 @@ export class CellKeys {
         case "F": {
           const fullDay = Number(this.#grid.getAttribute("full-day-minutes"));
           if (!fullDay) return false;
-          input.value = formatHours(fullDay);
+          const remaining = remainingMinutes(fullDay, this.#otherMinutesOnDay(form));
+          // A full day is left alone rather than wiped. Still handled, so no "f" gets typed.
+          if (remaining > 0) input.value = formatHours(remaining);
           return true;
         }
-        // Lower case too: some keyboards and tools report shift+t as "t".
         case "t":
         case "T":
-          return event.shiftKey && this.#moveToToday(form);
+          // Handled even when today isn't on the sheet, so no "t" gets typed.
+          this.#moveToToday(form);
+          return true;
         default:
           return false;
       }
@@ -92,6 +100,19 @@ export class CellKeys {
     return focusCell(
       this.#grid.querySelector<HTMLFormElement>(`form[data-cell="${taskId}:${today}"]`),
     );
+  }
+
+  /**
+   * Read from the inputs rather than `data-minutes`, since a cell you just left may still be saving.
+   * Text that isn't hours counts as nothing.
+   */
+  #otherMinutesOnDay(form: HTMLFormElement) {
+    return [...this.#grid.querySelectorAll<HTMLFormElement>(`form[data-day="${form.dataset.day}"]`)]
+      .filter((cell) => cell !== form)
+      .map(
+        (cell) =>
+          parseHours(cell.querySelector<HTMLInputElement>('input[name="hours"]')?.value ?? "") ?? 0,
+      );
   }
 
   /** The cells before and after this one among those matching. */
