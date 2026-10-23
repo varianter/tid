@@ -65,10 +65,10 @@ beforeAll(async () => {
     .returning({ id: projects.id })) as [{ id: number }, { id: number }];
 });
 
-test("only managers open and close projects", async () => {
-  const path = "/administration/oslo/projects";
+const path = "/administration/oslo/projects";
+
+test("only managers choose open projects", async () => {
   expect((await requestAs(member, path, { projectId: String(internalId) })).status).toBe(403);
-  expect((await requestAs(member, `${path}/${internalId}/delete`, {})).status).toBe(403);
   expect(await osloParticipation()).toEqual([]);
 
   expect((await requestAs(member, path)).status).toBe(403);
@@ -76,13 +76,12 @@ test("only managers open and close projects", async () => {
 });
 
 test("managers of any organization open a non-billable project, and close it again", async () => {
-  const path = "/administration/oslo/projects";
   const opened = await requestAs(bergenManager, path, { projectId: String(internalId) });
   expect(opened.headers.get("location")).toBe(path);
   expect(await osloParticipation()).toEqual([{ projectId: internalId, openToMembers: true }]);
-  expect(await (await requestAs(manager, path)).text()).toContain("INT-1");
+  expect(await (await requestAs(manager, path)).text()).toContain("checked");
 
-  await requestAs(manager, `${path}/${internalId}/delete`, {});
+  await requestAs(manager, path, {});
   expect(await osloParticipation()).toEqual([]);
 });
 
@@ -90,15 +89,13 @@ test("closing keeps the organization on a project it owns", async () => {
   await database
     .insert(projectOrganizations)
     .values({ projectId: internalId, orgId: osloId, isContractOwner: true, openToMembers: true });
-  await requestAs(manager, `/administration/oslo/projects/${internalId}/delete`, {});
+  await requestAs(manager, path, {});
   expect(await osloParticipation()).toEqual([{ projectId: internalId, openToMembers: false }]);
   await database.delete(projectOrganizations);
 });
 
-test("billable projects can't be opened", async () => {
-  const response = await requestAs(manager, "/administration/oslo/projects", {
-    projectId: String(billableId),
-  });
-  expect(response.status).toBe(400);
+test("billable projects aren't listed and can't be opened", async () => {
+  expect(await (await requestAs(manager, path)).text()).not.toContain("ACME-1");
+  await requestAs(manager, path, { projectId: String(billableId) });
   expect(await osloParticipation()).toEqual([]);
 });

@@ -87,7 +87,6 @@ const impureImports = allImports.filter(
 // ponytail: these did I/O before the rule. Each leaves the list when it's split into a pure file
 // and a `.data.ts`, `.middleware.ts` or slice.
 const impureFiles = [
-  "administration/openProjectChange.ts",
   "administration/organizationMember.ts",
   "assignments/assignment.ts",
   "assignments/repricing.ts",
