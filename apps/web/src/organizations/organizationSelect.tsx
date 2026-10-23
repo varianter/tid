@@ -1,5 +1,5 @@
 import { organizations } from "@tid/db/schema";
-import { Button, Label } from "@tid/ui";
+import { Button, Label, Select } from "@tid/ui";
 import { database } from "../database";
 
 export type OrganizationOption = { id: number; slug: string; name: string };
@@ -23,30 +23,25 @@ export function OrganizationSelect({
   keep?: Record<string, string>;
 }) {
   return (
-    <form method="get" action={action} class="stack-v nowrap gap-3xs">
-      {Object.entries(keep).map(([name, value]) => (
-        <input type="hidden" name={name} value={value} />
-      ))}
-      <Label for="organization">Organization</Label>
-      {/* A plain select, since Select's props don't allow an inline handler. */}
-      <select
-        class="v-select"
-        id="organization"
-        name="organization"
-        data-size="small"
-        onchange="this.form.requestSubmit()"
-      >
-        {organizations.map((organization) => (
-          <option value={organization.slug} selected={organization.slug === organizationSlug}>
-            {organization.name}
-          </option>
+    <auto-submit>
+      <form method="get" action={action} class="stack-v nowrap gap-3xs">
+        {Object.entries(keep).map(([name, value]) => (
+          <input type="hidden" name={name} value={value} />
         ))}
-      </select>
-      <noscript>
-        <Button type="submit" data-size="small">
-          Show
-        </Button>
-      </noscript>
-    </form>
+        <Label for="organization">Organization</Label>
+        <Select id="organization" name="organization" data-size="small">
+          {organizations.map((organization) => (
+            <option value={organization.slug} selected={organization.slug === organizationSlug}>
+              {organization.name}
+            </option>
+          ))}
+        </Select>
+        <noscript>
+          <Button type="submit" data-size="small">
+            Show
+          </Button>
+        </noscript>
+      </form>
+    </auto-submit>
   );
 }

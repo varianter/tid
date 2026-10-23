@@ -5,7 +5,7 @@ import { todayInOslo } from "@tid/calendar/osloClock";
 import type { SpecialDay } from "@tid/calendar/publicHolidays";
 import { timeEntries } from "@tid/db/schema";
 import { formatHours } from "@tid/elements/hours";
-import { Button, ColorMode, Input, Label, Page, PeriodNavigation } from "@tid/ui";
+import { Button, Checkbox, ColorMode, Input, Label, Page, PeriodNavigation, Select } from "@tid/ui";
 import { and, between, eq } from "drizzle-orm";
 import type { Context } from "hono";
 import { css, cx } from "hono/css";
@@ -115,27 +115,20 @@ function MonthPage({
       title="Timesheet"
       actions={
         <>
-          <form method="get" class="stack-h nowrap items-center gap-2xs">
-            {grid.addedTaskIds.map((taskId) => (
-              <input type="hidden" name="add" value={taskId} />
-            ))}
-            {/* A plain input, since Checkbox's props don't allow an inline handler. */}
-            <input
-              type="checkbox"
-              class="v-checkbox"
-              id="weekends"
-              name="weekends"
-              value="on"
-              checked={showWeekends}
-              onchange="this.form.requestSubmit()"
-            />
-            <Label for="weekends">Show weekends</Label>
-            <noscript>
-              <Button type="submit" data-size="small">
-                Apply
-              </Button>
-            </noscript>
-          </form>
+          <auto-submit style="display: contents;">
+            <form method="get" class="stack-h nowrap items-center gap-2xs">
+              {grid.addedTaskIds.map((taskId) => (
+                <input type="hidden" name="add" value={taskId} />
+              ))}
+              <Checkbox id="weekends" name="weekends" value="on" checked={showWeekends} />
+              <Label for="weekends">Show weekends</Label>
+              <noscript>
+                <Button type="submit" data-size="small">
+                  Apply
+                </Button>
+              </noscript>
+            </form>
+          </auto-submit>
           <PeriodNavigation
             previousHref={previousHref}
             nextHref={nextHref}
@@ -257,55 +250,50 @@ function TimesheetGrid({
 
         {addable && (
           // Picking a task adds `add` to the query, like the hidden inputs already there.
-          <form method="get" class="grid-subgrid grid-all-columns items-center">
-            {[...new URLSearchParams(search)].map(([name, value]) => (
-              <input type="hidden" name={name} value={value} />
-            ))}
-            <div class={`py-2xs ${stickyStart}`}>
-              {/* A plain select, since Select's props don't allow an inline handler. */}
-              <select
-                name="add"
-                class="v-select w-full"
-                data-size="small"
-                aria-label="Add task"
-                onchange="this.form.requestSubmit()"
-              >
-                <option value="" selected disabled>
-                  Add task…
-                </option>
-                {addableByProject.map(([projectName, projectTasks]) => (
-                  <optgroup label={projectName}>
-                    {projectTasks?.map((task) => (
-                      <option value={task.id}>{task.name}</option>
-                    ))}
-                  </optgroup>
-                ))}
-              </select>
-              <noscript>
-                <Button type="submit" data-size="small">
-                  Add
-                </Button>
-              </noscript>
-            </div>
-            {/* Placeholders so the row reads as part of the sheet; there's no task to log on yet. */}
-            {days.map((day, index) => (
-              <DayTint
-                tint={tints[index]}
-                weekStart={startsWeek[index]}
-                class="self-stretch px-3xs stack-v justify-center items-end"
-              >
-                <Input
-                  type="text"
-                  disabled
-                  tabindex={-1}
-                  aria-hidden="true"
-                  class="w-min-0 w-full"
-                  data-size="small"
-                  style={`max-width: ${inputWidth}`}
-                />
-              </DayTint>
-            ))}
-          </form>
+          <auto-submit style="display: contents;">
+            <form method="get" class="grid-subgrid grid-all-columns items-center">
+              {[...new URLSearchParams(search)].map(([name, value]) => (
+                <input type="hidden" name={name} value={value} />
+              ))}
+              <div class={`py-2xs ${stickyStart}`}>
+                <Select name="add" class="w-full" data-size="small" aria-label="Add task">
+                  <option value="" selected disabled>
+                    Add task…
+                  </option>
+                  {addableByProject.map(([projectName, projectTasks]) => (
+                    <optgroup label={projectName}>
+                      {projectTasks?.map((task) => (
+                        <option value={task.id}>{task.name}</option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </Select>
+                <noscript>
+                  <Button type="submit" data-size="small">
+                    Add
+                  </Button>
+                </noscript>
+              </div>
+              {/* Placeholders so the row reads as part of the sheet; there's no task to log on yet. */}
+              {days.map((day, index) => (
+                <DayTint
+                  tint={tints[index]}
+                  weekStart={startsWeek[index]}
+                  class="self-stretch px-3xs stack-v justify-center items-end"
+                >
+                  <Input
+                    type="text"
+                    disabled
+                    tabindex={-1}
+                    aria-hidden="true"
+                    class="w-min-0 w-full"
+                    data-size="small"
+                    style={`max-width: ${inputWidth}`}
+                  />
+                </DayTint>
+              ))}
+            </form>
+          </auto-submit>
         )}
 
         {rows.length > 0 && (
