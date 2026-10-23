@@ -1,5 +1,5 @@
 import { bundleElements } from "@tid/elements/bundle";
-import { findIconFile, iconsPath } from "@tid/ui";
+import { findIconSvg, iconsPath } from "@tid/ui";
 import { Hono } from "hono";
 import { csrf } from "hono/csrf";
 import { HTTPException } from "hono/http-exception";
@@ -14,7 +14,7 @@ import { consultants } from "./consultants/consultants.routes";
 import { dev, devLogoutUrl, devTenantId, readDevIdentity, requireDevUser } from "./dev/dev.routes";
 import { ErrorPage } from "./errors/errorPage";
 import { errorReport } from "./errors/errorReport";
-import { Layout } from "./layout";
+import { Layout, vardeStylesheet } from "./layout";
 import { signupRouter } from "./login/login.routes";
 import { proxyLogoutUrl, requireProxyUser } from "./login/proxyLogin.middleware";
 import { signupPath } from "./login/signupUrl";
@@ -71,6 +71,13 @@ app.use(
 app.use(csrf());
 app.use(
   jsxRenderer(async ({ children }, c) => {
+    // Early discovery of the stylesheet and element bundle, before the browser reaches their tags in head.
+    c.header(
+      "Link",
+      [`<${vardeStylesheet}>; rel=preload; as=style`, `<${elements.path}>; rel=modulepreload`].join(
+        ", ",
+      ),
+    );
     const user = c.get("user");
     return (
       <Layout
@@ -105,10 +112,11 @@ app.onError((error, c) => {
 
 app.get("/health", (c) => c.text("ok"));
 app.get(`${iconsPath}/:file`, (c) => {
-  const iconFile = findIconFile(c.req.param("file"));
-  if (!iconFile) return c.notFound();
-  return new Response(iconFile, {
-    headers: { "Cache-Control": "public, max-age=31536000, immutable" },
+  const svg = findIconSvg(c.req.param("file"));
+  if (!svg) return c.notFound();
+  return c.body(svg, 200, {
+    "Content-Type": "image/svg+xml",
+    "Cache-Control": "public, max-age=31536000, immutable",
   });
 });
 app.get(elements.path, (c) =>

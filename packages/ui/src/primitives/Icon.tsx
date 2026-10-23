@@ -33,20 +33,22 @@ export const iconNames = [
 
 export type IconName = (typeof iconNames)[number];
 
-const iconsDirectory = `${import.meta.dir}/../../icons`;
-const iconsHash = Bun.hash(
-  (
-    await Promise.all(iconNames.map((name) => Bun.file(`${iconsDirectory}/${name}.svg`).text()))
-  ).join(),
-).toString(36);
+/** Where the app serves the icons. */
+export const iconsPath = "/icons";
 
-/** Where the app serves the icons. The path holds a hash, so they can be cached forever. */
-export const iconsPath = `/icons/${iconsHash}`;
+// Each file name holds a hash of its SVG, so the icon can be cached forever.
+const icons = new Map(
+  await Promise.all(
+    iconNames.map(async (name) => {
+      const svg = await Bun.file(`${import.meta.dir}/../../icons/${name}.svg`).text();
+      return [name, { fileName: `${name}-${Bun.hash(svg).toString(36)}.svg`, svg }] as const;
+    }),
+  ),
+);
 
-/** The icon file named `<name>.svg`, if it is one of the icons. */
-export function findIconFile(fileName: string) {
-  const name = iconNames.find((name) => `${name}.svg` === fileName);
-  return name && Bun.file(`${iconsDirectory}/${name}.svg`);
+/** The SVG served as `fileName`, if it is one of the icons. */
+export function findIconSvg(fileName: string) {
+  return icons.values().find((icon) => icon.fileName === fileName)?.svg;
 }
 
 /** A decorative Material Symbol drawn in the current text color. */
@@ -60,7 +62,7 @@ export function Icon({
     <span
       class={classes("v-icon", className)}
       // Set via --icon-src, a relative URL would resolve against Varde's stylesheet.
-      style={`mask-image: url('${iconsPath}/${name}.svg'); ${style}`}
+      style={`mask-image: url('${iconsPath}/${icons.get(name)?.fileName}'); ${style}`}
       aria-hidden="true"
       {...attributes}
     />
