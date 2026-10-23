@@ -9,23 +9,23 @@ export function AssignConsultantForm({
   projectId: number;
   assignablePeople: AssignablePerson[];
 }) {
-  const peopleByOrganization = Map.groupBy(assignablePeople, (person) => person.orgName);
   return (
     <form
       method="post"
       action={`/projects/${projectId}/assignments`}
       class="stack-h items-center gap-xs"
     >
-      <Select name="userId" aria-label="Consultant to assign" required>
+      <Select
+        name="userId"
+        aria-label="Consultant to assign"
+        required
+        options={assignablePeople.map((person) => ({
+          value: person.id,
+          label: person.name,
+          group: person.orgName,
+        }))}
+      >
         <option value="">Choose a consultant</option>
-        {[...peopleByOrganization].map(([orgName, people]) => (
-          <optgroup>
-            <legend>{orgName}</legend>
-            {people.map((person) => (
-              <option value={person.id}>{person.name}</option>
-            ))}
-          </optgroup>
-        ))}
       </Select>
       <Button type="submit">Assign</Button>
     </form>

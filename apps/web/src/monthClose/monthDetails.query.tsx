@@ -12,12 +12,12 @@ import {
   Page,
   type Palette,
   PeriodNavigation,
+  ProgressBar,
   Stat,
   StatList,
 } from "@tid/ui";
 import { and, between, eq, gte, isNull, or, sql } from "drizzle-orm";
 import type { Context } from "hono";
-import { BillableBar } from "../billable/billableBar";
 import { consultantPath } from "../consultants/consultantsUrl";
 import { database } from "../database";
 import type { UserEnv } from "../login/user";
@@ -30,7 +30,6 @@ import {
 } from "../organizations/companyFilter";
 import { type QueryProps, queryPage } from "../query/queryPage";
 import { capacityMinutes } from "../reports/capacity";
-import { UtilizationBar } from "../reports/utilizationBar";
 import { formatShare } from "../share/share";
 import { LockMonthForm } from "./lockMonth.form";
 import { findActiveLock } from "./monthLock.data";
@@ -195,7 +194,10 @@ function MonthDetailsPage({
               share={formatShare(loggedMinutes, expectedMinutes)}
               note={`of ${formatTotalHours(expectedMinutes)} expected`}
             >
-              <UtilizationBar logged={loggedMinutes} capacity={expectedMinutes} />
+              <ProgressBar
+                max={expectedMinutes}
+                segments={[{ value: loggedMinutes, palette: "purple" }]}
+              />
             </Stat>
             <Stat
               label="Billable"
@@ -203,10 +205,12 @@ function MonthDetailsPage({
               share={formatShare(billableMinutes, loggedMinutes)}
               note={`${formatTotalHours(loggedMinutes - billableMinutes)} non-billable`}
             >
-              <BillableBar
-                billable={billableMinutes}
-                nonBillable={loggedMinutes - billableMinutes}
-                capacity={loggedMinutes}
+              <ProgressBar
+                max={loggedMinutes}
+                segments={[
+                  { value: billableMinutes, palette: "blue" },
+                  { value: loggedMinutes - billableMinutes, palette: "blue", shade: "soft" },
+                ]}
               />
             </Stat>
           </StatList>
@@ -306,7 +310,10 @@ function ConsultantGroup({
           <span class="stack-h nowrap items-center justify-end gap-xs">
             {formatTotalHours(row.minutes)}
             <span style="width: 6em;">
-              <UtilizationBar logged={row.minutes} capacity={row.expectedMinutes} />
+              <ProgressBar
+                max={row.expectedMinutes}
+                segments={[{ value: row.minutes, palette: "purple" }]}
+              />
             </span>
           </span>
           {formatShare(row.billableMinutes, row.minutes)}

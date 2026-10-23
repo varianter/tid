@@ -29,13 +29,7 @@ export function BillableSelect() {
   return (
     <FilterForm field={field}>
       <Label for={field}>Hours</Label>
-      <Select id={field} name={field} data-size="small">
-        {options.map((option) => (
-          <option value={option.value} selected={option.value === selected}>
-            {option.label}
-          </option>
-        ))}
-      </Select>
+      <Select id={field} name={field} data-size="small" selected={selected} options={options} />
     </FilterForm>
   );
 }

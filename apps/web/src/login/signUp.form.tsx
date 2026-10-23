@@ -44,17 +44,14 @@ export function SignUpPage({
             id="organizationId"
             name="organizationId"
             required
+            selected={values?.organizationId}
+            options={organizations.map((organization) => ({
+              value: organization.id,
+              label: organization.name,
+            }))}
             {...fieldErrorAttributes("organizationId", fieldErrors?.organizationId)}
           >
             <option value="">Choose your organization</option>
-            {organizations.map((organization) => (
-              <option
-                value={organization.id}
-                selected={String(organization.id) === values?.organizationId}
-              >
-                {organization.name}
-              </option>
-            ))}
           </Select>
         </Field>
         <Button type="submit" class="w-max-content">

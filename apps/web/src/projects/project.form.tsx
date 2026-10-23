@@ -166,14 +166,11 @@ export function ProjectFormPage({
                 id="clientId"
                 name="clientId"
                 required
+                selected={selectedClientId}
+                options={clients.map((client) => ({ value: client.id, label: client.name }))}
                 {...fieldErrorAttributes("clientId", fieldErrors?.clientId)}
               >
                 <option value="">Choose a client</option>
-                {clients.map((client) => (
-                  <option value={client.id} selected={String(client.id) === selectedClientId}>
-                    {client.name}
-                  </option>
-                ))}
               </Select>
             </Field>
           )}
@@ -209,19 +206,16 @@ export function ProjectFormPage({
               id="contractOwnerId"
               name="contractOwnerId"
               required={isBillable}
+              selected={selectedContractOwnerId}
+              options={organizations.map((organization) => ({
+                value: organization.id,
+                label: organization.name,
+              }))}
               {...fieldErrorAttributes("contractOwnerId", fieldErrors?.contractOwnerId)}
             >
               <option value="" selected={selectedContractOwnerId === ""}>
                 {isBillable ? "Choose an organization" : "None"}
               </option>
-              {organizations.map((organization) => (
-                <option
-                  value={organization.id}
-                  selected={String(organization.id) === selectedContractOwnerId}
-                >
-                  {organization.name}
-                </option>
-              ))}
             </Select>
           </Field>
           {isBillable &&

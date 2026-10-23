@@ -8,6 +8,7 @@ import {
   EmptyState,
   Page,
   PeriodNavigation,
+  ProgressBar,
   Stat,
   StatList,
   Tabs,
@@ -15,7 +16,6 @@ import {
 import { and, between, eq, gte, inArray, isNull, or, sql } from "drizzle-orm";
 import type { Child } from "hono/jsx";
 import { type Amounts, addAmounts, formatAmounts } from "../amount/amount";
-import { BillableBar } from "../billable/billableBar";
 import { BillableSelect, billableCondition } from "../billable/billableFilter";
 import { consultantPath } from "../consultants/consultantsUrl";
 import { database } from "../database";
@@ -25,7 +25,6 @@ import { type QueryProps, queryPage } from "../query/queryPage";
 import { formatShare } from "../share/share";
 import { capacityMinutes } from "./capacity";
 import { reportUrl, type Tab, tabs } from "./reportsUrl";
-import { UtilizationBar } from "./utilizationBar";
 
 export const monthlyReport = queryPage({
   url: reportUrl,
@@ -384,7 +383,7 @@ function Summary({
         share={formatShare(hours, capacityHours)}
         note={`of ${formatTotalHours(capacityHours * 60)} capacity`}
       >
-        <UtilizationBar logged={hours} capacity={capacityHours} />
+        <ProgressBar max={capacityHours} segments={[{ value: hours, palette: "purple" }]} />
       </Stat>
       <Stat
         label="Billable"
@@ -392,10 +391,12 @@ function Summary({
         share={formatShare(billableHours, hours)}
         note={`${formatTotalHours((hours - billableHours) * 60)} non-billable`}
       >
-        <BillableBar
-          billable={billableHours}
-          nonBillable={hours - billableHours}
-          capacity={hours}
+        <ProgressBar
+          max={hours}
+          segments={[
+            { value: billableHours, palette: "blue" },
+            { value: hours - billableHours, palette: "blue", shade: "soft" },
+          ]}
         />
       </Stat>
       <Stat label="Billable amount" value={formatAmounts(amounts, currency)} />
@@ -417,10 +418,12 @@ function BillableHours({ hours, billableHours }: { hours: number; billableHours:
       {formatTotalHours(billableHours * 60)}
       <span class="ink-subtle fw-regular">{formatShare(billableHours, hours)}</span>
       <span style={barWidth}>
-        <BillableBar
-          billable={billableHours}
-          nonBillable={hours - billableHours}
-          capacity={hours}
+        <ProgressBar
+          max={hours}
+          segments={[
+            { value: billableHours, palette: "blue" },
+            { value: hours - billableHours, palette: "blue", shade: "soft" },
+          ]}
         />
       </span>
     </span>
@@ -432,7 +435,7 @@ function Utilization({ hours, capacityHours }: { hours: number; capacityHours: n
     <span class="stack-h nowrap items-center justify-end gap-xs">
       {formatShare(hours, capacityHours)}
       <span style={barWidth}>
-        <UtilizationBar logged={hours} capacity={capacityHours} />
+        <ProgressBar max={capacityHours} segments={[{ value: hours, palette: "purple" }]} />
       </span>
     </span>
   );

@@ -98,18 +98,17 @@ export function CompanySelect({ selected, companies }: CompanyFilter) {
   return (
     <FilterForm field={field}>
       <Label for={field}>Company</Label>
-      <Select id={field} name={field} data-size="small">
-        {[...Map.groupBy(companies, (company) => company.country)].map(([country, members]) => (
-          <optgroup>
-            <legend>{countryNames[country]}</legend>
-            {members.map((company) => (
-              <option value={company.value} selected={company.value === selected.value}>
-                {company.name}
-              </option>
-            ))}
-          </optgroup>
-        ))}
-      </Select>
+      <Select
+        id={field}
+        name={field}
+        data-size="small"
+        selected={selected.value}
+        options={companies.map((company) => ({
+          value: company.value,
+          label: company.name,
+          group: countryNames[company.country],
+        }))}
+      />
     </FilterForm>
   );
 }

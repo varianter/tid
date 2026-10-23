@@ -16,13 +16,16 @@ export function OpenProjectToMembersForm({
       action={openProjectsPath(organizationSlug)}
       class="stack-h items-center gap-xs"
     >
-      <Select name="projectId" aria-label="Project to open" required>
+      <Select
+        name="projectId"
+        aria-label="Project to open"
+        required
+        options={projects.map((project) => ({
+          value: project.id,
+          label: `${project.client} – ${project.name}`,
+        }))}
+      >
         <option value="">Choose a project</option>
-        {projects.map((project) => (
-          <option value={project.id}>
-            {project.client} – {project.name}
-          </option>
-        ))}
       </Select>
       <Button type="submit">Open to everyone</Button>
     </form>

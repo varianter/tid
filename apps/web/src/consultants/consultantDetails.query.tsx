@@ -3,10 +3,18 @@ import { addMonths, firstDayOfMonth, lastDayOfMonth } from "@tid/calendar/isoDat
 import { todayInOslo } from "@tid/calendar/osloClock";
 import { clients, organizations, projects, tasks, timeEntries, users } from "@tid/db/schema";
 import { formatTotalHours } from "@tid/elements/hours";
-import { Badge, DataGrid, Page, PeriodNavigation, Section, Stat, StatList } from "@tid/ui";
+import {
+  Badge,
+  DataGrid,
+  Page,
+  PeriodNavigation,
+  ProgressBar,
+  Section,
+  Stat,
+  StatList,
+} from "@tid/ui";
 import { and, between, desc, eq, sql } from "drizzle-orm";
 import type { Context } from "hono";
-import { BillableBar } from "../billable/billableBar";
 import { database } from "../database";
 import type { UserEnv } from "../login/user";
 import { isManager } from "../managers/manager";
@@ -14,7 +22,6 @@ import { type Billing, billingLabels } from "../projects/billing";
 import { projectReportUrl } from "../projects/projectsUrl";
 import { type QueryProps, queryPage } from "../query/queryPage";
 import { capacityMinutes } from "../reports/capacity";
-import { UtilizationBar } from "../reports/utilizationBar";
 import { formatShare } from "../share/share";
 import { MonthEntries, type MonthEntry } from "../timeEntries/monthEntries";
 import { consultantsPath, consultantUrl } from "./consultantsUrl";
@@ -200,7 +207,7 @@ function MonthHours({
         share={formatShare(minutes, capacityMinutes)}
         note={`of ${formatTotalHours(capacityMinutes)} capacity`}
       >
-        <UtilizationBar logged={minutes} capacity={capacityMinutes} />
+        <ProgressBar max={capacityMinutes} segments={[{ value: minutes, palette: "purple" }]} />
       </Stat>
       <Stat
         label="Billable"
@@ -208,10 +215,12 @@ function MonthHours({
         share={formatShare(billableMinutes, minutes)}
         note={`${formatTotalHours(nonBillableMinutes)} non-billable`}
       >
-        <BillableBar
-          billable={billableMinutes}
-          nonBillable={nonBillableMinutes}
-          capacity={minutes}
+        <ProgressBar
+          max={minutes}
+          segments={[
+            { value: billableMinutes, palette: "blue" },
+            { value: nonBillableMinutes, palette: "blue", shade: "soft" },
+          ]}
         />
       </Stat>
     </StatList>

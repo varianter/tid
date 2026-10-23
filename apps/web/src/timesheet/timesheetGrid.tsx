@@ -72,20 +72,13 @@ export function TimesheetGrid({
         entries.some((entry) => entry.taskId === task.id),
     )
     .sort(byProjectThenName);
-  const addableByProject = Object.entries(
-    Object.groupBy(
-      tasks.filter((task) => !rows.includes(task)).sort(byProjectThenName),
-      (task) => task.projectName,
-    ),
-  );
-  const addable = !locked && addableByProject.length > 0;
+  const addableTasks = tasks.filter((task) => !rows.includes(task)).sort(byProjectThenName);
+  const addable = !locked && addableTasks.length > 0;
   if (rows.length === 0)
-    return <NoRows locked={locked} addableByProject={addableByProject} search={search} />;
+    return <NoRows locked={locked} addableTasks={addableTasks} search={search} />;
   return (
     <>
-      {addable && (
-        <AddTaskForm addableByProject={addableByProject} search={search} class="mt-s mb-m" />
-      )}
+      {addable && <AddTaskForm addableTasks={addableTasks} search={search} class="mt-s mb-m" />}
       <div
         class={cx("d-grid t-tabular my-s gap-column-3xs pr-m", sheetLayout)}
         style={`--days: ${days.length}; --task-columns: ${rows.length};`}
@@ -162,19 +155,17 @@ export function TimesheetGrid({
   );
 }
 
-type AddableTasks = [projectName: string, tasks: Task[] | undefined][];
-
 function NoRows({
   locked,
-  addableByProject,
+  addableTasks,
   search,
 }: {
   locked: boolean;
-  addableByProject: AddableTasks;
+  addableTasks: Task[];
   search: string;
 }) {
   if (locked) return <EmptyState emoji="🔒" title="This month has left the building" />;
-  if (addableByProject.length === 0)
+  if (addableTasks.length === 0)
     return (
       <EmptyState emoji="🏝️" title="Technically, you're on a desert island">
         Nowhere to put your hours – yet. Yell, DM or smoke signal someone who can make that happend.
@@ -184,7 +175,7 @@ function NoRows({
     <EmptyState
       emoji="🦗🦗🦗"
       title="Pick a task, log some hours"
-      action={<AddTaskForm addableByProject={addableByProject} search={search} />}
+      action={<AddTaskForm addableTasks={addableTasks} search={search} />}
     >
       Preferably before the higher ups starts asking silly questions.
     </EmptyState>
@@ -192,11 +183,11 @@ function NoRows({
 }
 
 function AddTaskForm({
-  addableByProject,
+  addableTasks,
   search,
   class: className,
 }: {
-  addableByProject: AddableTasks;
+  addableTasks: Task[];
   search: string;
   class?: string;
 }) {
@@ -207,18 +198,20 @@ function AddTaskForm({
         {[...new URLSearchParams(search)].map(([name, value]) => (
           <input type="hidden" name={name} value={value} />
         ))}
-        <Select name="add" class="w-full" data-size="small" aria-label="Add task">
+        <Select
+          name="add"
+          class="w-full"
+          data-size="small"
+          aria-label="Add task"
+          options={addableTasks.map((task) => ({
+            value: task.id,
+            label: task.name,
+            group: task.projectName,
+          }))}
+        >
           <option value="" selected disabled>
             Add task…
           </option>
-          {addableByProject.map(([projectName, projectTasks]) => (
-            <optgroup>
-              <legend>{projectName}</legend>
-              {projectTasks?.map((task) => (
-                <option value={task.id}>{task.name}</option>
-              ))}
-            </optgroup>
-          ))}
         </Select>
         <noscript>
           <Button type="submit" data-size="small">

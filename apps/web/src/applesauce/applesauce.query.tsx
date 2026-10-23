@@ -9,16 +9,15 @@ import {
   EmptyState,
   Page,
   PeriodNavigation,
+  ProgressBar,
   Stat,
   StatList,
   Tabs,
 } from "@tid/ui";
 import { between, eq, sql } from "drizzle-orm";
 import { formatAmounts } from "../amount/amount";
-import { BillableBar } from "../billable/billableBar";
 import { database } from "../database";
 import { type QueryProps, queryPage } from "../query/queryPage";
-import { UtilizationBar } from "../reports/utilizationBar";
 import { formatShare } from "../share/share";
 import { isYear, monthsOf, type Period, shiftPeriod, togglePeriod } from "./applesaucePeriod";
 import { applesauceUrl } from "./applesauceUrl";
@@ -145,10 +144,16 @@ function ApplesaucePage({
           value={formatShare(total.billableHours, total.billableBaseHours)}
           note={`${formatShare(previousTotal.billableHours, previousTotal.billableBaseHours) || "Nothing"} in ${previous}`}
         >
-          <BillableBar
-            billable={total.billableHours}
-            nonBillable={total.billableBaseHours - total.billableHours}
-            capacity={total.billableBaseHours}
+          <ProgressBar
+            max={total.billableBaseHours}
+            segments={[
+              { value: total.billableHours, palette: "blue" },
+              {
+                value: total.billableBaseHours - total.billableHours,
+                palette: "blue",
+                shade: "soft",
+              },
+            ]}
           />
         </Stat>
         <Stat
@@ -156,7 +161,10 @@ function ApplesaucePage({
           value={formatShare(total.hours, total.capacityHours)}
           note={`${formatShare(previousTotal.hours, previousTotal.capacityHours) || "Nothing"} in ${previous}`}
         >
-          <UtilizationBar logged={total.hours} capacity={total.capacityHours} />
+          <ProgressBar
+            max={total.capacityHours}
+            segments={[{ value: total.hours, palette: "purple" }]}
+          />
         </Stat>
         <Stat
           label="Consultants"
