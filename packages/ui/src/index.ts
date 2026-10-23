@@ -16,7 +16,7 @@ export { Badge } from "./primitives/Badge";
 export { Button, type ButtonProps } from "./primitives/Button";
 export { Checkbox } from "./primitives/Checkbox";
 export { ColorMode, type Palette } from "./primitives/ColorMode";
-export { Icon, type IconName, iconNames } from "./primitives/Icon";
+export { findIconFile, Icon, type IconName, iconNames, iconsPath } from "./primitives/Icon";
 export { Input } from "./primitives/Input";
 export { Label } from "./primitives/Label";
 export { Popover } from "./primitives/Popover";

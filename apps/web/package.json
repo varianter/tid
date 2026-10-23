@@ -3,7 +3,6 @@
   "type": "module",
   "scripts": {
     "dev": "bun src/dev.ts",
-    "download-icons": "bun scripts/download-icons.ts",
     "build": "bun build src/server.tsx --outfile dist/server.js --target bun",
     "start": "bun dist/server.js",
     "test": "bun test",

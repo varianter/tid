@@ -2,6 +2,9 @@
   "name": "@tid/ui",
   "private": true,
   "type": "module",
+  "scripts": {
+    "download-icons": "bun scripts/download-icons.ts"
+  },
   "exports": {
     ".": "./src/index.ts"
   },

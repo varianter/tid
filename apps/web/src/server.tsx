@@ -1,6 +1,6 @@
 import { bundleElements } from "@tid/elements/bundle";
+import { findIconFile, iconsPath } from "@tid/ui";
 import { Hono } from "hono";
-import { serveStatic } from "hono/bun";
 import { csrf } from "hono/csrf";
 import { HTTPException } from "hono/http-exception";
 import { jsxRenderer } from "hono/jsx-renderer";
@@ -104,14 +104,13 @@ app.onError((error, c) => {
 });
 
 app.get("/health", (c) => c.text("ok"));
-app.use(
-  "/icons/*",
-  serveStatic({
-    root: "./public",
-    // Uncached, every page load refetches the icons and they flicker in.
-    onFound: (_path, c) => c.header("Cache-Control", "public, max-age=86400"),
-  }),
-);
+app.get(`${iconsPath}/:file`, (c) => {
+  const iconFile = findIconFile(c.req.param("file"));
+  if (!iconFile) return c.notFound();
+  return new Response(iconFile, {
+    headers: { "Cache-Control": "public, max-age=31536000, immutable" },
+  });
+});
 app.get(elements.path, (c) =>
   c.body(elements.code, 200, {
     "Content-Type": "text/javascript",
