@@ -16,7 +16,6 @@
     "db:generate": "bun --filter @tid/db generate",
     "db:migrate": "bun --filter @tid/db migrate",
     "db:reset": "bun --filter @tid/db reset",
-    "harvest:import:norway": "bun --filter @tid/harvest import:norway",
     "db:studio": "bun --filter @tid/db studio",
     "test": "bun test",
     "typecheck": "bun check --no-pretty && bun --filter @tid/elements typecheck",

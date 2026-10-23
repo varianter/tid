@@ -41,7 +41,3 @@ Tid is deployed from [varianter/infrastructure-as-code](https://github.com/varia
 - [Workload README](https://github.com/varianter/infrastructure-as-code/blob/main/deployments/dev/workloads/tid/README.md): one-time database and identity setup, and how migrations run.
 - [ArgoCD application](https://github.com/varianter/infrastructure-as-code/blob/main/deployments/dev/argocd-apps/tid.yaml): sync policy. Its live status is in the [ArgoCD dashboard](https://argocd.variant.dev/applications/argocd/tid-dev).
 - Terraform for the [Postgres server and managed identity](https://github.com/varianter/infrastructure-as-code/blob/main/environments/prod/cluster/postgresql-tid.tf) and the [Entra app registration](https://github.com/varianter/infrastructure-as-code/blob/main/environments/prod/cluster/tid-oauth.tf).
-
-## Early life of Tid.
-
-To check the app against real data, the dev database can be rebuilt from Harvest. See [packages/harvest](packages/harvest/README.md).

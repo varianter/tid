@@ -16,7 +16,6 @@
         "@tid/calendar": "workspace:*",
         "@tid/db": "workspace:*",
         "@tid/elements": "workspace:*",
-        "@tid/harvest": "workspace:*",
         "@tid/ui": "workspace:*",
         "drizzle-orm": "catalog:",
         "hono": "4.13.9",
@@ -44,14 +43,6 @@
     },
     "packages/elements": {
       "name": "@tid/elements",
-    },
-    "packages/harvest": {
-      "name": "@tid/harvest",
-      "dependencies": {
-        "@tid/calendar": "workspace:*",
-        "@tid/db": "workspace:*",
-        "drizzle-orm": "catalog:",
-      },
     },
     "packages/ui": {
       "name": "@tid/ui",
@@ -290,8 +281,6 @@
     "@tid/db": ["@tid/db@workspace:packages/db"],
 
     "@tid/elements": ["@tid/elements@workspace:packages/elements"],
-
-    "@tid/harvest": ["@tid/harvest@workspace:packages/harvest"],
 
     "@tid/ui": ["@tid/ui@workspace:packages/ui"],
 

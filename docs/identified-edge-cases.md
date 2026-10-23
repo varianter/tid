@@ -31,13 +31,3 @@ Harvest sets billing per project (time and materials, fixed fee or non-billable)
 Moving billing to tasks would record this faithfully, but the rule that only non-billable projects can be open would then span two tables, and so would the rule that billing is fixed once time is logged.
 
 **Currently:** the project's billing type decides, so every task on a billable project exports as billable.
-
-## One Harvest account for several organizations
-
-Sweden probably has one Harvest account for all its offices, while each office is its own organization. Which organization should its users and projects go to?
-
-**Currently:** the Norwegian import only accepts accounts named exactly like an organization. Sweden will get its own import.
-
-## Importing from Harvest (on hold)
-
-The database enforces some rules that Harvest may not have: users can only be assigned through one of the project's organizations, and emails must be unique regardless of case. Imported history that breaks these rules will be rejected, so it needs cleaning or a decision before import. Settled rules are in the [Harvest import](../packages/harvest/README.md).

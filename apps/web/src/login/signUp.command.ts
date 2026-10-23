@@ -10,7 +10,7 @@ import { findUserByEmail, findUserByIdentity, identityProvider } from "./userIde
 
 type Identity = { subject: string; email: string; name?: string };
 
-// Importing from Harvest needs a manager, and it assigns everyone else's role. Only granted on
+// Someone has to be the first manager, since managers assign everyone else's role. Only granted on
 // sign-up, so removing the role later sticks.
 function isBootstrapManager(email: string) {
   const emails = process.env.BOOTSTRAP_MANAGER_EMAILS?.split(",") ?? [];

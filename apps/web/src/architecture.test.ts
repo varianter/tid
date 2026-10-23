@@ -94,7 +94,6 @@ const impureFiles = [
   "clients/client.ts",
   "consultants/consultantsUrl.ts",
   "consultants/currentBillableProjects.ts",
-  "harvestImport/harvestTokens.ts",
   "login/userIdentity.ts",
   "managers/manager.ts",
   "organizations/companyFilter.tsx",

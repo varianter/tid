@@ -5,5 +5,4 @@ docs
 **/*.test.ts
 testdist
 **/.env*
-packages/harvest/harvest-export
 .claude

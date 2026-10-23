@@ -78,7 +78,11 @@ export function Layout({
             [hidden] { display: none !important; }
             /* The nav's margin is set here, next to the height calc that
                subtracts it, so the two can't drift apart. */
-            #nav-popover nav { margin: var(--spacing-2xs); }
+            #nav-popover nav {
+              margin: var(--spacing-2xs);
+              --fade-color: var(--surface-tinted);
+              background: linear-gradient(100deg in oklch, var(--fade-color), oklch(from var(--fade-color) l c h / 0.9) 20%, oklch(from var(--fade-color) l c h / 0.65) 40%, oklch(from var(--fade-color) l c h / 0.35) 60%, oklch(from var(--fade-color) l c h / 0.05) 80%, oklch(from var(--fade-color) l c h / 0));
+            }
             @media (min-width: 900px) {
               #nav-popover { display: contents; }
               /* items-stretch on body would otherwise stretch the nav to the

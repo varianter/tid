@@ -15,7 +15,6 @@
     "@tid/calendar": "workspace:*",
     "@tid/db": "workspace:*",
     "@tid/elements": "workspace:*",
-    "@tid/harvest": "workspace:*",
     "@tid/ui": "workspace:*",
     "drizzle-orm": "catalog:",
     "hono": "4.13.9",

@@ -87,7 +87,7 @@ export function TimesheetGrid({
         <AddTaskForm addableByProject={addableByProject} search={search} class="mt-s mb-m" />
       )}
       <div
-        class={cx("d-grid t-tabular my-s gap-column-3xs", sheetLayout)}
+        class={cx("d-grid t-tabular my-s gap-column-3xs pr-m", sheetLayout)}
         style={`--days: ${days.length}; --task-columns: ${rows.length};`}
       >
         <div class="grid-subgrid grid-all-columns fs-s">
@@ -173,20 +173,20 @@ function NoRows({
   addableByProject: AddableTasks;
   search: string;
 }) {
-  if (locked) return <EmptyState emoji="🔒" title="Closed, and not a minute logged" />;
+  if (locked) return <EmptyState emoji="🔒" title="This month has left the building" />;
   if (addableByProject.length === 0)
     return (
-      <EmptyState emoji="🏝️" title="Nowhere to put your hours">
-        You're not on any projects yet. Nudge a manager to put you on one.
+      <EmptyState emoji="🏝️" title="Technically, you're on a desert island">
+        Nowhere to put your hours – yet. Yell, DM or smoke signal someone who can make that happend.
       </EmptyState>
     );
   return (
     <EmptyState
-      emoji="📝"
-      title="Fresh month, empty sheet"
+      emoji="🦗🦗🦗"
+      title="Pick a task, log some hours"
       action={<AddTaskForm addableByProject={addableByProject} search={search} />}
     >
-      Pick a task to get going. The hours won't log themselves.
+      Preferably before the higher ups starts asking silly questions.
     </EmptyState>
   );
 }
