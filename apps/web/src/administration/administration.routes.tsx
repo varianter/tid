@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import type { UserEnv } from "../login/user";
-import { organizationManagersOnly } from "../managers/manager";
+import { managersOnly } from "../managers/manager";
 import { closeProjectToMembers } from "./closeProjectToMembers.command";
 import { makeManager } from "./makeManager.command";
 import { managerList } from "./managerList.query";
@@ -11,7 +11,7 @@ import { removeManager } from "./removeManager.command";
 
 export const administration = new Hono<UserEnv>()
   .get("/", organizationOverviewRedirect)
-  .use("/:organization/*", organizationManagersOnly)
+  .use("/:organization/*", managersOnly)
   .get("/:organization", organizationOverview)
   .get("/:organization/projects", openProjectList)
   .post("/:organization/projects", openProjectToMembers)

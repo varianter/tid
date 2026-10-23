@@ -5,10 +5,12 @@ import type { Context } from "hono";
 import { database } from "../database";
 import type { UserEnv } from "../login/user";
 import { findOrganizationBySlug } from "../organizations/organization";
+import { listOrganizations, type OrganizationOption } from "../organizations/organizationSelect";
 import { participation } from "../projects/projectParticipation";
 import { administrationPath } from "./administrationUrl";
 import { CloseProjectToMembersForm } from "./closeProjectToMembers.form";
 import { OpenProjectToMembersForm } from "./openProjectToMembers.form";
+import { OrganizationSwitcher, OtherOrganizationNotice } from "./organizationSwitch";
 
 const projectRow = {
   id: projects.id,
@@ -53,6 +55,8 @@ export const openProjectList = async (c: Context<UserEnv>) => {
       organization={organization}
       openProjects={openProjects}
       openableProjects={openableProjects}
+      organizations={await listOrganizations()}
+      ownOrgId={c.get("user").orgId}
     />,
   );
 };
@@ -63,22 +67,34 @@ function OpenProjectListPage({
   organization,
   openProjects,
   openableProjects,
+  organizations,
+  ownOrgId,
 }: {
   organization: { slug: string; name: string };
   openProjects: ProjectRow[];
   openableProjects: ProjectRow[];
+  organizations: OrganizationOption[];
+  ownOrgId: number;
 }) {
   return (
     <Page
       title={`Projects open to everyone in ${organization.name}`}
       back={{ href: administrationPath(organization.slug), label: "Administration" }}
       actions={
-        <OpenProjectToMembersForm
-          organizationSlug={organization.slug}
-          projects={openableProjects}
-        />
+        <>
+          <OpenProjectToMembersForm
+            organizationSlug={organization.slug}
+            projects={openableProjects}
+          />
+          <OrganizationSwitcher organizations={organizations} current={organization} />
+        </>
       }
     >
+      <OtherOrganizationNotice
+        organizations={organizations}
+        current={organization}
+        ownOrgId={ownOrgId}
+      />
       {openProjects.length === 0 ? (
         <EmptyState emoji="🔓" title="No open projects">
           Members log hours only on projects they're assigned to.

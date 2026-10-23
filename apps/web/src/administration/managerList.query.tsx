@@ -7,8 +7,10 @@ import { consultantPath } from "../consultants/consultantsUrl";
 import { database } from "../database";
 import type { UserEnv } from "../login/user";
 import { findOrganizationBySlug } from "../organizations/organization";
+import { listOrganizations, type OrganizationOption } from "../organizations/organizationSelect";
 import { administrationPath } from "./administrationUrl";
 import { MakeManagerForm } from "./makeManager.form";
+import { OrganizationSwitcher, OtherOrganizationNotice } from "./organizationSwitch";
 import { RemoveManagerForm } from "./removeManager.form";
 
 export const managerList = async (c: Context<UserEnv>) => {
@@ -31,7 +33,14 @@ export const managerList = async (c: Context<UserEnv>) => {
     .from(users)
     .where(eq(users.orgId, organization.id))
     .orderBy(users.name);
-  return c.render(<ManagerListPage organization={organization} members={members} />);
+  return c.render(
+    <ManagerListPage
+      organization={organization}
+      members={members}
+      organizations={await listOrganizations()}
+      ownOrgId={c.get("user").orgId}
+    />,
+  );
 };
 
 type MemberRow = {
@@ -45,15 +54,25 @@ type MemberRow = {
 function ManagerListPage({
   organization,
   members,
+  organizations,
+  ownOrgId,
 }: {
   organization: { slug: string; name: string };
   members: MemberRow[];
+  organizations: OrganizationOption[];
+  ownOrgId: number;
 }) {
   return (
     <Page
       title={`Managers in ${organization.name}`}
       back={{ href: administrationPath(organization.slug), label: "Administration" }}
+      actions={<OrganizationSwitcher organizations={organizations} current={organization} />}
     >
+      <OtherOrganizationNotice
+        organizations={organizations}
+        current={organization}
+        ownOrgId={ownOrgId}
+      />
       <DataGrid columns={[{ label: "Name" }, { kind: "action" }]}>
         {members.map((member) => (
           <DataGrid.Row>

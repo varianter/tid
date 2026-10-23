@@ -63,18 +63,9 @@ export const projectManagersOnly = createMiddleware<UserEnv>(async (c, next) => 
   await next();
 });
 
-// For pages under an organization in the URL, which only its own managers may use.
-export const organizationManagersOnly = createMiddleware<UserEnv>(async (c, next) => {
-  const organization = await findOrganizationBySlug(c.req.param("organization") ?? "");
-  if (!organization) return c.notFound();
-  if (!(await managesOrganization(c.get("user"), organization.id))) {
-    return c.text("Only the organization's managers can do this", 403);
-  }
-  await next();
-});
-
-// Any manager, for what belongs to no organization, like clients and new projects. What belongs to
-// one organization checks managesOrganization instead, and what belongs to a project managesProject.
+// Any manager, for what belongs to no organization, like clients and new projects, and for
+// administering any organization. Month locks check managesOrganization instead, and what belongs
+// to a project managesProject.
 export const managersOnly = createMiddleware<UserEnv>(async (c, next) => {
   if (!(await isManager(c.get("user")))) return c.text("Only managers can do this", 403);
   await next();

@@ -65,12 +65,9 @@ beforeAll(async () => {
     .returning({ id: projects.id })) as [{ id: number }, { id: number }];
 });
 
-test("only the organization's managers open and close projects", async () => {
+test("only managers open and close projects", async () => {
   const path = "/administration/oslo/projects";
   expect((await requestAs(member, path, { projectId: String(internalId) })).status).toBe(403);
-  expect((await requestAs(bergenManager, path, { projectId: String(internalId) })).status).toBe(
-    403,
-  );
   expect((await requestAs(member, `${path}/${internalId}/delete`, {})).status).toBe(403);
   expect(await osloParticipation()).toEqual([]);
 
@@ -78,9 +75,9 @@ test("only the organization's managers open and close projects", async () => {
   expect((await requestAs(manager, "/administration/nowhere/projects")).status).toBe(404);
 });
 
-test("managers open a non-billable project, and close it again", async () => {
+test("managers of any organization open a non-billable project, and close it again", async () => {
   const path = "/administration/oslo/projects";
-  const opened = await requestAs(manager, path, { projectId: String(internalId) });
+  const opened = await requestAs(bergenManager, path, { projectId: String(internalId) });
   expect(opened.headers.get("location")).toBe(path);
   expect(await osloParticipation()).toEqual([{ projectId: internalId, openToMembers: true }]);
   expect(await (await requestAs(manager, path)).text()).toContain("INT-1");

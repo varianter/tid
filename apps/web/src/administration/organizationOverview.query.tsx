@@ -3,9 +3,10 @@ import { ActionList, ActionListItem, Button, Detail, Page } from "@tid/ui";
 import type { Context } from "hono";
 import type { UserEnv } from "../login/user";
 import { findOrganizationBySlug, findOrganizationSlug } from "../organizations/organization";
+import { listOrganizations, type OrganizationOption } from "../organizations/organizationSelect";
 import { administrationPath, managersPath, openProjectsPath } from "./administrationUrl";
+import { OrganizationSwitcher, OtherOrganizationNotice } from "./organizationSwitch";
 
-// Managers only administer their own organization.
 export const organizationOverviewRedirect = async (c: Context<UserEnv>) => {
   const slug = await findOrganizationSlug(c.get("user").orgId);
   if (!slug) return c.notFound();
@@ -15,11 +16,19 @@ export const organizationOverviewRedirect = async (c: Context<UserEnv>) => {
 export const organizationOverview = async (c: Context<UserEnv>) => {
   const organization = await findOrganizationBySlug(c.req.param("organization") ?? "");
   if (!organization) return c.notFound();
-  return c.render(<OrganizationOverviewPage organization={organization} />);
+  return c.render(
+    <OrganizationOverviewPage
+      organization={organization}
+      organizations={await listOrganizations()}
+      ownOrgId={c.get("user").orgId}
+    />,
+  );
 };
 
 function OrganizationOverviewPage({
   organization,
+  organizations,
+  ownOrgId,
 }: {
   organization: {
     slug: string;
@@ -29,9 +38,19 @@ function OrganizationOverviewPage({
     currency: string;
     fullDayMinutes: number;
   };
+  organizations: OrganizationOption[];
+  ownOrgId: number;
 }) {
   return (
-    <Page title={`Administration of ${organization.name}`}>
+    <Page
+      title={`Administration of ${organization.name}`}
+      actions={<OrganizationSwitcher organizations={organizations} current={organization} />}
+    >
+      <OtherOrganizationNotice
+        organizations={organizations}
+        current={organization}
+        ownOrgId={ownOrgId}
+      />
       <dl class="stack-h items-start gap-xl gap-row-s b-all bc-default br-l p-m">
         <Detail label="Legal name">{organization.legalName}</Detail>
         <Detail label="Country">{organization.country}</Detail>

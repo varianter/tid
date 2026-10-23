@@ -46,21 +46,30 @@ test("administration opens on the user's own organization", async () => {
   expect(response.headers.get("Location")).toBe("/administration/trondheim");
 });
 
-test("only the organization's managers administer it", async () => {
+test("any manager administers any organization", async () => {
   const response = await requestAs(manager, "/administration/trondheim");
   expect(await response.text()).toContain("7,5\u00a0h");
   expect((await requestAs(member, "/administration/trondheim")).status).toBe(403);
-  expect((await requestAs(osloManager, "/administration/trondheim")).status).toBe(403);
+  expect((await requestAs(osloManager, "/administration/trondheim")).status).toBe(200);
   expect((await requestAs(manager, "/administration/nowhere")).status).toBe(404);
 });
 
-test("managers make their organization's members managers, and remove the role again", async () => {
+test("administering another organization says so, with a way back", async () => {
+  const notice = "You are currently in the Administration of";
+  expect(await (await requestAs(manager, "/administration/trondheim")).text()).not.toContain(
+    notice,
+  );
+  const page = await (await requestAs(osloManager, "/administration/trondheim/managers")).text();
+  expect(page).toContain(notice);
+  expect(page).toContain('href="/administration/oslo"');
+});
+
+test("managers make an organization's members managers, and remove the role again", async () => {
   const path = `/administration/trondheim/managers/${member.id}`;
   expect((await requestAs(member, path, "POST")).status).toBe(403);
-  expect((await requestAs(osloManager, path, "POST")).status).toBe(403);
   expect(await managerIds()).toEqual([manager.id, osloManager.id].sort());
 
-  const response = await requestAs(manager, path, "POST");
+  const response = await requestAs(osloManager, path, "POST");
   expect(response.headers.get("location")).toBe("/administration/trondheim/managers");
   expect(await managerIds()).toEqual([manager.id, member.id, osloManager.id].sort());
 
@@ -68,7 +77,7 @@ test("managers make their organization's members managers, and remove the role a
   expect(await managerIds()).toEqual([manager.id, osloManager.id].sort());
 });
 
-test("managers can't change the role of someone in another organization", async () => {
+test("managers can't change the role of someone outside the organization in the URL", async () => {
   const path = `/administration/trondheim/managers/${osloManager.id}/delete`;
   expect((await requestAs(manager, path, "POST")).status).toBe(404);
   expect(await managerIds()).toContain(osloManager.id);
