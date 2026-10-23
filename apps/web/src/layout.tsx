@@ -5,7 +5,7 @@ import type { PropsWithChildren } from "hono/jsx";
 import { consultantPath } from "./consultants/consultantsUrl";
 import { TidSymbol, tidFaviconHref } from "./tidLogo";
 
-export const vardeStylesheet = "https://varde.variant.dev/v/1.0.0/styles.css";
+export const vardeStylesheet = "https://varde.variant.dev/v/2.0.0/styles.css";
 
 type LayoutProps = PropsWithChildren<{
   currentPath: string;
@@ -109,7 +109,7 @@ export function Layout({
 
 
             [data-transition="content"]{
-              view-transition-name: article-content;
+              view-transition-name: content;
             }
 
             ::view-transition-old(root),
@@ -118,21 +118,21 @@ export function Layout({
               mix-blend-mode: normal;
             }
 
-            ::view-transition-old(article-content) {
+            ::view-transition-old(content) {
               animation: none;
               opacity: 0;
             }
 
-            ::view-transition-group(article-content) {
+            ::view-transition-group(content) {
               animation-duration: 0s;
             }
 
-            ::view-transition-new(article-content) {
-              animation: article-content-enter 0.6s cubic-bezier(.32, .58, .2, 1) both;
+            ::view-transition-new(content) {
+              animation: content-enter 0.6s cubic-bezier(.32, .58, .2, 1) both;
               mix-blend-mode: normal;
             }
 
-            @keyframes article-content-enter {
+            @keyframes content-enter {
               from {
                 opacity: 0;
                 translate: 0 40px;
@@ -140,7 +140,7 @@ export function Layout({
             }
 
             @media (prefers-reduced-motion: reduce) {
-              ::view-transition-new(main) {
+              ::view-transition-new(content),
                 animation: none;
               }
             }
