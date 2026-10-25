@@ -6,7 +6,20 @@ import { database } from "../database";
 import type { User, UserEnv } from "../login/user";
 import { findOrganizationBySlug, findOrganizationCountry } from "../organizations/organization";
 
-export async function isManager(user: User) {
+// Login loads the user afresh for each request, so keying on it asks the database once per
+// request however many checks and the layout ask.
+const managerChecks = new WeakMap<User, Promise<boolean>>();
+
+export function isManager(user: User) {
+  let check = managerChecks.get(user);
+  if (!check) {
+    check = hasManagerRole(user);
+    managerChecks.set(user, check);
+  }
+  return check;
+}
+
+async function hasManagerRole(user: User) {
   const roles = await database
     .select()
     .from(userRoles)

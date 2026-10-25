@@ -26,6 +26,8 @@ import {
   type Company,
   type CompanyFilter,
   CompanySelect,
+  completeCompany,
+  findCompanyFilter,
   resolveCompany,
 } from "../organizations/companyFilter";
 import { type QueryProps, queryPage } from "../query/queryPage";
@@ -42,8 +44,8 @@ const organizationOf = (company: Company) =>
 
 // The month being closed: last month until it's locked, then this one.
 export const monthDetailsRedirect = async (c: Context<UserEnv>) => {
-  const company = await resolveCompany(c);
-  if (company instanceof Response) return company;
+  const company = await findCompanyFilter(c.get("user"), c.req.query("company"));
+  if (!company) return c.notFound();
   const organization = organizationOf(company.selected);
   if (!organization) return c.notFound();
   const thisMonth = thisMonthInOslo();
@@ -54,6 +56,7 @@ export const monthDetailsRedirect = async (c: Context<UserEnv>) => {
 
 export const monthDetails = queryPage({
   url: monthUrl,
+  complete: completeCompany,
   loader: async (c: Context<UserEnv>, { month }) => {
     const company = await resolveCompany(c);
     if (company instanceof Response) return company;

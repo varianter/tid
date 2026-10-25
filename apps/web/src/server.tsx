@@ -1,6 +1,8 @@
+import { thisMonthInOslo } from "@tid/calendar/osloClock";
 import { bundleElements } from "@tid/elements/bundle";
 import { findIconSvg, iconsPath } from "@tid/ui";
 import { Hono } from "hono";
+import { compress } from "hono/compress";
 import { csrf } from "hono/csrf";
 import { HTTPException } from "hono/http-exception";
 import { jsxRenderer } from "hono/jsx-renderer";
@@ -24,6 +26,7 @@ import { monthClose } from "./monthClose/monthClose.routes";
 import { projects } from "./projects/projects.routes";
 import { reports } from "./reports/reports.routes";
 import { reportDatabaseTiming, reportRenderTiming, timeMiddleware } from "./serverTiming";
+import { monthPath } from "./timesheet/monthPage";
 import { timesheet } from "./timesheet/timesheet.routes";
 
 const isDevLoginEnabled = process.env.DEV_LOGIN === "true";
@@ -51,7 +54,7 @@ const elements = await bundleElements();
 
 const app = new Hono<PublicEnv>();
 
-app.use(timing({ totalDescription: "Total" }), reportDatabaseTiming);
+app.use(compress(), timing({ totalDescription: "Total" }), reportDatabaseTiming);
 
 app.use(
   secureHeaders({
@@ -72,11 +75,14 @@ app.use(csrf());
 app.use(
   jsxRenderer(async ({ children }, c) => {
     // Early discovery of the stylesheet and element bundle, before the browser reaches their tags in head.
+    // The font is fetched with CORS, which needs its own connection to Varde's origin.
     c.header(
       "Link",
-      [`<${vardeStylesheet}>; rel=preload; as=style`, `<${elements.path}>; rel=modulepreload`].join(
-        ", ",
-      ),
+      [
+        `<${vardeStylesheet}>; rel=preload; as=style`,
+        `<${new URL(vardeStylesheet).origin}>; rel=preconnect; crossorigin`,
+        `<${elements.path}>; rel=modulepreload`,
+      ].join(", "),
     );
     const user = c.get("user");
     return (
@@ -131,7 +137,7 @@ if (isDevLoginEnabled) app.route("/dev", dev);
 app.route(signupPath, login.signup);
 app.use(timeMiddleware("auth", login.requireUser));
 
-app.get("/", (c) => c.redirect("/timesheet"));
+app.get("/", (c) => c.redirect(monthPath(thisMonthInOslo(), false)));
 app.route("/timesheet", timesheet);
 app.route("/clients", clients);
 app.route("/projects", projects);

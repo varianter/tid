@@ -45,6 +45,21 @@ test("the loader can answer instead of the view", async () => {
   expect((await app.request("/shelf?color=red&size=large")).status).toBe(404);
 });
 
+test("defaults from the request land in the same redirect as the rest", async () => {
+  const completing = new Hono().get(
+    "/shelf",
+    queryPage({
+      url: shelfUrl,
+      complete: async (_, query) => ({ ...query, size: query.size ?? "small" }),
+      loader: async () => ({}),
+      view: () => <main />,
+    }),
+  );
+  const response = await completing.request("/shelf?color=green");
+  expect(response.headers.get("location")).toBe("/shelf?color=red&size=small");
+  expect((await completing.request("/shelf?color=red&size=small")).status).toBe(200);
+});
+
 const binUrl = pageUrl(
   "/shelf/:shelfId/bins/:bin",
   z.object({ shelfId: idParam, bin: z.string(), color: z.enum(["red", "blue"]).catch("red") }),

@@ -14,6 +14,7 @@ import { and, between, eq } from "drizzle-orm";
 import type { Context } from "hono";
 import { database } from "../database";
 import type { UserEnv } from "../login/user";
+import { isManager } from "../managers/manager";
 import { isLockedOn } from "../monthClose/monthLock.data";
 import { findOrganization } from "../organizations/organization";
 import { capacityMinutes } from "../reports/capacity";
@@ -23,20 +24,19 @@ import { type MonthError, TimesheetGrid, type TimesheetGridProps } from "./times
 
 /** The user's entries between from and till, the tasks the timesheet offers them, and those it shows unasked. */
 async function loadTimesheet(userId: number, from: string, till: string) {
-  const entries = await database
-    .select({
-      taskId: timeEntries.taskId,
-      spentOn: timeEntries.spentOn,
-      minutes: timeEntries.minutes,
-    })
-    .from(timeEntries)
-    .where(and(eq(timeEntries.userId, userId), between(timeEntries.spentOn, from, till)));
-  const assignedTasks = await userTasks().where(onBillableAssignment(userId, from));
-  return {
-    tasks: await userTasks().where(offeredTo(userId, from, till)),
-    entries,
-    assignedTaskIds: assignedTasks.map((task) => task.id),
-  };
+  const [entries, assignedTasks, tasks] = await Promise.all([
+    database
+      .select({
+        taskId: timeEntries.taskId,
+        spentOn: timeEntries.spentOn,
+        minutes: timeEntries.minutes,
+      })
+      .from(timeEntries)
+      .where(and(eq(timeEntries.userId, userId), between(timeEntries.spentOn, from, till))),
+    userTasks().where(onBillableAssignment(userId, from)),
+    userTasks().where(offeredTo(userId, from, till)),
+  ]);
+  return { tasks, entries, assignedTaskIds: assignedTasks.map((task) => task.id) };
 }
 const addedTaskIdsOf = (queries: string[] | undefined) => (queries ?? []).map(Number);
 
@@ -53,25 +53,26 @@ export async function renderMonth(c: Context<UserEnv>, month: string, error?: Mo
   const showWeekends = c.req.query("weekends") === "on";
   const addedTaskIds = addedTaskIdsOf(c.req.queries("add"));
   const monthDays = daysOfMonth(month);
-  const { tasks, entries, assignedTaskIds } = await loadTimesheet(
-    c.get("user").id,
-    firstDayOfMonth(month),
-    lastDayOfMonth(month),
-  );
+  const user = c.get("user");
+  const [{ tasks, entries, assignedTaskIds }, organization, locked] = await Promise.all([
+    loadTimesheet(user.id, firstDayOfMonth(month), lastDayOfMonth(month)),
+    findOrganization(user.orgId),
+    isLockedOn(user.orgId, firstDayOfMonth(month)),
+    // Started now for the layout, which would otherwise wait for it after the rest.
+    isManager(user),
+  ]);
   // A weekend with hours stays visible, so hiding weekends never hides time.
   const days = monthDays.filter(
     (day) => showWeekends || !isWeekend(day) || entries.some((entry) => entry.spentOn === day),
   );
   const search = new URL(c.req.url).search;
-  const user = c.get("user");
-  const organization = await findOrganization(user.orgId);
   if (!organization) throw new Error("The user's organization is missing");
   const { country, fullDayMinutes } = organization;
 
   return c.render(
     <MonthPage
       month={month}
-      locked={await isLockedOn(c.get("user").orgId, firstDayOfMonth(month))}
+      locked={locked}
       showWeekends={showWeekends}
       previousHref={monthPath(addMonths(month, -1), showWeekends)}
       nextHref={monthPath(addMonths(month, 1), showWeekends)}

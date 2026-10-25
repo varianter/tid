@@ -19,7 +19,12 @@ import { type Amounts, addAmounts, formatAmounts } from "../amount/amount";
 import { BillableSelect, billableCondition } from "../billable/billableFilter";
 import { consultantPath } from "../consultants/consultantsUrl";
 import { database } from "../database";
-import { type CompanyFilter, CompanySelect, resolveCompany } from "../organizations/companyFilter";
+import {
+  type CompanyFilter,
+  CompanySelect,
+  completeCompany,
+  resolveCompany,
+} from "../organizations/companyFilter";
 import { projectReportUrl } from "../projects/projectsUrl";
 import { type QueryProps, queryPage } from "../query/queryPage";
 import { formatShare } from "../share/share";
@@ -28,6 +33,7 @@ import { reportUrl, type Tab, tabs } from "./reportsUrl";
 
 export const monthlyReport = queryPage({
   url: reportUrl,
+  complete: completeCompany,
   loader: async (c, { month, tab, billable }) => {
     const company = await resolveCompany(c);
     if (company instanceof Response) return company;

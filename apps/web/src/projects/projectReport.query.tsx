@@ -3,7 +3,12 @@ import { formatTotalHours } from "@tid/elements/hours";
 import { Button, Detail, Page, PeriodNavigation } from "@tid/ui";
 import type { Context } from "hono";
 import type { UserEnv } from "../login/user";
-import { type CompanyFilter, CompanySelect, resolveCompany } from "../organizations/companyFilter";
+import {
+  type CompanyFilter,
+  CompanySelect,
+  completeCompany,
+  resolveCompany,
+} from "../organizations/companyFilter";
 import { type QueryProps, queryPage } from "../query/queryPage";
 import { MonthEntries, type MonthEntry } from "../timeEntries/monthEntries";
 import { billingLabels } from "./billing";
@@ -12,6 +17,7 @@ import { projectReportPrintUrl, projectReportUrl } from "./projectsUrl";
 
 export const projectReport = queryPage({
   url: projectReportUrl,
+  complete: completeCompany,
   loader: async (c: Context<UserEnv>, { projectId, month }) => {
     const company = await resolveCompany(c);
     if (company instanceof Response) return company;
