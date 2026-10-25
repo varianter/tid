@@ -13,7 +13,7 @@ import {
   users,
 } from "@tid/db/schema";
 import { formatTotalHours } from "@tid/elements/hours";
-import { Badge, Button, DataGrid, Detail, Page, Section, Stat, StatList } from "@tid/ui";
+import { Badge, Button, DataGrid, Detail, Icon, Page, Section, Stat, StatList } from "@tid/ui";
 import { and, desc, eq, lte, notExists, type SQL, sql } from "drizzle-orm";
 import type { Context } from "hono";
 import { formatAmount } from "../amount/amount";
@@ -226,6 +226,12 @@ function ProjectDetailsPage({
   return (
     <Page
       title={project.name}
+      description={
+        <>
+          <a href={`/clients/${project.clientId}`}>{project.client}</a>
+          <Badge>{project.code}</Badge>
+        </>
+      }
       back={{ href: "/projects", label: "Back to projects" }}
       actions={
         <>
@@ -234,40 +240,39 @@ function ProjectDetailsPage({
             href={projectReportUrl.path({ projectId: project.id, month: monthOf(todayInOslo()) })}
             data-variant="tinted"
           >
+            <Icon name="bar_chart" />
             Report
           </Button>
           {canManageProject && (
-            <Button as="a" href={`/projects/${project.id}/edit`} data-variant="tinted">
+            <Button as="a" href={`/projects/${project.id}/edit`} data-variant="outlined">
+              <Icon name="settings" />
               Edit
             </Button>
           )}
         </>
       }
     >
-      <dl class="stack-h items-start gap-xl gap-row-s b-all bc-default br-l p-m">
-        <Detail label="Client">
-          <a href={`/clients/${project.clientId}`}>{project.client}</a>
+      <dl class="stack-h items-start gap-xl gap-row-s b-all bc-default br-l p-m self-start">
+        <Detail label="Billing">
+          {[billingLabels[project.billing], project.currency].filter(Boolean).join(" · ")}
         </Detail>
-        <Detail label="Code">{project.code}</Detail>
-        <Detail label="Billing">{billingLabels[project.billing]}</Detail>
-        <Detail label="Currency">{project.currency ?? "None"}</Detail>
         <Detail label="Contract owner">{contractOwner?.name ?? "None"}</Detail>
         <Detail label="Organizations">
           {participations.length === 0 ? (
             "None"
           ) : (
-            // One flex item per organization, so a line never breaks between a name and its badge.
-            <span class="stack-h wrap items-center gap-s gap-row-3xs">
-              {participations.map((participation, index) => (
-                <span>
+            <span class="stack-h wrap items-center gap-xs">
+              {participations.map((participation) => (
+                <Badge
+                  title={
+                    participation.openToMembers
+                      ? "Everyone in the organization may log hours here"
+                      : undefined
+                  }
+                >
                   {participation.name}
-                  {participation.openToMembers && (
-                    <Badge class="ml-xs" title="Everyone in the organization may log hours here">
-                      Open
-                    </Badge>
-                  )}
-                  {index < participations.length - 1 && ","}
-                </span>
+                  {participation.openToMembers && " · Open"}
+                </Badge>
               ))}
             </span>
           )}

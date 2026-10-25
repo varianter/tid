@@ -62,6 +62,7 @@ export function TimesheetCell({
       data-size="large"
       style={`height: 100%;`}
       inputmode="decimal"
+      autocomplete="false"
       aria-label={`${task.projectName}, ${task.name}, ${formatDate(day)}`}
       aria-invalid={error ? "true" : undefined}
       aria-describedby={error ? errorId : undefined}

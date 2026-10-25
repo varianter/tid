@@ -28,6 +28,11 @@ const stickyFade = `linear-gradient(
 export const sheetLayout = css`
   overflow-x: scroll;
   scroll-behavior: smooth;
+  /* Focusing a cell scrolls it into view at the scrollport's edge, under the sticky task
+     column. Padding the scrollport by that column keeps the first day's cells in sight. The
+     task column takes its 1fr share only while everything fits, so when the sheet scrolls at
+     all, the column is at its 20ch minimum. */
+  scroll-padding-inline-start: 20ch;
   grid-template-columns: minmax(20ch, 1fr) repeat(var(--days), max-content);
   & [data-week-start] {
     margin-inline-start: var(--spacing-xs);
