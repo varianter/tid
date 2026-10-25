@@ -5,7 +5,7 @@ import type { PropsWithChildren } from "hono/jsx";
 import { consultantPath } from "./consultants/consultantsUrl";
 import { TidSymbol, tidFaviconHref } from "./tidLogo";
 
-export const vardeStylesheet = "https://varde.variant.dev/v/2.0.0/styles.css";
+export const vardeStylesheet = "https://varde.variant.dev/v/2.0.1/styles.css";
 
 type LayoutProps = PropsWithChildren<{
   currentPath: string;
