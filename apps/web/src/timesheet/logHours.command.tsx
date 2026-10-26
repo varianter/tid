@@ -7,7 +7,8 @@ import { database } from "../database";
 import type { User, UserEnv } from "../login/user";
 import { isLockedOn, isMonthLockedError } from "../monthClose/monthLock.data";
 import { loggableBy, userTasks } from "./loggableTasks";
-import { renderMonth } from "./monthPage";
+import { MonthPage } from "./monthPage";
+import { loadTimesheet } from "./timesheet.data";
 import { cellFields, cellHours, hoursHint, TimesheetCell } from "./timesheetCell";
 import { cellsActionOf } from "./timesheetUrl";
 
@@ -83,7 +84,15 @@ export const logHours = async (c: Context<UserEnv, "/month/:month">) => {
   const saved = await saveHours(user, task.id, day, cell.hours);
   if (saved.error) {
     c.status(422);
-    return renderMonth(c, month, { taskId: task.id, day, ...saved.error });
+    return c.render(
+      <MonthPage
+        month={month}
+        user={user}
+        search={new URL(c.req.url).search}
+        timesheet={await loadTimesheet(user, month)}
+        error={{ taskId: task.id, day, ...saved.error }}
+      />,
+    );
   }
   const query = new URL(c.req.url).searchParams;
   // A cleared row would otherwise vanish when it held the task's last entry this month.

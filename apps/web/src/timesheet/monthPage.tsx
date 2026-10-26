@@ -1,142 +1,91 @@
 import { calendarFor } from "@tid/calendar";
 import { formatDate } from "@tid/calendar/dateDisplay";
-import {
-  addMonths,
-  daysOfMonth,
-  firstDayOfMonth,
-  isWeekend,
-  lastDayOfMonth,
-} from "@tid/calendar/isoDate";
+import { addMonths, daysOfMonth, isWeekend } from "@tid/calendar/isoDate";
 import { todayInOslo } from "@tid/calendar/osloClock";
-import { timeEntries } from "@tid/db/schema";
 import { Checkbox, Label, Page, PeriodNavigation } from "@tid/ui";
-import { and, between, eq } from "drizzle-orm";
-import type { Context } from "hono";
-import { database } from "../database";
-import type { UserEnv } from "../login/user";
-import { isLockedOn } from "../monthClose/monthLock.data";
+import type { User } from "../login/user";
 import { Filtered, FilterForm, PageSearch } from "../query/filter";
 import { capacityMinutes } from "../reports/capacity";
 import { CellShortcuts } from "./cellShortcuts";
-import { offeredTo, onBillableAssignment, userTasks } from "./loggableTasks";
 import { type MonthError, TimesheetGrid, type TimesheetGridProps } from "./timesheetGrid";
 import { cellsActionOf, monthPath } from "./timesheetUrl";
 
-/** The user's entries between from and till, the tasks the timesheet offers them, and those it shows unasked. */
-async function loadTimesheet(userId: number, from: string, till: string) {
-  const [entries, assignedTasks, tasks] = await Promise.all([
-    database
-      .select({
-        taskId: timeEntries.taskId,
-        spentOn: timeEntries.spentOn,
-        minutes: timeEntries.minutes,
-      })
-      .from(timeEntries)
-      .where(and(eq(timeEntries.userId, userId), between(timeEntries.spentOn, from, till))),
-    userTasks().where(onBillableAssignment(userId, from)),
-    userTasks().where(offeredTo(userId, from, till)),
-  ]);
-  return { tasks, entries, assignedTaskIds: assignedTasks.map((task) => task.id) };
-}
-const addedTaskIdsOf = (queries: string[] | undefined) => (queries ?? []).map(Number);
+type Timesheet = Pick<TimesheetGridProps, "tasks" | "entries" | "assignedTaskIds"> & {
+  locked: boolean;
+};
 
-/** Renders the month the request names, with one cell showing an error if a save failed. */
-export async function renderMonth(c: Context<UserEnv>, month: string, error?: MonthError) {
-  const showWeekends = c.req.query("weekends") === "on";
-  const addedTaskIds = addedTaskIdsOf(c.req.queries("add"));
-  const monthDays = daysOfMonth(month);
-  const user = c.get("user");
-  const [{ tasks, entries, assignedTaskIds }, locked] = await Promise.all([
-    loadTimesheet(user.id, firstDayOfMonth(month), lastDayOfMonth(month)),
-    isLockedOn(user.orgId, firstDayOfMonth(month)),
-  ]);
-  // A weekend with hours stays visible, so hiding weekends never hides time.
-  const days = monthDays.filter(
-    (day) => showWeekends || !isWeekend(day) || entries.some((entry) => entry.spentOn === day),
-  );
-  const search = new URL(c.req.url).search;
-  const { country, fullDayMinutes } = user.organization;
-
-  return c.render(
-    <PageSearch.Provider value={new URLSearchParams(search)}>
-      <MonthPage
-        month={month}
-        locked={locked}
-        showWeekends={showWeekends}
-        previousHref={monthPath(addMonths(month, -1), showWeekends)}
-        nextHref={monthPath(addMonths(month, 1), showWeekends)}
-        days={days}
-        calendar={calendarFor(country)}
-        expectedMinutes={capacityMinutes(month, country, fullDayMinutes, user.endsOn)}
-        tasks={tasks}
-        entries={entries}
-        cellsAction={cellsActionOf(month, search)}
-        cellAction={`/timesheet/month/${month}/cell${search}`}
-        fullDayMinutes={fullDayMinutes}
-        addedTaskIds={addedTaskIds}
-        assignedTaskIds={assignedTaskIds}
-        error={error}
-      />
-    </PageSearch.Provider>,
-  );
-}
-
-type PeriodLinks = { previousHref: string; nextHref: string };
-
-function MonthPage({
+/** The month as the page's query asks for it, with one cell showing an error if a save failed. */
+export function MonthPage({
   month,
-  showWeekends,
-  previousHref,
-  nextHref,
-  cellAction,
-  fullDayMinutes,
-  ...grid
+  user,
+  search,
+  timesheet: { tasks, entries, assignedTaskIds, locked },
+  error,
 }: {
   month: string;
-  showWeekends: boolean;
-  /** Where the timesheet element saves a cell, getting just that cell back. */
-  cellAction: string;
-  /** What F fills a cell with. */
-  fullDayMinutes: number;
-} & PeriodLinks &
-  TimesheetGridProps) {
+  user: User;
+  /** The page's query string, kept by its links and forms. */
+  search: string;
+  timesheet: Timesheet;
+  error?: MonthError;
+}) {
+  const query = new URLSearchParams(search);
+  const showWeekends = query.get("weekends") === "on";
+  // A weekend with hours stays visible, so hiding weekends never hides time.
+  const days = daysOfMonth(month).filter(
+    (day) => showWeekends || !isWeekend(day) || entries.some((entry) => entry.spentOn === day),
+  );
+  const { country, fullDayMinutes } = user.organization;
   return (
-    <Page title="Timesheet">
-      <Filtered
-        by={
-          <>
-            <FilterForm field="weekends">
-              <Label for="weekends" class="stack-h items-center gap-2xs">
-                <Checkbox id="weekends" name="weekends" value="on" checked={showWeekends} />
-                Show weekends
-              </Label>
-            </FilterForm>
-            <PeriodNavigation
-              previousHref={previousHref}
-              nextHref={nextHref}
-              previousLabel="Previous month"
-              nextLabel="Next month"
-            >
-              {formatDate(month, "month")}
-            </PeriodNavigation>
-          </>
-        }
-      >
-        {grid.locked && (
-          <p class="b-all bc-subtle br-l fs-s p-xs surface-tinted">
-            {formatDate(month, "month")} is locked. Ask a manager to unlock it if something needs
-            changing.
-          </p>
-        )}
-        <timesheet-conductor
-          cell-action={cellAction}
-          full-day-minutes={fullDayMinutes}
-          today={todayInOslo()}
+    <PageSearch.Provider value={query}>
+      <Page title="Timesheet">
+        <Filtered
+          by={
+            <>
+              <FilterForm field="weekends">
+                <Label for="weekends" class="stack-h items-center gap-2xs">
+                  <Checkbox id="weekends" name="weekends" value="on" checked={showWeekends} />
+                  Show weekends
+                </Label>
+              </FilterForm>
+              <PeriodNavigation
+                previousHref={monthPath(addMonths(month, -1), showWeekends)}
+                nextHref={monthPath(addMonths(month, 1), showWeekends)}
+                previousLabel="Previous month"
+                nextLabel="Next month"
+              >
+                {formatDate(month, "month")}
+              </PeriodNavigation>
+            </>
+          }
         >
-          <TimesheetGrid {...grid} />
-        </timesheet-conductor>
-        {!grid.locked && <CellShortcuts fullDayMinutes={fullDayMinutes} />}
-      </Filtered>
-    </Page>
+          {locked && (
+            <p class="b-all bc-subtle br-l fs-s p-xs surface-tinted">
+              {formatDate(month, "month")} is locked. Ask a manager to unlock it if something needs
+              changing.
+            </p>
+          )}
+          <timesheet-conductor
+            cell-action={`/timesheet/month/${month}/cell${search}`}
+            full-day-minutes={fullDayMinutes}
+            today={todayInOslo()}
+          >
+            <TimesheetGrid
+              days={days}
+              calendar={calendarFor(country)}
+              expectedMinutes={capacityMinutes(month, country, fullDayMinutes, user.endsOn)}
+              tasks={tasks}
+              entries={entries}
+              cellsAction={cellsActionOf(month, search)}
+              addedTaskIds={query.getAll("add").map(Number)}
+              assignedTaskIds={assignedTaskIds}
+              error={error}
+              locked={locked}
+            />
+          </timesheet-conductor>
+          {!locked && <CellShortcuts fullDayMinutes={fullDayMinutes} />}
+        </Filtered>
+      </Page>
+    </PageSearch.Provider>
   );
 }

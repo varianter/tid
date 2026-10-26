@@ -102,7 +102,6 @@ const impureFiles = [
   "projects/projectReport.tsx",
   "projects/projectSummary.tsx",
   "timesheet/loggableTasks.ts",
-  "timesheet/monthPage.tsx",
 ];
 
 test("files without an I/O suffix are pure", () => {
