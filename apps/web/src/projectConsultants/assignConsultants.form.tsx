@@ -1,5 +1,5 @@
 import { formatDate } from "@tid/calendar/dateDisplay";
-import { Button, Checkbox, DataGrid, FormError, Page } from "@tid/ui";
+import { Checkbox, DataGrid, FormError } from "@tid/ui";
 import { z } from "zod";
 import type { FormProps } from "../form/formAction";
 
@@ -19,27 +19,29 @@ type AssignablePerson = {
   leftProjectOn: string | null;
 };
 
-type AssignConsultantsPageProps = {
+type AssignConsultantsProps = {
   project: { id: number; name: string };
   /** Sorted by organization, so they group. */
   people: AssignablePerson[];
-} & FormProps;
+};
 
-export function AssignConsultantsPage({
-  project,
+export const assignConsultantsFrame = ({ project, people }: AssignConsultantsProps) => ({
+  title: `Assign consultants to ${project.name}`,
+  cancel: `/projects/${project.id}`,
+  submit: people.length === 0 ? undefined : "Assign",
+});
+
+export function AssignConsultantsFields({
   people,
   fieldErrors,
-}: AssignConsultantsPageProps) {
+}: AssignConsultantsProps & FormProps) {
   const organizations = Map.groupBy(people, (person) => person.orgName);
   return (
-    <Page
-      title={`Assign consultants to ${project.name}`}
-      back={{ href: `/projects/${project.id}`, label: `Back to ${project.name}` }}
-    >
+    <>
       {people.length === 0 ? (
         <p class="ink-subtle">Everyone is assigned already.</p>
       ) : (
-        <form method="post" class="stack-v items-start gap-m">
+        <>
           {fieldErrors?.userId && <FormError id="userId-error" errors={fieldErrors.userId} />}
           <DataGrid columns={[{ kind: "fit" }, { label: "Consultant" }]}>
             {[...organizations].map(([orgName, orgPeople]) => (
@@ -65,9 +67,8 @@ export function AssignConsultantsPage({
               </>
             ))}
           </DataGrid>
-          <Button type="submit">Assign</Button>
-        </form>
+        </>
       )}
-    </Page>
+    </>
   );
 }

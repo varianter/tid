@@ -33,7 +33,7 @@ Everything a use case needs that no other slice uses stays in its slice: the dat
 
 A command is split from its form, because the screen and the business change for different reasons. The command loads what it needs, applies the rules, writes and redirects. The form is everything the user sees and sends. A form shared by several commands is named after its noun: `<noun>.form.tsx`.
 
-A command with a page of its own uses `formAction`, passing it the form's schema and view. A command shown on another page, like a button or an inline form, has its form imported by that page.
+A command with a page of its own uses `formAction`, passing it the form's schema, its fields and the frame around them; `formAction` renders the page. A command shown on another page, like a button or an inline form, has its form imported by that page.
 
 A slice exports one handler per way its use case is answered. A `GET` that only redirects to a query's page, such as to the current month, belongs to that query as `<query>Redirect`. A command that answers a plain form post and a script's request differently exports a handler for each.
 

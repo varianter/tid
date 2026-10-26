@@ -9,12 +9,13 @@ import {
 } from "@tid/calendar/isoDate";
 import { todayInOslo } from "@tid/calendar/osloClock";
 import { timeEntries } from "@tid/db/schema";
-import { Button, Checkbox, Label, Page, PeriodNavigation } from "@tid/ui";
+import { Checkbox, Label, Page, PeriodNavigation } from "@tid/ui";
 import { and, between, eq } from "drizzle-orm";
 import type { Context } from "hono";
 import { database } from "../database";
 import type { UserEnv } from "../login/user";
 import { isLockedOn } from "../monthClose/monthLock.data";
+import { Filtered, FilterForm, PageSearch } from "../query/filter";
 import { capacityMinutes } from "../reports/capacity";
 import { CellShortcuts } from "./cellShortcuts";
 import { offeredTo, onBillableAssignment, userTasks } from "./loggableTasks";
@@ -57,25 +58,26 @@ export async function renderMonth(c: Context<UserEnv>, month: string, error?: Mo
   const { country, fullDayMinutes } = user.organization;
 
   return c.render(
-    <MonthPage
-      month={month}
-      locked={locked}
-      showWeekends={showWeekends}
-      previousHref={monthPath(addMonths(month, -1), showWeekends)}
-      nextHref={monthPath(addMonths(month, 1), showWeekends)}
-      days={days}
-      calendar={calendarFor(country)}
-      expectedMinutes={capacityMinutes(month, country, fullDayMinutes, user.endsOn)}
-      tasks={tasks}
-      entries={entries}
-      cellsAction={cellsActionOf(month, search)}
-      cellAction={`/timesheet/month/${month}/cell${search}`}
-      fullDayMinutes={fullDayMinutes}
-      addedTaskIds={addedTaskIds}
-      assignedTaskIds={assignedTaskIds}
-      search={search}
-      error={error}
-    />,
+    <PageSearch.Provider value={new URLSearchParams(search)}>
+      <MonthPage
+        month={month}
+        locked={locked}
+        showWeekends={showWeekends}
+        previousHref={monthPath(addMonths(month, -1), showWeekends)}
+        nextHref={monthPath(addMonths(month, 1), showWeekends)}
+        days={days}
+        calendar={calendarFor(country)}
+        expectedMinutes={capacityMinutes(month, country, fullDayMinutes, user.endsOn)}
+        tasks={tasks}
+        entries={entries}
+        cellsAction={cellsActionOf(month, search)}
+        cellAction={`/timesheet/month/${month}/cell${search}`}
+        fullDayMinutes={fullDayMinutes}
+        addedTaskIds={addedTaskIds}
+        assignedTaskIds={assignedTaskIds}
+        error={error}
+      />
+    </PageSearch.Provider>,
   );
 }
 
@@ -99,49 +101,42 @@ function MonthPage({
 } & PeriodLinks &
   TimesheetGridProps) {
   return (
-    <Page
-      title="Timesheet"
-      actions={
-        <>
-          {!grid.locked && <CellShortcuts fullDayMinutes={fullDayMinutes} />}
-          <auto-submit style="display: contents;">
-            <form method="get" class="stack-h nowrap items-center gap-2xs">
-              {grid.addedTaskIds.map((taskId) => (
-                <input type="hidden" name="add" value={taskId} />
-              ))}
-              <Checkbox id="weekends" name="weekends" value="on" checked={showWeekends} />
-              <Label for="weekends">Show weekends</Label>
-              <noscript>
-                <Button type="submit" data-size="small">
-                  Show
-                </Button>
-              </noscript>
-            </form>
-          </auto-submit>
-          <PeriodNavigation
-            previousHref={previousHref}
-            nextHref={nextHref}
-            previousLabel="Previous month"
-            nextLabel="Next month"
-          >
-            {formatDate(month, "month")}
-          </PeriodNavigation>
-        </>
-      }
-    >
-      {grid.locked && (
-        <p class="b-all bc-subtle br-l fs-s p-xs surface-tinted">
-          {formatDate(month, "month")} is locked. Ask a manager to unlock it if something needs
-          changing.
-        </p>
-      )}
-      <timesheet-conductor
-        cell-action={cellAction}
-        full-day-minutes={fullDayMinutes}
-        today={todayInOslo()}
+    <Page title="Timesheet">
+      <Filtered
+        by={
+          <>
+            <FilterForm field="weekends">
+              <Label for="weekends" class="stack-h items-center gap-2xs">
+                <Checkbox id="weekends" name="weekends" value="on" checked={showWeekends} />
+                Show weekends
+              </Label>
+            </FilterForm>
+            <PeriodNavigation
+              previousHref={previousHref}
+              nextHref={nextHref}
+              previousLabel="Previous month"
+              nextLabel="Next month"
+            >
+              {formatDate(month, "month")}
+            </PeriodNavigation>
+          </>
+        }
       >
-        <TimesheetGrid {...grid} />
-      </timesheet-conductor>
+        {grid.locked && (
+          <p class="b-all bc-subtle br-l fs-s p-xs surface-tinted">
+            {formatDate(month, "month")} is locked. Ask a manager to unlock it if something needs
+            changing.
+          </p>
+        )}
+        <timesheet-conductor
+          cell-action={cellAction}
+          full-day-minutes={fullDayMinutes}
+          today={todayInOslo()}
+        >
+          <TimesheetGrid {...grid} />
+        </timesheet-conductor>
+        {!grid.locked && <CellShortcuts fullDayMinutes={fullDayMinutes} />}
+      </Filtered>
     </Page>
   );
 }

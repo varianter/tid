@@ -1,17 +1,10 @@
 import { todayInOslo } from "@tid/calendar/osloClock";
-import {
-  assignmentRates,
-  projectAssignments,
-  projects,
-  tasks,
-  timeEntries,
-  users,
-} from "@tid/db/schema";
+import { assignmentRates, projectAssignments, tasks, timeEntries, users } from "@tid/db/schema";
 import { and, eq } from "drizzle-orm";
 import { database } from "../database";
 import { formAction } from "../form/formAction";
 import { removeUnneededParticipation } from "../projects/projectParticipation";
-import { EndAssignmentPage, endAssignmentForm } from "./endAssignment.form";
+import { EndAssignmentFields, endAssignmentForm, endAssignmentFrame } from "./endAssignment.form";
 import { assignment, idParams, type ProjectConsultantIds, ratesOf } from "./projectConsultant";
 
 // Without logged time there's nothing to keep, so ending removes the consultant instead.
@@ -21,10 +14,9 @@ export const endAssignment = formAction({
     const ids = idParams(c.req.param());
     if (!ids) return c.notFound();
     const [consultant] = await database
-      .select({ name: users.name, projectName: projects.name })
+      .select({ name: users.name })
       .from(projectAssignments)
       .innerJoin(users, eq(users.id, projectAssignments.userId))
-      .innerJoin(projects, eq(projects.id, projectAssignments.projectId))
       .where(assignment(ids));
     if (!consultant) return c.notFound();
     return { ids, ...consultant, hasLoggedTime: await hasLoggedTime(ids), today: todayInOslo() };
@@ -40,7 +32,8 @@ export const endAssignment = formAction({
     }
     return { redirect: `/projects/${ids.projectId}` };
   },
-  view: EndAssignmentPage,
+  frame: endAssignmentFrame,
+  view: EndAssignmentFields,
 });
 
 async function hasLoggedTime({ projectId, userId }: ProjectConsultantIds) {

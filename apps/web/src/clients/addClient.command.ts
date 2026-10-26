@@ -1,7 +1,7 @@
 import { clients } from "@tid/db/schema";
 import { database } from "../database";
 import { formAction } from "../form/formAction";
-import { alreadyExists, ClientFormPage, clientFields } from "./client.form";
+import { alreadyExists, ClientFields, clientFields, clientFrame } from "./client.form";
 
 export const addClient = formAction({
   schema: clientFields,
@@ -14,5 +14,6 @@ export const addClient = formAction({
       .returning();
     return inserted ? { redirect: `/clients/${inserted.id}` } : alreadyExists;
   },
-  view: ClientFormPage,
+  frame: clientFrame,
+  view: ClientFields,
 });

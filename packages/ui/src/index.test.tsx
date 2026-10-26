@@ -71,14 +71,16 @@ test("Page renders the back link and actions only when given", () => {
     <Page
       title="Acme"
       back={{ href: "/clients", label: "Back to clients" }}
-      actions={<Button>Edit</Button>}
+      actions={[{ label: "Edit", href: "/clients/1/edit" }, false]}
     >
       Body
     </Page>,
   );
   expect(full).toContain('href="/clients"');
   expect(full).toContain("Back to clients");
-  expect(full).toContain('<button class="v-button">Edit</button>');
+  expect(full).toContain(
+    '<a class="v-button" href="/clients/1/edit" data-variant="tinted">Edit</a>',
+  );
 });
 
 test("Page puts its title in the document's head", () => {

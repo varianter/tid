@@ -1,6 +1,5 @@
 import type { clients } from "@tid/db/schema";
 import {
-  Button,
   Checkbox,
   Field,
   FormError,
@@ -8,7 +7,6 @@ import {
   fieldErrorAttributes,
   Input,
   Label,
-  Page,
   Radio,
   Select,
 } from "@tid/ui";
@@ -90,7 +88,7 @@ export function parseBilling(value: string | undefined): Billing | undefined {
 
 type ClientOption = typeof clients.$inferSelect & { codeSuggestion?: string };
 
-type ProjectFormPageProps = {
+type ProjectFormProps = {
   /** Picked before the form, since it decides which fields the project has. */
   billing: Billing;
   /** The project being edited. Its client can't change. Omitted when starting one. */
@@ -112,9 +110,18 @@ type ProjectFormPageProps = {
   currency: string;
   /** The organization that invoices the client, selected until the user picks another. */
   contractOwnerId: number | null;
-} & FormProps;
+};
 
-export function ProjectFormPage({
+export const projectFrame = ({ billing, project }: ProjectFormProps) =>
+  project
+    ? { title: `Edit ${project.name}`, cancel: `/projects/${project.id}`, submit: "Save changes" }
+    : {
+        title: `New ${billingLabels[billing].toLowerCase()} project`,
+        cancel: "/projects/new",
+        submit: "Create project",
+      };
+
+export function ProjectFields({
   billing,
   project,
   clients = [],
@@ -125,8 +132,7 @@ export function ProjectFormPage({
   contractOwnerId,
   values,
   fieldErrors,
-  formError,
-}: ProjectFormPageProps) {
+}: ProjectFormProps & FormProps) {
   const isBillable = billing !== "non_billable";
   const selectedClientId = values?.clientId ?? suggestedClientId;
   // ponytail: follows the client selected on load only; updating on change needs client-side JS.
@@ -140,165 +146,146 @@ export function ProjectFormPage({
   const selectedContractOwnerId = values?.contractOwnerId ?? String(contractOwnerId ?? "");
   const otherBillings = billings.filter((other) => other !== billing);
   return (
-    <Page
-      title={
-        project ? `Edit ${project.name}` : `New ${billingLabels[billing].toLowerCase()} project`
-      }
-      back={
-        project
-          ? { href: `/projects/${project.id}`, label: "Back to project" }
-          : { href: "/projects/new", label: "Back to billing" }
-      }
-    >
-      <form method="post" class="stack-v gap-xl w-max-5">
-        {formError && <p role="alert">{formError}</p>}
-        <input type="hidden" name="billing" value={billing} />
-        <fieldset class="stack-v gap-m">
-          <legend class="fs-l fw-bold mb-s">Contract</legend>
-          {project ? (
-            <div class="stack-v gap-3xs">
-              <span class="fs-s ink-subtle">Client</span>
-              <span>{project.client}</span>
-            </div>
-          ) : (
-            <Field name="clientId" label="Client" errors={fieldErrors?.clientId}>
-              <Select
-                id="clientId"
-                name="clientId"
-                required
-                selected={selectedClientId}
-                options={clients.map((client) => ({ value: client.id, label: client.name }))}
-                {...fieldErrorAttributes("clientId", fieldErrors?.clientId)}
-              >
-                <option value="">Choose a client</option>
-              </Select>
-            </Field>
-          )}
-          {project && (
-            <div class="stack-v gap-3xs">
-              <span class="fs-s ink-subtle">Billing</span>
-              <span>{billingLabels[billing]}</span>
-              {project.hasLoggedTime ? (
-                <p class="fs-s ink-subtle">
-                  Hours are logged on this project. Start a new project to bill it differently.
-                </p>
-              ) : (
-                <p class="fs-s">
-                  Change to{" "}
-                  {otherBillings.map((other, index) => (
-                    <>
-                      {index > 0 && " or "}
-                      <a href={`/projects/${project.id}/edit?billing=${other}`}>
-                        {billingLabels[other].toLowerCase()}
-                      </a>
-                    </>
-                  ))}
-                </p>
-              )}
-            </div>
-          )}
-          <Field
-            name="contractOwnerId"
-            label="Contract owner"
-            errors={fieldErrors?.contractOwnerId}
-          >
+    <>
+      <input type="hidden" name="billing" value={billing} />
+      <fieldset class="stack-v gap-m">
+        <legend class="fs-l fw-bold mb-s">Contract</legend>
+        {project ? (
+          <div class="stack-v gap-3xs">
+            <span class="fs-s ink-subtle">Client</span>
+            <span>{project.client}</span>
+          </div>
+        ) : (
+          <Field name="clientId" label="Client" errors={fieldErrors?.clientId}>
             <Select
-              id="contractOwnerId"
-              name="contractOwnerId"
-              required={isBillable}
-              selected={selectedContractOwnerId}
-              options={organizations.map((organization) => ({
-                value: organization.id,
-                label: organization.name,
-              }))}
-              {...fieldErrorAttributes("contractOwnerId", fieldErrors?.contractOwnerId)}
+              id="clientId"
+              name="clientId"
+              required
+              selected={selectedClientId}
+              options={clients.map((client) => ({ value: client.id, label: client.name }))}
+              {...fieldErrorAttributes("clientId", fieldErrors?.clientId)}
             >
-              <option value="" selected={selectedContractOwnerId === ""}>
-                {isBillable ? "Choose an organization" : "None"}
-              </option>
+              <option value="">Choose a client</option>
             </Select>
           </Field>
-          {isBillable &&
-            (project?.hasLoggedTime ? (
-              <div class="stack-v gap-3xs">
-                <span class="fs-s ink-subtle">Currency</span>
-                <span>{currency}</span>
-                <input type="hidden" name="currency" value={currency} />
-              </div>
-            ) : (
-              <fieldset class="stack-v gap-2xs">
-                <legend class="v-form-label mb-xs">Currency</legend>
-                <div class="stack-h gap-m">
-                  {currencies.map((option) => (
-                    <Label class="stack-h items-center gap-2xs">
-                      <Radio
-                        name="currency"
-                        value={option}
-                        checked={option === selectedCurrency}
-                        required
-                        {...fieldErrorAttributes("currency", fieldErrors?.currency)}
-                      />
-                      {option}
-                    </Label>
-                  ))}
-                </div>
-                {fieldErrors?.currency && (
-                  <FormError id="currency-error" errors={fieldErrors.currency} />
-                )}
-              </fieldset>
-            ))}
-        </fieldset>
-        <fieldset class="stack-v gap-m">
-          <legend class="fs-l fw-bold mb-s">Project</legend>
-          <FormField
-            name="name"
-            label="Name"
-            value={values?.name ?? project?.name}
-            errors={fieldErrors?.name}
-            required
-          />
-          <Field name="code" label="Code" errors={fieldErrors?.code}>
-            <Input
-              id="code"
-              name="code"
-              value={values?.code ?? project?.code}
-              maxlength={16}
-              required
-              {...fieldErrorAttributes("code", fieldErrors?.code)}
-            />
-            {codeSuggestion && <p class="fs-s ink-subtle mt-3xs">Suggestion: {codeSuggestion}</p>}
-          </Field>
-          {!isBillable && (
-            <div>
-              <Label class="stack-h items-center gap-xs">
-                <Checkbox name="countsTowardBillableBase" checked={countsTowardBillableBase} />
-                Counts toward billable base
-              </Label>
-              <p class="fs-s ink-subtle mt-3xs">
-                Untick for absence, like holidays, so it doesn't lower the billable share.
-              </p>
-            </div>
-          )}
-        </fieldset>
-        {!project && (
-          <fieldset class="stack-v gap-m">
-            <legend class="fs-l fw-bold mb-s">First task</legend>
-            <Field name="firstTask" label="Task name" errors={fieldErrors?.firstTask}>
-              <Input
-                id="firstTask"
-                name="firstTask"
-                value={values?.firstTask ?? "Consulting"}
-                required
-                {...fieldErrorAttributes("firstTask", fieldErrors?.firstTask)}
-              />
-              <p class="fs-s ink-subtle mt-3xs">You can add more tasks on the project page.</p>
-            </Field>
-          </fieldset>
         )}
-        <Button type="submit" class="w-max-content">
-          {project ? "Save changes" : "Create project"}
-        </Button>
-      </form>
-    </Page>
+        {project && (
+          <div class="stack-v gap-3xs">
+            <span class="fs-s ink-subtle">Billing</span>
+            <span>{billingLabels[billing]}</span>
+            {project.hasLoggedTime ? (
+              <p class="fs-s ink-subtle">
+                Hours are logged on this project. Start a new project to bill it differently.
+              </p>
+            ) : (
+              <p class="fs-s">
+                Change to{" "}
+                {otherBillings.map((other, index) => (
+                  <>
+                    {index > 0 && " or "}
+                    <a href={`/projects/${project.id}/edit?billing=${other}`}>
+                      {billingLabels[other].toLowerCase()}
+                    </a>
+                  </>
+                ))}
+              </p>
+            )}
+          </div>
+        )}
+        <Field name="contractOwnerId" label="Contract owner" errors={fieldErrors?.contractOwnerId}>
+          <Select
+            id="contractOwnerId"
+            name="contractOwnerId"
+            required={isBillable}
+            selected={selectedContractOwnerId}
+            options={organizations.map((organization) => ({
+              value: organization.id,
+              label: organization.name,
+            }))}
+            {...fieldErrorAttributes("contractOwnerId", fieldErrors?.contractOwnerId)}
+          >
+            <option value="" selected={selectedContractOwnerId === ""}>
+              {isBillable ? "Choose an organization" : "None"}
+            </option>
+          </Select>
+        </Field>
+        {isBillable &&
+          (project?.hasLoggedTime ? (
+            <div class="stack-v gap-3xs">
+              <span class="fs-s ink-subtle">Currency</span>
+              <span>{currency}</span>
+              <input type="hidden" name="currency" value={currency} />
+            </div>
+          ) : (
+            <fieldset class="stack-v gap-2xs">
+              <legend class="v-form-label mb-xs">Currency</legend>
+              <div class="stack-h gap-m">
+                {currencies.map((option) => (
+                  <Label class="stack-h items-center gap-2xs">
+                    <Radio
+                      name="currency"
+                      value={option}
+                      checked={option === selectedCurrency}
+                      required
+                      {...fieldErrorAttributes("currency", fieldErrors?.currency)}
+                    />
+                    {option}
+                  </Label>
+                ))}
+              </div>
+              {fieldErrors?.currency && (
+                <FormError id="currency-error" errors={fieldErrors.currency} />
+              )}
+            </fieldset>
+          ))}
+      </fieldset>
+      <fieldset class="stack-v gap-m">
+        <legend class="fs-l fw-bold mb-s">Project</legend>
+        <FormField
+          name="name"
+          label="Name"
+          value={values?.name ?? project?.name}
+          errors={fieldErrors?.name}
+          required
+        />
+        <Field name="code" label="Code" errors={fieldErrors?.code}>
+          <Input
+            id="code"
+            name="code"
+            value={values?.code ?? project?.code}
+            maxlength={16}
+            required
+            {...fieldErrorAttributes("code", fieldErrors?.code)}
+          />
+          {codeSuggestion && <p class="fs-s ink-subtle mt-3xs">Suggestion: {codeSuggestion}</p>}
+        </Field>
+        {!isBillable && (
+          <div>
+            <Label class="stack-h items-center gap-xs">
+              <Checkbox name="countsTowardBillableBase" checked={countsTowardBillableBase} />
+              Counts toward billable base
+            </Label>
+            <p class="fs-s ink-subtle mt-3xs">
+              Untick for absence, like holidays, so it doesn't lower the billable share.
+            </p>
+          </div>
+        )}
+      </fieldset>
+      {!project && (
+        <fieldset class="stack-v gap-m">
+          <legend class="fs-l fw-bold mb-s">First task</legend>
+          <Field name="firstTask" label="Task name" errors={fieldErrors?.firstTask}>
+            <Input
+              id="firstTask"
+              name="firstTask"
+              value={values?.firstTask ?? "Consulting"}
+              required
+              {...fieldErrorAttributes("firstTask", fieldErrors?.firstTask)}
+            />
+            <p class="fs-s ink-subtle mt-3xs">You can add more tasks on the project page.</p>
+          </Field>
+        </fieldset>
+      )}
+    </>
   );
 }

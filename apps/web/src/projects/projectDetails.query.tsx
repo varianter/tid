@@ -206,30 +206,29 @@ function ProjectDetailsPage({
         </>
       }
       back={{ href: "/projects", label: "Back to projects" }}
-      actions={
-        <>
-          <Button
-            as="a"
-            href={projectReportUrl.path({ projectId: project.id, month: monthOf(todayInOslo()) })}
-            data-variant="tinted"
-          >
-            <Icon name="bar_chart" />
-            Report
-          </Button>
-          {canManageProject && isHourly && (
-            <Button as="a" href={projectRatesPath(project.id)} data-variant="outlined">
-              Rates
-            </Button>
-          )}
-          {canManageProject && (
-            <Button as="a" href={`/projects/${project.id}/edit`} data-variant="outlined">
-              <Icon name="settings" />
-              Edit
-            </Button>
-          )}
-        </>
-      }
+      actions={[
+        canManageProject && {
+          label: "Edit",
+          href: `/projects/${project.id}/edit`,
+          icon: "settings",
+        },
+      ]}
     >
+      <nav aria-label="About the project" class="stack-h gap-xs">
+        <Button
+          as="a"
+          href={projectReportUrl.path({ projectId: project.id, month: monthOf(todayInOslo()) })}
+          data-variant="outlined"
+        >
+          <Icon name="bar_chart" />
+          Report
+        </Button>
+        {canManageProject && isHourly && (
+          <Button as="a" href={projectRatesPath(project.id)} data-variant="outlined">
+            Rates
+          </Button>
+        )}
+      </nav>
       <dl class="stack-h items-start gap-xl gap-row-s b-all bc-default br-l p-m self-start">
         <Detail label="Billing">
           {[billingLabels[project.billing], project.currency].filter(Boolean).join(" · ")}
@@ -263,13 +262,9 @@ function ProjectDetailsPage({
       </StatList>
       <Section
         title="Consultants"
-        actions={
-          canAssign && (
-            <Button as="a" href={`${projectConsultantsPath(project.id)}/new`}>
-              Assign
-            </Button>
-          )
-        }
+        actions={[
+          canAssign && { label: "Assign", href: `${projectConsultantsPath(project.id)}/new` },
+        ]}
       >
         {assignedPeople.length === 0 ? (
           <p class="ink-subtle">No one is assigned yet.</p>
@@ -326,13 +321,9 @@ function ProjectDetailsPage({
       </Section>
       <Section
         title="Tasks"
-        actions={
-          canManageProject && (
-            <Button as="a" href={`/projects/${project.id}/tasks/new`}>
-              Add task
-            </Button>
-          )
-        }
+        actions={[
+          canManageProject && { label: "Add task", href: `/projects/${project.id}/tasks/new` },
+        ]}
       >
         {tasks.length === 0 ? (
           <p class="ink-subtle">No tasks yet.</p>

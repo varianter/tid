@@ -11,7 +11,7 @@ import {
   removeUnneededParticipation,
 } from "../projects/projectParticipation";
 import { openProjectsPath } from "./administrationUrl";
-import { OpenProjectsPage, openProjectsForm } from "./openProjects.form";
+import { OpenProjectsFields, openProjectsForm, openProjectsFrame } from "./openProjects.form";
 
 export const chooseOpenProjects = formAction({
   schema: openProjectsForm,
@@ -60,5 +60,6 @@ export const chooseOpenProjects = formAction({
     });
     return { redirect: openProjectsPath(organization.slug) };
   },
-  view: OpenProjectsPage,
+  frame: openProjectsFrame,
+  view: OpenProjectsFields,
 });

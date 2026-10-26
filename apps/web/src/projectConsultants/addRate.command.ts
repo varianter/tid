@@ -1,6 +1,6 @@
 import { todayInOslo } from "@tid/calendar/osloClock";
 import { formAction } from "../form/formAction";
-import { AddRatePage, addRateForm } from "./addRate.form";
+import { AddRateFields, addRateForm, addRateFrame } from "./addRate.form";
 import { idParams, projectRatesPath, ratesPath } from "./projectConsultant";
 import { loadConsultant } from "./projectConsultant.data";
 import { addRateAndReprice, entriesToReprice } from "./repricing";
@@ -24,5 +24,6 @@ export const addRate = formAction({
     await addRateAndReprice(consultant, newRate);
     return { redirect: projectRatesPath(consultant.projectId) };
   },
-  view: AddRatePage,
+  frame: addRateFrame,
+  view: AddRateFields,
 });

@@ -6,7 +6,7 @@ import { z } from "zod";
 import { database } from "../database";
 import type { User, UserEnv } from "../login/user";
 import { countryVisibility } from "../managers/manager";
-import { FilterForm } from "../query/queryPage";
+import { FilterForm } from "../query/filter";
 
 type Organization = typeof organizations.$inferSelect;
 

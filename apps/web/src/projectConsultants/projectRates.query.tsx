@@ -1,7 +1,7 @@
 import { formatDate } from "@tid/calendar/dateDisplay";
 import { todayInOslo } from "@tid/calendar/osloClock";
 import { assignmentRates, projectAssignments, projects, users } from "@tid/db/schema";
-import { Badge, Button, DataGrid, Page, Section } from "@tid/ui";
+import { Badge, DataGrid, Page, Section } from "@tid/ui";
 import { and, eq, sql } from "drizzle-orm";
 import type { Context } from "hono";
 import { formatAmount } from "../amount/amount";
@@ -69,16 +69,13 @@ function ProjectRatesPage({ project, consultants, today }: ProjectRatesPageProps
         return (
           <Section
             title={consultant.name}
-            actions={
-              <Button
-                as="a"
-                href={`${ratesPath(ids)}/new`}
-                data-variant="outlined"
-                aria-label={`Add a rate for ${consultant.name}`}
-              >
-                Add rate
-              </Button>
-            }
+            actions={[
+              {
+                label: "Add rate",
+                href: `${ratesPath(ids)}/new`,
+                "aria-label": `Add a rate for ${consultant.name}`,
+              },
+            ]}
           >
             {consultant.rates.length === 0 ? (
               <p class="ink-subtle">No rates yet, so their hours have no billable amount.</p>

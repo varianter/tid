@@ -1,4 +1,5 @@
 export { ActionList, ActionListItem } from "./compositions/ActionList";
+export { type Action, Actions } from "./compositions/Actions";
 export { BarChart, type BarChartPoint } from "./compositions/BarChart";
 export { DataGrid, type DataGridColumn } from "./compositions/DataGrid";
 export { Detail } from "./compositions/Detail";
@@ -7,6 +8,7 @@ export { EmptyState } from "./compositions/EmptyState";
 export { Field, fieldErrorAttributes } from "./compositions/forms/Field";
 export { FormError } from "./compositions/forms/FormError";
 export { FormField } from "./compositions/forms/FormField";
+export { FormPage } from "./compositions/forms/FormPage";
 export { Page } from "./compositions/Page";
 export { PeriodNavigation } from "./compositions/PeriodNavigation";
 export { Section } from "./compositions/Section";

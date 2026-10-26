@@ -8,6 +8,7 @@ import { database } from "../database";
 import type { UserEnv } from "../login/user";
 import { findOrganizationBySlug } from "../organizations/organization";
 import { listOrganizations, type OrganizationOption } from "../organizations/organizationSelect";
+import { Filtered } from "../query/filter";
 import { administrationPath } from "./administrationUrl";
 import { MakeManagerForm } from "./makeManager.form";
 import { OrganizationSwitcher, OtherOrganizationNotice } from "./organizationSwitch";
@@ -66,45 +67,46 @@ function ManagerListPage({
     <Page
       title={`Managers in ${organization.name}`}
       back={{ href: administrationPath(organization.slug), label: "Administration" }}
-      actions={<OrganizationSwitcher organizations={organizations} current={organization} />}
     >
-      <OtherOrganizationNotice
-        organizations={organizations}
-        current={organization}
-        ownOrgId={ownOrgId}
-      />
-      <DataGrid columns={[{ label: "Name" }, { kind: "action" }]}>
-        {members.map((member) => (
-          <DataGrid.Row>
-            <DataGrid.Title
-              secondary={[
-                member.email,
-                member.endsOn && `Left Variant ${formatDate(member.endsOn)}`,
-              ]
-                .filter(Boolean)
-                .join(" · ")}
-            >
-              <span class="stack-h gap-xs items-center">
-                <a href={consultantPath(member.id)}>{member.name}</a>
-                {member.isManager && <Badge>Manager</Badge>}
-              </span>
-            </DataGrid.Title>
-            {member.isManager ? (
-              <RemoveManagerForm
-                organizationSlug={organization.slug}
-                userId={member.id}
-                name={member.name}
-              />
-            ) : (
-              <MakeManagerForm
-                organizationSlug={organization.slug}
-                userId={member.id}
-                name={member.name}
-              />
-            )}
-          </DataGrid.Row>
-        ))}
-      </DataGrid>
+      <Filtered by={<OrganizationSwitcher organizations={organizations} current={organization} />}>
+        <OtherOrganizationNotice
+          organizations={organizations}
+          current={organization}
+          ownOrgId={ownOrgId}
+        />
+        <DataGrid columns={[{ label: "Name" }, { kind: "action" }]}>
+          {members.map((member) => (
+            <DataGrid.Row>
+              <DataGrid.Title
+                secondary={[
+                  member.email,
+                  member.endsOn && `Left Variant ${formatDate(member.endsOn)}`,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
+              >
+                <span class="stack-h gap-xs items-center">
+                  <a href={consultantPath(member.id)}>{member.name}</a>
+                  {member.isManager && <Badge>Manager</Badge>}
+                </span>
+              </DataGrid.Title>
+              {member.isManager ? (
+                <RemoveManagerForm
+                  organizationSlug={organization.slug}
+                  userId={member.id}
+                  name={member.name}
+                />
+              ) : (
+                <MakeManagerForm
+                  organizationSlug={organization.slug}
+                  userId={member.id}
+                  name={member.name}
+                />
+              )}
+            </DataGrid.Row>
+          ))}
+        </DataGrid>
+      </Filtered>
     </Page>
   );
 }

@@ -7,6 +7,7 @@ import { formatHours } from "@tid/elements/hours";
 import { Button, ColorMode, EmptyState, Select } from "@tid/ui";
 import { cx } from "hono/css";
 import type { PropsWithChildren } from "hono/jsx";
+import { usePageSearch } from "../query/filter";
 import type { Task } from "./loggableTasks";
 import { ProjectTotals } from "./projectTotals";
 import { dayLabelLayout, sheetLayout } from "./sheetLayout";
@@ -27,8 +28,6 @@ export type TimesheetGridProps = {
   addedTaskIds: number[];
   /** Tasks shown even without hours, since the user is assigned to their project. */
   assignedTaskIds: number[];
-  /** The current query string, kept when adding a row. */
-  search: string;
   error?: MonthError;
   /** Locked months show their hours but take no changes. */
   locked?: boolean;
@@ -43,7 +42,6 @@ export function TimesheetGrid({
   cellsAction,
   addedTaskIds,
   assignedTaskIds,
-  search,
   error,
   locked = false,
 }: TimesheetGridProps) {
@@ -74,11 +72,10 @@ export function TimesheetGrid({
     .sort(byProjectThenName);
   const addableTasks = tasks.filter((task) => !rows.includes(task)).sort(byProjectThenName);
   const addable = !locked && addableTasks.length > 0;
-  if (rows.length === 0)
-    return <NoRows locked={locked} addableTasks={addableTasks} search={search} />;
+  if (rows.length === 0) return <NoRows locked={locked} addableTasks={addableTasks} />;
   return (
     <>
-      {addable && <AddTaskForm addableTasks={addableTasks} search={search} class="mt-s mb-m" />}
+      {addable && <AddTaskForm addableTasks={addableTasks} class="mt-s mb-m" />}
       <div
         class={cx("d-grid t-tabular my-s gap-column-3xs pr-m", sheetLayout)}
         style={`--days: ${days.length}; --task-columns: ${rows.length};`}
@@ -155,15 +152,7 @@ export function TimesheetGrid({
   );
 }
 
-function NoRows({
-  locked,
-  addableTasks,
-  search,
-}: {
-  locked: boolean;
-  addableTasks: Task[];
-  search: string;
-}) {
+function NoRows({ locked, addableTasks }: { locked: boolean; addableTasks: Task[] }) {
   if (locked) return <EmptyState emoji="🔒" title="This month has left the building" />;
   if (addableTasks.length === 0)
     return (
@@ -175,27 +164,20 @@ function NoRows({
     <EmptyState
       emoji="🦗🦗🦗"
       title="Pick a task, log some hours"
-      action={<AddTaskForm addableTasks={addableTasks} search={search} />}
+      action={<AddTaskForm addableTasks={addableTasks} />}
     >
       Preferably before the higher ups starts asking silly questions.
     </EmptyState>
   );
 }
 
-function AddTaskForm({
-  addableTasks,
-  search,
-  class: className,
-}: {
-  addableTasks: Task[];
-  search: string;
-  class?: string;
-}) {
+// Picking a task adds `add` to the page's query, next to the rows added before it. It isn't a
+// filter, since it keeps every value already there.
+function AddTaskForm({ addableTasks, class: className }: { addableTasks: Task[]; class?: string }) {
   return (
-    // Picking a task adds `add` to the query, like the hidden inputs already there.
     <auto-submit>
       <form method="get" class={cx("stack-h nowrap items-center gap-2xs w-max-5", className)}>
-        {[...new URLSearchParams(search)].map(([name, value]) => (
+        {[...usePageSearch()].map(([name, value]) => (
           <input type="hidden" name={name} value={value} />
         ))}
         <Select

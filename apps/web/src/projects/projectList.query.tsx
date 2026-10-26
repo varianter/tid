@@ -1,10 +1,11 @@
 import { projectOrganizations, projects } from "@tid/db/schema";
-import { Button, EmptyState, Page } from "@tid/ui";
+import { type Action, Actions, EmptyState, Page } from "@tid/ui";
 import { and, eq, exists, inArray } from "drizzle-orm";
 import type { Context } from "hono";
 import { database } from "../database";
 import type { UserEnv } from "../login/user";
 import { type CompanyFilter, CompanySelect, resolveCompany } from "../organizations/companyFilter";
+import { Filtered } from "../query/filter";
 import { listProjects, type ProjectSummary, ProjectTable } from "./projectSummary";
 
 export const projectList = async (c: Context<UserEnv>) => {
@@ -34,11 +35,7 @@ export const projectList = async (c: Context<UserEnv>) => {
   );
 };
 
-const newProjectButton = () => (
-  <Button as="a" href="/projects/new" data-variant="tinted">
-    New project
-  </Button>
-);
+const newProject: Action = { label: "New project", href: "/projects/new" };
 
 function ProjectListPage({
   projects,
@@ -47,24 +44,18 @@ function ProjectListPage({
   canStartProjects,
 }: { projects: ProjectSummary[]; canStartProjects: boolean } & CompanyFilter) {
   return (
-    <Page
-      title="Projects"
-      actions={
-        <>
-          <CompanySelect selected={selected} companies={companies} />
-          {canStartProjects && newProjectButton()}
-        </>
-      }
-    >
-      {projects.length === 0 ? (
-        <EmptyState
-          emoji="📁"
-          title="No projects yet"
-          action={canStartProjects && newProjectButton()}
-        />
-      ) : (
-        <ProjectTable projects={projects} />
-      )}
+    <Page title="Projects" actions={[canStartProjects && newProject]}>
+      <Filtered by={<CompanySelect selected={selected} companies={companies} />}>
+        {projects.length === 0 ? (
+          <EmptyState
+            emoji="📁"
+            title="No projects yet"
+            action={canStartProjects && <Actions actions={[newProject]} />}
+          />
+        ) : (
+          <ProjectTable projects={projects} />
+        )}
+      </Filtered>
     </Page>
   );
 }

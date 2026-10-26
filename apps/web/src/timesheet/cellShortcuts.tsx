@@ -1,50 +1,25 @@
 import { formatTotalHours } from "@tid/elements/hours";
-import { Button, DataGrid, Popover } from "@tid/ui";
 import type { PropsWithChildren } from "hono/jsx";
 
-const popoverId = "cell-shortcuts";
-
-/** The keys the timesheet conductor's cells answer to, behind a button. */
+/** The keys the timesheet conductor's cells answer to, as a footer under the timesheet. */
 export function CellShortcuts({ fullDayMinutes }: { fullDayMinutes: number }) {
+  const shortcuts: [string[], string][] = [
+    [["↑", "↓", "←", "→"], "Move to the next cell. ← and → move once the caret is at the edge."],
+    [["T"], "Go to today on the same task"],
+    [["F"], `Fill in what's left of the day (${formatTotalHours(fullDayMinutes)} in all)`],
+    [["Shift", "↑"], "Add half an hour"],
+    [["Shift", "↓"], "Remove half an hour"],
+    [["Enter"], "Save. Leaving the cell saves too."],
+  ];
   return (
-    <>
-      <Button type="button" popovertarget={popoverId} data-variant="plain" data-size="small">
-        Shortcuts
-      </Button>
-      <Popover id={popoverId} data-type="dialog" data-backdrop>
-        <div class="stack-v gap-s b-all bc-subtle p-m surface-base br-m shadow-mid">
-          <h2 class="fs-m fw-bold">Keyboard shortcuts</h2>
-          <DataGrid columns={[{ label: "Keys", kind: "fit" }, { label: "In a cell" }]}>
-            <DataGrid.Row>
-              <Keys keys={["↑", "↓", "←", "→"]} />
-              <span>Move to the next cell. ← and → move once the caret is at the edge.</span>
-            </DataGrid.Row>
-            <DataGrid.Row>
-              <Keys keys={["T"]} />
-              <span>Go to today on the same task</span>
-            </DataGrid.Row>
-            <DataGrid.Row>
-              <Keys keys={["F"]} />
-              <span>
-                Fill in what's left of the day ({formatTotalHours(fullDayMinutes)} in all)
-              </span>
-            </DataGrid.Row>
-            <DataGrid.Row>
-              <Keys keys={["Shift", "↑"]} />
-              <span>Add half an hour</span>
-            </DataGrid.Row>
-            <DataGrid.Row>
-              <Keys keys={["Shift", "↓"]} />
-              <span>Remove half an hour</span>
-            </DataGrid.Row>
-            <DataGrid.Row>
-              <Keys keys={["Enter"]} />
-              <span>Save. Leaving the cell saves too.</span>
-            </DataGrid.Row>
-          </DataGrid>
-        </div>
-      </Popover>
-    </>
+    <footer class="stack-h wrap gap-m fs-s ink-subtle">
+      {shortcuts.map(([keys, description]) => (
+        <span class="stack-h nowrap items-center gap-2xs">
+          <Keys keys={keys} />
+          {description}
+        </span>
+      ))}
+    </footer>
   );
 }
 

@@ -1,12 +1,7 @@
-import { Button } from "@tid/ui";
 import type { Context } from "hono";
-import { createContext, type FC, type PropsWithChildren, useContext } from "hono/jsx";
+import type { FC } from "hono/jsx";
+import { PageSearch } from "./filter";
 import type { PageUrl } from "./pageUrl";
-
-// The page's canonical query, so a filter form can submit the rest of it alongside its own field.
-const PageSearch = createContext(new URLSearchParams());
-
-export const usePageSearch = () => useContext(PageSearch);
 
 type StateOf<Url> = Url extends { path: (state: infer State) => string } ? State : never;
 
@@ -52,23 +47,4 @@ export function queryPage<State, P extends object>(opts: {
       </PageSearch.Provider>,
     );
   };
-}
-
-/** A form that changes `field` in the page's query, keeping the rest. It submits on change. */
-export function FilterForm({ field, children }: PropsWithChildren<{ field: string }>) {
-  return (
-    <auto-submit>
-      <form method="get" class="stack-v nowrap gap-3xs">
-        {[...usePageSearch()].map(([name, value]) =>
-          name === field ? null : <input type="hidden" name={name} value={value} />,
-        )}
-        {children}
-        <noscript>
-          <Button type="submit" data-size="small">
-            Show
-          </Button>
-        </noscript>
-      </form>
-    </auto-submit>
-  );
 }

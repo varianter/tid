@@ -1,4 +1,4 @@
-import { Button, Field, FormField, fieldErrorAttributes, Page, Select } from "@tid/ui";
+import { Field, FormField, fieldErrorAttributes, Select } from "@tid/ui";
 import { z } from "zod";
 import type { FormProps } from "../form/formAction";
 
@@ -16,7 +16,9 @@ export type SignUpProps = {
   organizations: OrganizationOption[];
 };
 
-export function SignUpPage({
+export const signUpFrame = () => ({ title: "Welcome to Tid", submit: "Start using Tid" });
+
+export function SignUpFields({
   email,
   name,
   organizations,
@@ -24,48 +26,35 @@ export function SignUpPage({
   fieldErrors,
 }: SignUpProps & FormProps) {
   return (
-    <Page title="Welcome to Tid">
+    <>
       <p class="w-max-5">
         You're logging in as {email} for the first time. Tell us who you are and which Variant
         organization you work for. You can't change the organization yourself later, so ask a
         manager if it needs changing.
       </p>
-      <form method="post" class="stack-v gap-m w-max-5">
-        <FormField
-          name="name"
-          label="Name"
-          value={values?.name ?? name}
-          errors={fieldErrors?.name}
-          autocomplete="name"
+      <FormField
+        name="name"
+        label="Name"
+        value={values?.name ?? name}
+        errors={fieldErrors?.name}
+        autocomplete="name"
+        required
+      />
+      <Field name="organizationId" label="Organization" errors={fieldErrors?.organizationId}>
+        <Select
+          id="organizationId"
+          name="organizationId"
           required
-        />
-        <Field name="organizationId" label="Organization" errors={fieldErrors?.organizationId}>
-          <Select
-            id="organizationId"
-            name="organizationId"
-            required
-            selected={values?.organizationId}
-            options={organizations.map((organization) => ({
-              value: organization.id,
-              label: organization.name,
-            }))}
-            {...fieldErrorAttributes("organizationId", fieldErrors?.organizationId)}
-          >
-            <option value="">Choose your organization</option>
-          </Select>
-        </Field>
-        <Button type="submit" class="w-max-content">
-          Start using Tid
-        </Button>
-      </form>
-    </Page>
-  );
-}
-
-export function NotAnEmployeePage({ email }: { email: string }) {
-  return (
-    <Page title="Tid is for Variant employees">
-      <p class="w-max-5">{email} isn't a Variant email address, so it can't be used to sign up.</p>
-    </Page>
+          selected={values?.organizationId}
+          options={organizations.map((organization) => ({
+            value: organization.id,
+            label: organization.name,
+          }))}
+          {...fieldErrorAttributes("organizationId", fieldErrors?.organizationId)}
+        >
+          <option value="">Choose your organization</option>
+        </Select>
+      </Field>
+    </>
   );
 }

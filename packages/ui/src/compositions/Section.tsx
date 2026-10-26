@@ -1,13 +1,14 @@
-import type { Child, PropsWithChildren } from "hono/jsx";
+import type { PropsWithChildren } from "hono/jsx";
 import { classes, type Props } from "../primitives/attributes";
+import { type Action, Actions } from "./Actions";
 
 type SectionProps = PropsWithChildren<
   Props<
     "section",
     {
       title: string;
-      /** Shown at the end of the heading's row. */
-      actions?: Child;
+      /** Links to forms about this section, at the end of the heading's row. */
+      actions?: (Action | false)[];
     }
   >
 >;
@@ -31,7 +32,7 @@ export function Section({
     >
       <div class="stack-h items-center justify-between gap-m wrap">
         <h2 class="fs-l fw-bold">{title}</h2>
-        {actions}
+        {actions && <Actions actions={actions} />}
       </div>
       {children}
     </section>

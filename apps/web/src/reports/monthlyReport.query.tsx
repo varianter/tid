@@ -26,6 +26,7 @@ import {
   resolveCompany,
 } from "../organizations/companyFilter";
 import { projectReportUrl } from "../projects/projectsUrl";
+import { Filtered } from "../query/filter";
 import { type QueryProps, queryPage } from "../query/queryPage";
 import { formatShare } from "../share/share";
 import { capacityMinutes } from "./capacity";
@@ -242,47 +243,48 @@ function ReportPage({
   const consultantHref = (userId: number) => consultantPath(userId, month);
   const table = reportTable(report, total, currency, projectHref, consultantHref);
   return (
-    <Page
-      title="Reports"
-      actions={
-        <>
-          <CompanySelect {...company} />
-          <BillableSelect />
-          <PeriodNavigation
-            previousHref={href({ month: addMonths(month, -1) })}
-            nextHref={href({ month: addMonths(month, 1) })}
-            previousLabel="Previous month"
-            nextLabel="Next month"
-          >
-            {formatDate(month, "month")}
-          </PeriodNavigation>
-        </>
-      }
-    >
-      <Summary {...total} capacityHours={capacityHours} currency={currency} />
-      <section>
-        <Tabs aria-label="Group by">
-          {tabs.map((tabName) => (
-            <Tabs.Link href={href({ tab: tabName })} active={tabName === report.tab}>
-              {tabLabels[tabName]}
-            </Tabs.Link>
-          ))}
-        </Tabs>
-        <div class="b-all bc-subtle br-l p-m mt-s">
-          {table.rows.length === 0 ? (
-            <EmptyState emoji="🗓️" title="No hours logged">
-              No time was logged in {formatDate(month, "month")}.
-            </EmptyState>
-          ) : (
-            <DataGrid columns={table.columns}>
-              {table.rows.map((row) => (
-                <DataGrid.Row href={row.href}>{row.cells}</DataGrid.Row>
-              ))}
-              <DataGrid.Footer>{table.footer}</DataGrid.Footer>
-            </DataGrid>
-          )}
-        </div>
-      </section>
+    <Page title="Reports">
+      <Filtered
+        by={
+          <>
+            <CompanySelect {...company} />
+            <BillableSelect />
+            <PeriodNavigation
+              previousHref={href({ month: addMonths(month, -1) })}
+              nextHref={href({ month: addMonths(month, 1) })}
+              previousLabel="Previous month"
+              nextLabel="Next month"
+            >
+              {formatDate(month, "month")}
+            </PeriodNavigation>
+          </>
+        }
+      >
+        <Summary {...total} capacityHours={capacityHours} currency={currency} />
+        <section>
+          <Tabs aria-label="Group by">
+            {tabs.map((tabName) => (
+              <Tabs.Link href={href({ tab: tabName })} active={tabName === report.tab}>
+                {tabLabels[tabName]}
+              </Tabs.Link>
+            ))}
+          </Tabs>
+          <div class="b-all bc-subtle br-l p-m mt-s">
+            {table.rows.length === 0 ? (
+              <EmptyState emoji="🗓️" title="No hours logged">
+                No time was logged in {formatDate(month, "month")}.
+              </EmptyState>
+            ) : (
+              <DataGrid columns={table.columns}>
+                {table.rows.map((row) => (
+                  <DataGrid.Row href={row.href}>{row.cells}</DataGrid.Row>
+                ))}
+                <DataGrid.Footer>{table.footer}</DataGrid.Footer>
+              </DataGrid>
+            )}
+          </div>
+        </section>
+      </Filtered>
     </Page>
   );
 }

@@ -20,6 +20,7 @@ import { database } from "../database";
 import type { UserEnv } from "../login/user";
 import { type Billing, billingLabels } from "../projects/billing";
 import { projectReportUrl } from "../projects/projectsUrl";
+import { Filtered } from "../query/filter";
 import { type QueryProps, queryPage } from "../query/queryPage";
 import { capacityMinutes } from "../reports/capacity";
 import { formatShare } from "../share/share";
@@ -130,36 +131,39 @@ function ConsultantDetailsPage({
           ? { href: consultantsPath(user.organizationSlug), label: "Consultants" }
           : undefined
       }
-      actions={
-        <PeriodNavigation
-          previousHref={href({ month: addMonths(month, -1) })}
-          nextHref={href({ month: addMonths(month, 1) })}
-          previousLabel="Previous month"
-          nextLabel="Next month"
-        >
-          {formatDate(month, "month")}
-        </PeriodNavigation>
-      }
     >
-      <SidebarLayout
-        sidebar={
-          <div class="stack-v gap-m">
-            <MonthHours
-              minutes={minutes}
-              billableMinutes={billableMinutes}
-              capacityMinutes={monthCapacityMinutes}
-            />
-            <CurrentProjects
-              projects={currentBillableProjects}
-              projectHref={(projectId) =>
-                projectReportUrl.path({ projectId, month, company: user.organizationSlug })
-              }
-            />
-          </div>
+      <Filtered
+        by={
+          <PeriodNavigation
+            previousHref={href({ month: addMonths(month, -1) })}
+            nextHref={href({ month: addMonths(month, 1) })}
+            previousLabel="Previous month"
+            nextLabel="Next month"
+          >
+            {formatDate(month, "month")}
+          </PeriodNavigation>
         }
       >
-        <MonthEntries month={month} entries={entries} titleLabel="Project" />
-      </SidebarLayout>
+        <SidebarLayout
+          sidebar={
+            <div class="stack-v gap-m">
+              <MonthHours
+                minutes={minutes}
+                billableMinutes={billableMinutes}
+                capacityMinutes={monthCapacityMinutes}
+              />
+              <CurrentProjects
+                projects={currentBillableProjects}
+                projectHref={(projectId) =>
+                  projectReportUrl.path({ projectId, month, company: user.organizationSlug })
+                }
+              />
+            </div>
+          }
+        >
+          <MonthEntries month={month} entries={entries} titleLabel="Project" />
+        </SidebarLayout>
+      </Filtered>
     </Page>
   );
 }

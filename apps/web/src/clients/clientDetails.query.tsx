@@ -1,6 +1,6 @@
 import { projects } from "@tid/db/schema";
 import { formatTotalHours } from "@tid/elements/hours";
-import { Button, Detail, Page, Section } from "@tid/ui";
+import { Detail, Page, Section } from "@tid/ui";
 import { eq } from "drizzle-orm";
 import type { Context } from "hono";
 import type { UserEnv } from "../login/user";
@@ -36,18 +36,10 @@ function ClientDetailsPage({
     <Page
       title={client.name}
       back={{ href: "/clients", label: "Back to clients" }}
-      actions={
-        canChange && (
-          <>
-            <Button as="a" href={`/clients/${client.id}/edit`} data-variant="tinted">
-              Edit
-            </Button>
-            <Button as="a" href={`/projects/new?client=${client.id}`} data-variant="tinted">
-              New project
-            </Button>
-          </>
-        )
-      }
+      actions={[
+        canChange && { label: "Edit", href: `/clients/${client.id}/edit` },
+        canChange && { label: "New project", href: `/projects/new?client=${client.id}` },
+      ]}
     >
       <dl class="stack-h items-start gap-xl b-all bc-default br-l p-m">
         <Detail label="Projects">{projects.length}</Detail>

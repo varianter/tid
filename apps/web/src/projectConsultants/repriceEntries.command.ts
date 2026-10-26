@@ -3,7 +3,7 @@ import { z } from "zod";
 import { formAction } from "../form/formAction";
 import { idParams, projectRatesPath } from "./projectConsultant";
 import { loadConsultant } from "./projectConsultant.data";
-import { RepricePage, repriceEntriesForm } from "./repriceEntries.form";
+import { RepriceFields, repriceEntriesForm, repriceFrame } from "./repriceEntries.form";
 import { addRateAndReprice, entriesToReprice } from "./repricing";
 
 // The rate in minor units, as the rates form passes it on.
@@ -27,5 +27,6 @@ export const repriceEntries = formAction({
     await addRateAndReprice(consultant, newRate);
     return { redirect: projectRatesPath(consultant.projectId) };
   },
-  view: RepricePage,
+  frame: repriceFrame,
+  view: RepriceFields,
 });

@@ -31,6 +31,7 @@ import {
   findCompanyFilter,
   resolveCompany,
 } from "../organizations/companyFilter";
+import { Filtered } from "../query/filter";
 import { type QueryProps, queryPage } from "../query/queryPage";
 import { capacityMinutes } from "../reports/capacity";
 import { formatShare } from "../share/share";
@@ -168,116 +169,117 @@ function MonthDetailsPage({
       ? "ready to lock"
       : "open";
   return (
-    <Page
-      title="Month close"
-      actions={
-        <>
-          <CompanySelect {...company} />
-          <PeriodNavigation
-            previousHref={href({ month: addMonths(month, -1) })}
-            nextHref={href({ month: addMonths(month, 1) })}
-            previousLabel="Previous month"
-            nextLabel="Next month"
-          >
-            {formatDate(month, "month")}
-          </PeriodNavigation>
-        </>
-      }
-    >
-      <SidebarLayout
-        sidebar={
-          rows.length === 0 ? (
-            <EmptyState emoji="👥" title="No consultants yet" />
-          ) : (
-            <StatList orientation="vertical">
-              <Stat
-                label="Logged"
-                value={formatTotalHours(loggedMinutes)}
-                share={formatShare(loggedMinutes, expectedMinutes)}
-                note={`of ${formatTotalHours(expectedMinutes)} expected`}
-              >
-                <ProgressBar
-                  max={expectedMinutes}
-                  segments={[{ value: loggedMinutes, palette: "purple" }]}
-                />
-              </Stat>
-              <Stat
-                label="Billable"
-                value={formatTotalHours(billableMinutes)}
-                share={formatShare(billableMinutes, loggedMinutes)}
-                note={`${formatTotalHours(loggedMinutes - billableMinutes)} non-billable`}
-              >
-                <ProgressBar
-                  max={loggedMinutes}
-                  segments={[
-                    { value: billableMinutes, palette: "blue" },
-                    { value: loggedMinutes - billableMinutes, palette: "blue", shade: "soft" },
-                  ]}
-                />
-              </Stat>
-            </StatList>
-          )
+    <Page title="Month close">
+      <Filtered
+        by={
+          <>
+            <CompanySelect {...company} />
+            <PeriodNavigation
+              previousHref={href({ month: addMonths(month, -1) })}
+              nextHref={href({ month: addMonths(month, 1) })}
+              previousLabel="Previous month"
+              nextLabel="Next month"
+            >
+              {formatDate(month, "month")}
+            </PeriodNavigation>
+          </>
         }
       >
-        <div class="stack-v gap-s">
-          <ColorMode
-            palette={missingCount === 0 ? "green" : "yellow"}
-            class="stack-h items-center gap-m b-all bc-default br-l py-xs px-m ink-default surface-tinted"
-          >
-            <span class="stack-v gap-4xs">
-              <span class="fs-m">
-                {formatDate(month, "month")} is <strong>{lockStatus}</strong>
-              </span>
-              <span class="fs-s ink-subtle">
-                {activeLock
-                  ? `Locked by ${activeLock.lockedByName}, ${formatDate(isoDateInOslo(activeLock.lockedAt))}`
-                  : missingCount === 0
-                    ? isDueForLock
-                      ? "All consultants have logged their hours!"
-                      : "Everyone is up to date so far."
-                    : `Still lacks hours from ${missingCount} ${missingCount === 1 ? "consultant" : "consultants"}.`}
-              </span>
-            </span>
-            {canChangeLock &&
-              (activeLock ? (
-                <UnlockMonthForm organizationSlug={organizationSlug} month={month} />
-              ) : (
-                <LockMonthForm organizationSlug={organizationSlug} month={month} />
-              ))}
-          </ColorMode>
-          {rows.length > 0 && (
-            <DataGrid
-              columns={[
-                { kind: "fit" },
-                { label: "Consultant" },
-                { label: "Logged", kind: "number" },
-                { label: "Billable share", kind: "number" },
-                { label: "Expected", kind: "number" },
-                { label: "Missing", kind: "number" },
-              ]}
+        <SidebarLayout
+          sidebar={
+            rows.length === 0 ? (
+              <EmptyState emoji="👥" title="No consultants yet" />
+            ) : (
+              <StatList orientation="vertical">
+                <Stat
+                  label="Logged"
+                  value={formatTotalHours(loggedMinutes)}
+                  share={formatShare(loggedMinutes, expectedMinutes)}
+                  note={`of ${formatTotalHours(expectedMinutes)} expected`}
+                >
+                  <ProgressBar
+                    max={expectedMinutes}
+                    segments={[{ value: loggedMinutes, palette: "purple" }]}
+                  />
+                </Stat>
+                <Stat
+                  label="Billable"
+                  value={formatTotalHours(billableMinutes)}
+                  share={formatShare(billableMinutes, loggedMinutes)}
+                  note={`${formatTotalHours(loggedMinutes - billableMinutes)} non-billable`}
+                >
+                  <ProgressBar
+                    max={loggedMinutes}
+                    segments={[
+                      { value: billableMinutes, palette: "blue" },
+                      { value: loggedMinutes - billableMinutes, palette: "blue", shade: "soft" },
+                    ]}
+                  />
+                </Stat>
+              </StatList>
+            )
+          }
+        >
+          <div class="stack-v gap-s">
+            <ColorMode
+              palette={missingCount === 0 ? "green" : "yellow"}
+              class="stack-h items-center gap-m b-all bc-default br-l py-xs px-m ink-default surface-tinted"
             >
-              <ConsultantGroup
-                palette="coral"
-                icon="thumb_down"
-                title="Still missing hours"
-                month={month}
-                canOpenConsultants={canOpenConsultants}
-                rows={rows
-                  .filter((row) => row.missingMinutes > 0)
-                  .sort((a, b) => b.missingMinutes - a.missingMinutes)}
-              />
-              <ConsultantGroup
-                palette="green"
-                icon="thumb_up"
-                title="All hours logged"
-                month={month}
-                canOpenConsultants={canOpenConsultants}
-                rows={rows.filter((row) => row.missingMinutes === 0)}
-              />
-            </DataGrid>
-          )}
-        </div>
-      </SidebarLayout>
+              <span class="stack-v gap-4xs">
+                <span class="fs-m">
+                  {formatDate(month, "month")} is <strong>{lockStatus}</strong>
+                </span>
+                <span class="fs-s ink-subtle">
+                  {activeLock
+                    ? `Locked by ${activeLock.lockedByName}, ${formatDate(isoDateInOslo(activeLock.lockedAt))}`
+                    : missingCount === 0
+                      ? isDueForLock
+                        ? "All consultants have logged their hours!"
+                        : "Everyone is up to date so far."
+                      : `Still lacks hours from ${missingCount} ${missingCount === 1 ? "consultant" : "consultants"}.`}
+                </span>
+              </span>
+              {canChangeLock &&
+                (activeLock ? (
+                  <UnlockMonthForm organizationSlug={organizationSlug} month={month} />
+                ) : (
+                  <LockMonthForm organizationSlug={organizationSlug} month={month} />
+                ))}
+            </ColorMode>
+            {rows.length > 0 && (
+              <DataGrid
+                columns={[
+                  { kind: "fit" },
+                  { label: "Consultant" },
+                  { label: "Logged", kind: "number" },
+                  { label: "Billable share", kind: "number" },
+                  { label: "Expected", kind: "number" },
+                  { label: "Missing", kind: "number" },
+                ]}
+              >
+                <ConsultantGroup
+                  palette="coral"
+                  icon="thumb_down"
+                  title="Still missing hours"
+                  month={month}
+                  canOpenConsultants={canOpenConsultants}
+                  rows={rows
+                    .filter((row) => row.missingMinutes > 0)
+                    .sort((a, b) => b.missingMinutes - a.missingMinutes)}
+                />
+                <ConsultantGroup
+                  palette="green"
+                  icon="thumb_up"
+                  title="All hours logged"
+                  month={month}
+                  canOpenConsultants={canOpenConsultants}
+                  rows={rows.filter((row) => row.missingMinutes === 0)}
+                />
+              </DataGrid>
+            )}
+          </div>
+        </SidebarLayout>
+      </Filtered>
     </Page>
   );
 }

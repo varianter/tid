@@ -1,5 +1,6 @@
+import { FormPage } from "@tid/ui";
 import type { Context } from "hono";
-import type { FC } from "hono/jsx";
+import type { Child, FC } from "hono/jsx";
 import { z } from "zod";
 
 type Ctx = Context;
@@ -12,12 +13,22 @@ export type FieldErrors<S extends z.ZodType> = {
 export type FormProps = {
   values?: Record<string, string>;
   fieldErrors?: Partial<Record<string, string[]>>;
-  formError?: string;
+};
+
+/** What frames a form's fields as a page of its own. */
+type FormFrame = {
+  title: string;
+  description?: Child;
+  /** The page the form was opened from. */
+  cancel?: string;
+  /** The submit button's label. Leave it out when there's nothing to submit. */
+  submit?: string;
 };
 
 /**
  * One form on one URL: GET renders it, POST validates and submits, then
- * redirects (303) or re-renders the form with errors (422).
+ * redirects (303) or re-renders the form with errors (422). It renders the page around the form,
+ * so every form page has the same frame and nothing else.
  */
 export function formAction<S extends z.ZodType, P extends object>(opts: {
   /** Validates the POST body. Failures re-render with field errors. */
@@ -33,14 +44,24 @@ export function formAction<S extends z.ZodType, P extends object>(opts: {
     data: z.infer<S>,
     props: P,
   ) => Promise<{ redirect: string } | { fieldErrors: FieldErrors<S> } | { formError: string }>;
-  /** Renders the form. Gets the loader's props, plus `values`, `fieldErrors` and `formError` after a failed POST. */
+  /** The page around the form, from the loader's props. */
+  frame: (props: P) => FormFrame;
+  /** Renders the form's fields. Gets the loader's props, plus `values` and `fieldErrors` after a failed POST. */
   view: FC<P & FormProps>;
 }) {
   const View = opts.view;
+  const render = (c: Ctx, props: P, failure: FormProps & { formError?: string } = {}) => {
+    const { formError, ...form } = failure;
+    return c.render(
+      <FormPage {...opts.frame(props)} formError={formError}>
+        <View {...props} {...form} />
+      </FormPage>,
+    );
+  };
   return async (c: Ctx) => {
     const props = await opts.loader(c);
     if (props instanceof Response) return props;
-    if (c.req.method === "GET") return c.render(<View {...props} />);
+    if (c.req.method === "GET") return render(c, props);
 
     // `all` keeps repeated fields (checkboxes) as arrays for the schema.
     // `values` drops them, so a multi-select isn't re-checked on a 422.
@@ -53,18 +74,16 @@ export function formAction<S extends z.ZodType, P extends object>(opts: {
       c.status(422);
       // formErrors come from a refine without a path (cross-field rules).
       const { fieldErrors, formErrors } = z.flattenError(form.error);
-      return c.render(
-        <View {...props} values={values} fieldErrors={fieldErrors} formError={formErrors[0]} />,
-      );
+      return render(c, props, { values, fieldErrors, formError: formErrors[0] });
     }
     const result = await opts.onSubmit(c, form.data, props);
     if ("fieldErrors" in result) {
       c.status(422);
-      return c.render(<View {...props} values={values} fieldErrors={result.fieldErrors} />);
+      return render(c, props, { values, fieldErrors: result.fieldErrors });
     }
     if ("formError" in result) {
       c.status(422);
-      return c.render(<View {...props} values={values} formError={result.formError} />);
+      return render(c, props, { values, formError: result.formError });
     }
     return c.redirect(result.redirect, 303);
   };

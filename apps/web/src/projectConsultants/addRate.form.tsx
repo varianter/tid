@@ -1,5 +1,5 @@
 import { isIsoDate } from "@tid/calendar/isoDate";
-import { Button, FormField, Page } from "@tid/ui";
+import { FormField } from "@tid/ui";
 import { z } from "zod";
 import type { FormProps } from "../form/formAction";
 import { type Consultant, projectRatesPath } from "./projectConsultant";
@@ -16,35 +16,40 @@ export const addRateForm = z.object({
   validFrom: z.string().refine(isIsoDate, "Choose a date"),
 });
 
-type AddRatePageProps = { consultant: Consultant; today: string } & FormProps;
+type AddRateProps = { consultant: Consultant; today: string };
 
-export function AddRatePage({ consultant, today, values, fieldErrors }: AddRatePageProps) {
+export const addRateFrame = ({ consultant }: AddRateProps) => ({
+  title: `New rate for ${consultant.name}`,
+  cancel: projectRatesPath(consultant.projectId),
+  submit: "Add rate",
+});
+
+export function AddRateFields({
+  consultant,
+  today,
+  values,
+  fieldErrors,
+}: AddRateProps & FormProps) {
   return (
-    <Page
-      title={`New rate for ${consultant.name}`}
-      back={{ href: projectRatesPath(consultant.projectId), label: "Back to rates" }}
-    >
-      <form method="post" class="stack-v items-start gap-m">
-        <FormField
-          name="rate"
-          label={`Hourly rate (${consultant.currency})`}
-          type="number"
-          min="0"
-          step="0.01"
-          value={values?.rate}
-          errors={fieldErrors?.rate}
-          required
-        />
-        <FormField
-          name="validFrom"
-          label="Start date"
-          type="date"
-          value={values?.validFrom ?? today}
-          errors={fieldErrors?.validFrom}
-          required
-        />
-        <Button type="submit">Add rate</Button>
-      </form>
-    </Page>
+    <>
+      <FormField
+        name="rate"
+        label={`Hourly rate (${consultant.currency})`}
+        type="number"
+        min="0"
+        step="0.01"
+        value={values?.rate}
+        errors={fieldErrors?.rate}
+        required
+      />
+      <FormField
+        name="validFrom"
+        label="Start date"
+        type="date"
+        value={values?.validFrom ?? today}
+        errors={fieldErrors?.validFrom}
+        required
+      />
+    </>
   );
 }

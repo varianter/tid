@@ -1,6 +1,6 @@
 import { clients, projects, tasks, timeEntries } from "@tid/db/schema";
 import { formatTotalHours } from "@tid/elements/hours";
-import { Button, DataGrid, EmptyState, Page } from "@tid/ui";
+import { type Action, Actions, DataGrid, EmptyState, Page } from "@tid/ui";
 import { countDistinct, eq, sql } from "drizzle-orm";
 import type { Context } from "hono";
 import { database } from "../database";
@@ -26,11 +26,7 @@ export const clientList = async (c: Context<UserEnv>) => {
 
 type ClientRow = Client & { projectCount: number; spentMinutes: number };
 
-const newClientButton = () => (
-  <Button as="a" href="/clients/new" data-variant="tinted">
-    New client
-  </Button>
-);
+const newClient: Action = { label: "New client", href: "/clients/new" };
 
 function ClientListPage({
   clients,
@@ -40,9 +36,13 @@ function ClientListPage({
   canAddClients: boolean;
 }) {
   return (
-    <Page title="Clients" actions={canAddClients && newClientButton()}>
+    <Page title="Clients" actions={[canAddClients && newClient]}>
       {clients.length === 0 ? (
-        <EmptyState emoji="🏢" title="No clients yet" action={canAddClients && newClientButton()} />
+        <EmptyState
+          emoji="🏢"
+          title="No clients yet"
+          action={canAddClients && <Actions actions={[newClient]} />}
+        />
       ) : (
         <DataGrid
           columns={[

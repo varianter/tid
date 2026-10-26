@@ -4,6 +4,7 @@ import type { Context } from "hono";
 import type { UserEnv } from "../login/user";
 import { findOrganizationBySlug } from "../organizations/organization";
 import { listOrganizations, type OrganizationOption } from "../organizations/organizationSelect";
+import { Filtered } from "../query/filter";
 import { administrationPath, managersPath, openProjectsPath } from "./administrationUrl";
 import { OrganizationSwitcher, OtherOrganizationNotice } from "./organizationSwitch";
 
@@ -40,33 +41,32 @@ function OrganizationOverviewPage({
   ownOrgId: number;
 }) {
   return (
-    <Page
-      title={`Administration of ${organization.name}`}
-      actions={<OrganizationSwitcher organizations={organizations} current={organization} />}
-    >
-      <OtherOrganizationNotice
-        organizations={organizations}
-        current={organization}
-        ownOrgId={ownOrgId}
-      />
-      <dl class="stack-h items-start gap-xl gap-row-s b-all bc-default br-l p-m">
-        <Detail label="Legal name">{organization.legalName}</Detail>
-        <Detail label="Country">{organization.country}</Detail>
-        <Detail label="Currency">{organization.currency}</Detail>
-        <Detail label="Working day">{formatTotalHours(organization.fullDayMinutes)}</Detail>
-      </dl>
-      <ActionList>
-        <ActionListItem
-          title="Projects open to everyone"
-          description="Everyone can log hours on these"
-          action={<ManageLink href={openProjectsPath(organization.slug)} />}
+    <Page title={`Administration of ${organization.name}`}>
+      <Filtered by={<OrganizationSwitcher organizations={organizations} current={organization} />}>
+        <OtherOrganizationNotice
+          organizations={organizations}
+          current={organization}
+          ownOrgId={ownOrgId}
         />
-        <ActionListItem
-          title="Managers"
-          description="Who administers the organization"
-          action={<ManageLink href={managersPath(organization.slug)} />}
-        />
-      </ActionList>
+        <dl class="stack-h items-start gap-xl gap-row-s b-all bc-default br-l p-m">
+          <Detail label="Legal name">{organization.legalName}</Detail>
+          <Detail label="Country">{organization.country}</Detail>
+          <Detail label="Currency">{organization.currency}</Detail>
+          <Detail label="Working day">{formatTotalHours(organization.fullDayMinutes)}</Detail>
+        </dl>
+        <ActionList>
+          <ActionListItem
+            title="Projects open to everyone"
+            description="Everyone can log hours on these"
+            action={<ManageLink href={openProjectsPath(organization.slug)} />}
+          />
+          <ActionListItem
+            title="Managers"
+            description="Who administers the organization"
+            action={<ManageLink href={managersPath(organization.slug)} />}
+          />
+        </ActionList>
+      </Filtered>
     </Page>
   );
 }

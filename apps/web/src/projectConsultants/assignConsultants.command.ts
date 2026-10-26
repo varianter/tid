@@ -6,7 +6,11 @@ import { formAction } from "../form/formAction";
 import type { User } from "../login/user";
 import { managesProject } from "../managers/manager";
 import { ensureParticipation } from "../projects/projectParticipation";
-import { AssignConsultantsPage, assignConsultantsForm } from "./assignConsultants.form";
+import {
+  AssignConsultantsFields,
+  assignConsultantsForm,
+  assignConsultantsFrame,
+} from "./assignConsultants.form";
 
 export const assignConsultants = formAction({
   schema: assignConsultantsForm,
@@ -60,7 +64,8 @@ export const assignConsultants = formAction({
     );
     return { redirect: `/projects/${project.id}` };
   },
-  view: AssignConsultantsPage,
+  frame: assignConsultantsFrame,
+  view: AssignConsultantsFields,
 });
 
 /**

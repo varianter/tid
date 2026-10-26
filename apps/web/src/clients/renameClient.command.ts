@@ -3,7 +3,7 @@ import { and, eq, ne } from "drizzle-orm";
 import { database } from "../database";
 import { formAction } from "../form/formAction";
 import { findClient } from "./client";
-import { alreadyExists, ClientFormPage, clientFields } from "./client.form";
+import { alreadyExists, ClientFields, clientFields, clientFrame } from "./client.form";
 
 export const renameClient = formAction({
   schema: clientFields,
@@ -20,5 +20,6 @@ export const renameClient = formAction({
     await database.update(clients).set({ name }).where(eq(clients.id, client.id));
     return { redirect: `/clients/${client.id}` };
   },
-  view: ClientFormPage,
+  frame: clientFrame,
+  view: ClientFields,
 });

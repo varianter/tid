@@ -1,4 +1,4 @@
-import { Button, FormField, Page } from "@tid/ui";
+import { FormField } from "@tid/ui";
 import { z } from "zod";
 import type { FormProps } from "../form/formAction";
 import type { Client } from "./client";
@@ -8,28 +8,19 @@ export const clientFields = z.object({ name: z.string().trim().min(1, "Enter a n
 export const alreadyExists = { fieldErrors: { name: ["A client with this name already exists"] } };
 
 /** Creates a client, or renames `client` when given. */
-export function ClientFormPage({ client, values, fieldErrors }: { client?: Client } & FormProps) {
+export const clientFrame = ({ client }: { client?: Client }) =>
+  client
+    ? { title: `Edit ${client.name}`, cancel: `/clients/${client.id}`, submit: "Save changes" }
+    : { title: "New client", cancel: "/clients", submit: "Create client" };
+
+export function ClientFields({ client, values, fieldErrors }: { client?: Client } & FormProps) {
   return (
-    <Page
-      title={client ? `Edit ${client.name}` : "New client"}
-      back={
-        client
-          ? { href: `/clients/${client.id}`, label: "Back to client" }
-          : { href: "/clients", label: "Back to clients" }
-      }
-    >
-      <form method="post" class="stack-v gap-m w-max-5">
-        <FormField
-          name="name"
-          label="Name"
-          value={values?.name ?? client?.name}
-          errors={fieldErrors?.name}
-          required
-        />
-        <Button type="submit" class="w-max-content">
-          {client ? "Save changes" : "Create client"}
-        </Button>
-      </form>
-    </Page>
+    <FormField
+      name="name"
+      label="Name"
+      value={values?.name ?? client?.name}
+      errors={fieldErrors?.name}
+      required
+    />
   );
 }

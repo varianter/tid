@@ -5,7 +5,13 @@ import { formAction } from "../form/formAction";
 import type { User } from "../login/user";
 import { findOrganizationCurrency } from "../organizations/organization";
 import { listOrganizations } from "../organizations/organizationSelect";
-import { editProjectForm, ProjectFormPage, parseBilling, projectColumns } from "./project.form";
+import {
+  editProjectForm,
+  ProjectFields,
+  parseBilling,
+  projectColumns,
+  projectFrame,
+} from "./project.form";
 import { listProjectCurrencies } from "./projectCurrency";
 import {
   ensureParticipation,
@@ -136,5 +142,6 @@ export const editProject = formAction({
     }
     return { redirect: `/projects/${project.id}` };
   },
-  view: ProjectFormPage,
+  frame: projectFrame,
+  view: ProjectFields,
 });

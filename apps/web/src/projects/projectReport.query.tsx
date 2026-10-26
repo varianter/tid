@@ -9,6 +9,7 @@ import {
   completeCompany,
   resolveCompany,
 } from "../organizations/companyFilter";
+import { Filtered } from "../query/filter";
 import { type QueryProps, queryPage } from "../query/queryPage";
 import { MonthEntries, type MonthEntry } from "../timeEntries/monthEntries";
 import { billingLabels } from "./billing";
@@ -46,33 +47,38 @@ function ProjectReportPage({
       title={project.name}
       description={`Report for ${period}`}
       back={{ href: `/projects/${project.id}`, label: "Back to project" }}
-      actions={
-        <>
-          <CompanySelect {...company} />
-          <PeriodNavigation
-            previousHref={href({ month: addMonths(query.month, -1) })}
-            nextHref={href({ month: addMonths(query.month, 1) })}
-            previousLabel="Previous month"
-            nextLabel="Next month"
-          >
-            {period}
-          </PeriodNavigation>
-          <Button as="a" href={projectReportPrintUrl.path(query)} data-variant="tinted">
+    >
+      <Filtered
+        by={
+          <>
+            <CompanySelect {...company} />
+            <PeriodNavigation
+              previousHref={href({ month: addMonths(query.month, -1) })}
+              nextHref={href({ month: addMonths(query.month, 1) })}
+              previousLabel="Previous month"
+              nextLabel="Next month"
+            >
+              {period}
+            </PeriodNavigation>
+          </>
+        }
+      >
+        <dl class="stack-h items-start gap-xl gap-row-s b-all bc-default br-l p-m">
+          <Detail label="Client">
+            <a href={`/clients/${project.clientId}`}>{project.client}</a>
+          </Detail>
+          <Detail label="Code">{project.code}</Detail>
+          <Detail label="Billing">{billingLabels[project.billing]}</Detail>
+          <Detail label="Hours">{formatTotalHours(hours * 60)}</Detail>
+          {amount && <Detail label="Amount">{amount}</Detail>}
+        </dl>
+        <MonthEntries month={query.month} entries={entries} titleLabel="Consultant" />
+        <div>
+          <Button as="a" href={projectReportPrintUrl.path(query)} data-variant="outlined">
             Print
           </Button>
-        </>
-      }
-    >
-      <dl class="stack-h items-start gap-xl gap-row-s b-all bc-default br-l p-m">
-        <Detail label="Client">
-          <a href={`/clients/${project.clientId}`}>{project.client}</a>
-        </Detail>
-        <Detail label="Code">{project.code}</Detail>
-        <Detail label="Billing">{billingLabels[project.billing]}</Detail>
-        <Detail label="Hours">{formatTotalHours(hours * 60)}</Detail>
-        {amount && <Detail label="Amount">{amount}</Detail>}
-      </dl>
-      <MonthEntries month={query.month} entries={entries} titleLabel="Consultant" />
+        </div>
+      </Filtered>
     </Page>
   );
 }

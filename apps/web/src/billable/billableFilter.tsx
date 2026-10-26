@@ -2,7 +2,7 @@ import { Label, Select } from "@tid/ui";
 import { eq } from "drizzle-orm";
 import type { PgColumn } from "drizzle-orm/pg-core";
 import { z } from "zod";
-import { FilterForm, usePageSearch } from "../query/queryPage";
+import { FilterForm, usePageSearch } from "../query/filter";
 
 const field = "billable";
 const yes = "yes";

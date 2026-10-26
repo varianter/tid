@@ -1,9 +1,9 @@
-import { Button, Checkbox, DataGrid, EmptyState, Page } from "@tid/ui";
+import { Checkbox, DataGrid, EmptyState } from "@tid/ui";
 import { z } from "zod";
 import type { FormProps } from "../form/formAction";
 import type { OrganizationOption } from "../organizations/organizationSelect";
 import { administrationPath } from "./administrationUrl";
-import { OrganizationSwitcher, OtherOrganizationNotice } from "./organizationSwitch";
+import { OtherOrganizationNotice } from "./organizationSwitch";
 
 // One ticked box comes as a string, several as an array, none as nothing.
 export const openProjectsForm = z.object({
@@ -21,26 +21,28 @@ export type OpenableProject = {
   open: boolean;
 };
 
-type OpenProjectsPageProps = {
+type OpenProjectsProps = {
   organization: { slug: string; name: string };
   projects: OpenableProject[];
   organizations: OrganizationOption[];
   ownOrgId: number;
-} & FormProps;
+};
 
-export function OpenProjectsPage({
+export const openProjectsFrame = ({ organization, projects }: OpenProjectsProps) => ({
+  title: `Projects open to everyone in ${organization.name}`,
+  cancel: administrationPath(organization.slug),
+  submit: projects.length === 0 ? undefined : "Save",
+});
+
+export function OpenProjectsFields({
   organization,
   projects,
   organizations,
   ownOrgId,
-}: OpenProjectsPageProps) {
+}: OpenProjectsProps & FormProps) {
   const clients = Map.groupBy(projects, (project) => project.client);
   return (
-    <Page
-      title={`Projects open to everyone in ${organization.name}`}
-      back={{ href: administrationPath(organization.slug), label: "Administration" }}
-      actions={<OrganizationSwitcher organizations={organizations} current={organization} />}
-    >
+    <>
       <OtherOrganizationNotice
         organizations={organizations}
         current={organization}
@@ -51,28 +53,25 @@ export function OpenProjectsPage({
           Only non-billable projects can be open to everyone.
         </EmptyState>
       ) : (
-        <form method="post" class="stack-v items-start gap-m">
-          <DataGrid columns={[{ kind: "fit" }, { label: "Project" }]}>
-            {[...clients].map(([client, clientProjects]) => (
-              <>
-                <DataGrid.Group>{client}</DataGrid.Group>
-                {clientProjects.map((project) => (
-                  <DataGrid.Row for={`project-${project.id}`}>
-                    <Checkbox
-                      id={`project-${project.id}`}
-                      name="projectId"
-                      value={String(project.id)}
-                      checked={project.open}
-                    />
-                    <DataGrid.Title secondary={project.code}>{project.name}</DataGrid.Title>
-                  </DataGrid.Row>
-                ))}
-              </>
-            ))}
-          </DataGrid>
-          <Button type="submit">Save</Button>
-        </form>
+        <DataGrid columns={[{ kind: "fit" }, { label: "Project" }]}>
+          {[...clients].map(([client, clientProjects]) => (
+            <>
+              <DataGrid.Group>{client}</DataGrid.Group>
+              {clientProjects.map((project) => (
+                <DataGrid.Row for={`project-${project.id}`}>
+                  <Checkbox
+                    id={`project-${project.id}`}
+                    name="projectId"
+                    value={String(project.id)}
+                    checked={project.open}
+                  />
+                  <DataGrid.Title secondary={project.code}>{project.name}</DataGrid.Title>
+                </DataGrid.Row>
+              ))}
+            </>
+          ))}
+        </DataGrid>
       )}
-    </Page>
+    </>
   );
 }

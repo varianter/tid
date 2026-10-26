@@ -1,13 +1,15 @@
 import type { Child, PropsWithChildren } from "hono/jsx";
 import { Button } from "../primitives/Button";
 import { Icon } from "../primitives/Icon";
+import { type Action, Actions } from "./Actions";
 
 type PageProps = PropsWithChildren<{
   title: string;
   /** A line under the title about what the page shows, such as an email or a status. */
   description?: Child;
   back?: { href: string; label: string };
-  actions?: Child;
+  /** Links to forms, the only thing in the header. Filters sit with the data they narrow. */
+  actions?: (Action | false)[];
 }>;
 
 export function Page({ title, description, back, actions, children }: PageProps) {
@@ -30,7 +32,7 @@ export function Page({ title, description, back, actions, children }: PageProps)
         )}
         <div class="stack-h items-end gap-m">
           {heading}
-          {actions && <div class="ml-auto stack-h items-center gap-m">{actions}</div>}
+          {actions && <Actions actions={actions} class="ml-auto" />}
         </div>
       </header>
       <div data-transition="content" class="stack-v nowrap gap-xl">

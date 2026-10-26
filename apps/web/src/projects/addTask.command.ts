@@ -2,7 +2,7 @@ import { projects, tasks } from "@tid/db/schema";
 import { eq } from "drizzle-orm";
 import { database } from "../database";
 import { formAction } from "../form/formAction";
-import { AddTaskPage, addTaskForm } from "./addTask.form";
+import { AddTaskFields, addTaskForm, addTaskFrame } from "./addTask.form";
 
 export const addTask = formAction({
   schema: addTaskForm,
@@ -20,5 +20,6 @@ export const addTask = formAction({
     await database.insert(tasks).values({ projectId: project.id, name }).onConflictDoNothing();
     return { redirect: `/projects/${project.id}` };
   },
-  view: AddTaskPage,
+  frame: addTaskFrame,
+  view: AddTaskFields,
 });

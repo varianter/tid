@@ -17,6 +17,7 @@ import {
 import { between, eq, sql } from "drizzle-orm";
 import { formatAmounts } from "../amount/amount";
 import { database } from "../database";
+import { Filtered } from "../query/filter";
 import { type QueryProps, queryPage } from "../query/queryPage";
 import { formatShare } from "../share/share";
 import { isYear, monthsOf, type Period, shiftPeriod, togglePeriod } from "./applesaucePeriod";
@@ -109,127 +110,128 @@ function ApplesaucePage({
   const previous = formatPeriod(shiftPeriod(period, -1));
   const toggled = togglePeriod(period, thisMonthInOslo());
   return (
-    <Page
-      title="Applesauce"
-      actions={
-        <>
-          <Tabs aria-label="Period">
-            <Tabs.Link
-              href={href({ period: isYear(period) ? toggled : period })}
-              active={!isYear(period)}
+    <Page title="Applesauce">
+      <Filtered
+        by={
+          <>
+            <Tabs aria-label="Period">
+              <Tabs.Link
+                href={href({ period: isYear(period) ? toggled : period })}
+                active={!isYear(period)}
+              >
+                Month
+              </Tabs.Link>
+              <Tabs.Link
+                href={href({ period: isYear(period) ? period : toggled })}
+                active={isYear(period)}
+              >
+                Year
+              </Tabs.Link>
+            </Tabs>
+            <PeriodNavigation
+              previousHref={href({ period: shiftPeriod(period, -1) })}
+              nextHref={href({ period: shiftPeriod(period, 1) })}
+              previousLabel={`Previous ${unit}`}
+              nextLabel={`Next ${unit}`}
             >
-              Month
-            </Tabs.Link>
-            <Tabs.Link
-              href={href({ period: isYear(period) ? period : toggled })}
-              active={isYear(period)}
-            >
-              Year
-            </Tabs.Link>
-          </Tabs>
-          <PeriodNavigation
-            previousHref={href({ period: shiftPeriod(period, -1) })}
-            nextHref={href({ period: shiftPeriod(period, 1) })}
-            previousLabel={`Previous ${unit}`}
-            nextLabel={`Next ${unit}`}
+              {formatPeriod(period)}
+            </PeriodNavigation>
+          </>
+        }
+      >
+        <StatList>
+          <Stat
+            label="Billable"
+            value={formatShare(total.billableHours, total.billableBaseHours)}
+            note={`${formatShare(previousTotal.billableHours, previousTotal.billableBaseHours) || "Nothing"} in ${previous}`}
           >
-            {formatPeriod(period)}
-          </PeriodNavigation>
-        </>
-      }
-    >
-      <StatList>
-        <Stat
-          label="Billable"
-          value={formatShare(total.billableHours, total.billableBaseHours)}
-          note={`${formatShare(previousTotal.billableHours, previousTotal.billableBaseHours) || "Nothing"} in ${previous}`}
-        >
-          <ProgressBar
-            max={total.billableBaseHours}
-            segments={[
-              { value: total.billableHours, palette: "blue" },
-              {
-                value: total.billableBaseHours - total.billableHours,
-                palette: "blue",
-                shade: "soft",
-              },
-            ]}
-          />
-        </Stat>
-        <Stat
-          label="Utilization"
-          value={formatShare(total.hours, total.capacityHours)}
-          note={`${formatShare(previousTotal.hours, previousTotal.capacityHours) || "Nothing"} in ${previous}`}
-        >
-          <ProgressBar
-            max={total.capacityHours}
-            segments={[{ value: total.hours, palette: "purple" }]}
-          />
-        </Stat>
-        <Stat
-          label="Consultants"
-          value={String(total.consultants)}
-          note={`${previousTotal.consultants} in ${previous}`}
-        />
-      </StatList>
-      {isYear(period) && (
-        <ColorMode palette="blue" class="d-block b-all bc-subtle br-l p-m">
-          <BarChart
-            aria-label="Billable per month"
-            max={100}
-            track
-            // Every month of the year, so months to come show as empty columns.
-            points={monthsOf(period, `${period}-12`).map((month) => ({
-              label: month,
-              value: billableByMonth.get(month) ?? 0,
-            }))}
-          />
-        </ColorMode>
-      )}
-      <div class="b-all bc-subtle br-l p-m">
-        {total.hours === 0 ? (
-          <EmptyState emoji="🍎" title="No hours logged">
-            No time was logged in {formatPeriod(period)}.
-          </EmptyState>
-        ) : (
-          <DataGrid
-            columns={[
-              { label: "Office" },
-              { label: "Billable", kind: "number" },
-              { label: "Utilization", kind: "number" },
-              { label: "Consultants", kind: "number" },
-              { label: "Billable amount", kind: "number" },
-              { label: "Average rate", kind: "number" },
-              { label: "Per consultant", kind: "number" },
-            ]}
-          >
-            {offices
-              .filter(({ totals }) => totals.hours > 0)
-              .map(({ office, totals }) => (
-                <DataGrid.Row>
-                  <DataGrid.Title>{office.name}</DataGrid.Title>
-                  {formatShare(totals.billableHours, totals.billableBaseHours)}
-                  {formatShare(totals.hours, totals.capacityHours)}
-                  {totals.consultants}
-                  {formatAmounts(totals.amounts, office.currency)}
-                  {formatAmounts(averageRates(totals), office.currency)}
-                  {formatAmounts(amountPerConsultant(totals), office.currency)}
-                </DataGrid.Row>
-              ))}
-            <DataGrid.Footer>
-              {[
-                "Total",
-                formatShare(total.billableHours, total.billableBaseHours),
-                formatShare(total.hours, total.capacityHours),
-                total.consultants,
-                "",
-                "",
-                "",
+            <ProgressBar
+              max={total.billableBaseHours}
+              segments={[
+                { value: total.billableHours, palette: "blue" },
+                {
+                  value: total.billableBaseHours - total.billableHours,
+                  palette: "blue",
+                  shade: "soft",
+                },
               ]}
-            </DataGrid.Footer>
-          </DataGrid>
+            />
+          </Stat>
+          <Stat
+            label="Utilization"
+            value={formatShare(total.hours, total.capacityHours)}
+            note={`${formatShare(previousTotal.hours, previousTotal.capacityHours) || "Nothing"} in ${previous}`}
+          >
+            <ProgressBar
+              max={total.capacityHours}
+              segments={[{ value: total.hours, palette: "purple" }]}
+            />
+          </Stat>
+          <Stat
+            label="Consultants"
+            value={String(total.consultants)}
+            note={`${previousTotal.consultants} in ${previous}`}
+          />
+        </StatList>
+        {isYear(period) && (
+          <ColorMode palette="blue" class="d-block b-all bc-subtle br-l p-m">
+            <BarChart
+              aria-label="Billable per month"
+              max={100}
+              track
+              // Every month of the year, so months to come show as empty columns.
+              points={monthsOf(period, `${period}-12`).map((month) => ({
+                label: month,
+                value: billableByMonth.get(month) ?? 0,
+              }))}
+            />
+          </ColorMode>
         )}
-      </div>
+        <div class="b-all bc-subtle br-l p-m">
+          {total.hours === 0 ? (
+            <EmptyState emoji="🍎" title="No hours logged">
+              No time was logged in {formatPeriod(period)}.
+            </EmptyState>
+          ) : (
+            <DataGrid
+              columns={[
+                { label: "Office" },
+                { label: "Billable", kind: "number" },
+                { label: "Utilization", kind: "number" },
+                { label: "Consultants", kind: "number" },
+                { label: "Billable amount", kind: "number" },
+                { label: "Average rate", kind: "number" },
+                { label: "Per consultant", kind: "number" },
+              ]}
+            >
+              {offices
+                .filter(({ totals }) => totals.hours > 0)
+                .map(({ office, totals }) => (
+                  <DataGrid.Row>
+                    <DataGrid.Title>{office.name}</DataGrid.Title>
+                    {formatShare(totals.billableHours, totals.billableBaseHours)}
+                    {formatShare(totals.hours, totals.capacityHours)}
+                    {totals.consultants}
+                    {formatAmounts(totals.amounts, office.currency)}
+                    {formatAmounts(averageRates(totals), office.currency)}
+                    {formatAmounts(amountPerConsultant(totals), office.currency)}
+                  </DataGrid.Row>
+                ))}
+              <DataGrid.Footer>
+                {[
+                  "Total",
+                  formatShare(total.billableHours, total.billableBaseHours),
+                  formatShare(total.hours, total.capacityHours),
+                  total.consultants,
+                  "",
+                  "",
+                  "",
+                ]}
+              </DataGrid.Footer>
+            </DataGrid>
+          )}
+        </div>
+      </Filtered>
     </Page>
   );
 }

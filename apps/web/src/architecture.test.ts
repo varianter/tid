@@ -114,3 +114,39 @@ test("the list of impure files only shrinks", () => {
   const nowPure = impureFiles.filter((file) => !impureImports.some((i) => i.file === file));
   expect(nowPure).toEqual([]);
 });
+
+const filesContaining = (pattern: RegExp) =>
+  sourceFiles.filter((file) => pattern.test(readFileSync(join(import.meta.dir, file), "utf8")));
+
+const isDevTooling = (file: string) => file.startsWith("dev/");
+
+// A form page is what an action opens, so `formAction` frames it: a page of its own couldn't
+// tell the browser, or an overlay later, that it's a form.
+test("forms leave their page to formAction", () => {
+  expect(filesContaining(/<Page\b/).filter((file) => file.endsWith(".form.tsx"))).toEqual([]);
+});
+
+test("only formAction renders a form page", () => {
+  const stray = filesContaining(/import\s*\{[^}]*\bFormPage\b[^}]*\}\s*from\s*"@tid\/ui"/).filter(
+    (file) => file !== "form/formAction.tsx",
+  );
+  expect(stray).toEqual([]);
+});
+
+// ponytail: the timesheet's cell is a form outside a `.form.tsx` until logHours splits it out.
+const postingFiles = ["timesheet/timesheetCell.tsx"];
+
+test("only forms post", () => {
+  const stray = filesContaining(/method="post"/).filter(
+    (file) => !file.endsWith(".form.tsx") && !isDevTooling(file) && !postingFiles.includes(file),
+  );
+  expect(stray).toEqual([]);
+});
+
+// Adding a timesheet row keeps every `add` already in the query, which a filter would replace.
+const queryFormFiles = ["query/filter.tsx", "timesheet/timesheetGrid.tsx"];
+
+test("every GET form is a FilterForm", () => {
+  const stray = filesContaining(/method="get"/).filter((file) => !queryFormFiles.includes(file));
+  expect(stray).toEqual([]);
+});

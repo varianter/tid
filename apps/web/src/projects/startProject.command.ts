@@ -4,7 +4,13 @@ import { database } from "../database";
 import { formAction } from "../form/formAction";
 import type { User } from "../login/user";
 import { listOrganizations } from "../organizations/organizationSelect";
-import { ProjectFormPage, parseBilling, projectColumns, startProjectForm } from "./project.form";
+import {
+  ProjectFields,
+  parseBilling,
+  projectColumns,
+  projectFrame,
+  startProjectForm,
+} from "./project.form";
 import { suggestProjectCode } from "./projectCode";
 import { listProjectCurrencies } from "./projectCurrency";
 
@@ -81,5 +87,6 @@ export const startProject = formAction({
       ? { fieldErrors: { code: ["Another project uses this code"] } }
       : { fieldErrors: { name: ["The client already has a project with this name"] } };
   },
-  view: ProjectFormPage,
+  frame: projectFrame,
+  view: ProjectFields,
 });

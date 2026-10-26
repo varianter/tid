@@ -4,8 +4,9 @@ import type { Context } from "hono";
 import { database } from "../database";
 import { formAction } from "../form/formAction";
 import { employeeCountry } from "./employeeEmail";
+import { NotAnEmployeePage } from "./notAnEmployeePage";
 import { readProxyIdentity } from "./proxyLogin.middleware";
-import { NotAnEmployeePage, SignUpPage, type SignUpProps, signUpForm } from "./signUp.form";
+import { SignUpFields, type SignUpProps, signUpForm, signUpFrame } from "./signUp.form";
 import { findUserByEmail, findUserByIdentity, identityProvider } from "./userIdentity";
 
 type Identity = { subject: string; email: string; name?: string };
@@ -69,5 +70,6 @@ export const signUp = (
       });
       return { redirect: "/" };
     },
-    view: SignUpPage,
+    frame: signUpFrame,
+    view: SignUpFields,
   });

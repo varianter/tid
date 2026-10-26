@@ -1,8 +1,9 @@
 import { expect, test } from "bun:test";
 import { Hono } from "hono";
 import { z } from "zod";
+import { Filtered, FilterForm } from "./filter";
 import { idParam, pageUrl } from "./pageUrl";
-import { FilterForm, queryPage } from "./queryPage";
+import { queryPage } from "./queryPage";
 
 const shelfUrl = pageUrl(
   "/shelf",
@@ -20,9 +21,13 @@ const app = new Hono().get(
     view: ({ count, href }) => (
       <main>
         <a href={href({ color: "blue" })}>{count} blue</a>
-        <FilterForm field="size">
-          <select name="size" />
-        </FilterForm>
+        <Filtered
+          by={
+            <FilterForm field="size">
+              <select name="size" />
+            </FilterForm>
+          }
+        />
       </main>
     ),
   }),

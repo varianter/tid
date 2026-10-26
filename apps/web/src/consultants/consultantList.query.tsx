@@ -7,6 +7,7 @@ import type { Context } from "hono";
 import { database } from "../database";
 import type { UserEnv } from "../login/user";
 import { type CompanyFilter, CompanySelect, resolveCompany } from "../organizations/companyFilter";
+import { Filtered } from "../query/filter";
 import { consultantPath } from "./consultantsUrl";
 import { loadCurrentBillableProjects } from "./currentBillableProjects";
 
@@ -65,31 +66,33 @@ function ConsultantListPage({
   companies,
 }: { consultants: ConsultantRow[] } & CompanyFilter) {
   return (
-    <Page title="Consultants" actions={<CompanySelect selected={selected} companies={companies} />}>
-      {consultants.length === 0 ? (
-        <EmptyState emoji="👥" title="No consultants yet" />
-      ) : (
-        <DataGrid columns={[{ label: "Name" }, { label: "Billable projects" }]}>
-          {consultants.map((consultant) => (
-            <DataGrid.Row href={consultantPath(consultant.id)}>
-              <DataGrid.Title
-                secondary={[
-                  consultant.email,
-                  consultant.endsOn && `Left Variant ${formatDate(consultant.endsOn)}`,
-                ]
-                  .filter(Boolean)
-                  .join(" · ")}
-              >
-                <span class="stack-h gap-xs items-center">
-                  <span class="fw-medium">{consultant.name}</span>
-                  {consultant.isManager && <Badge>Manager</Badge>}
-                </span>
-              </DataGrid.Title>
-              {consultant.projectNames.join(", ")}
-            </DataGrid.Row>
-          ))}
-        </DataGrid>
-      )}
+    <Page title="Consultants">
+      <Filtered by={<CompanySelect selected={selected} companies={companies} />}>
+        {consultants.length === 0 ? (
+          <EmptyState emoji="👥" title="No consultants yet" />
+        ) : (
+          <DataGrid columns={[{ label: "Name" }, { label: "Billable projects" }]}>
+            {consultants.map((consultant) => (
+              <DataGrid.Row href={consultantPath(consultant.id)}>
+                <DataGrid.Title
+                  secondary={[
+                    consultant.email,
+                    consultant.endsOn && `Left Variant ${formatDate(consultant.endsOn)}`,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                >
+                  <span class="stack-h gap-xs items-center">
+                    <span class="fw-medium">{consultant.name}</span>
+                    {consultant.isManager && <Badge>Manager</Badge>}
+                  </span>
+                </DataGrid.Title>
+                {consultant.projectNames.join(", ")}
+              </DataGrid.Row>
+            ))}
+          </DataGrid>
+        )}
+      </Filtered>
     </Page>
   );
 }
