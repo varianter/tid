@@ -1,42 +1,56 @@
-import { Button, Icon, Input, Label, Popover } from "@tid/ui";
-import type { AssignmentIds } from "./assignment";
+import { isIsoDate } from "@tid/calendar/isoDate";
+import { Button, FormField, Page } from "@tid/ui";
+import { z } from "zod";
+import type { FormProps } from "../form/formAction";
+import type { ProjectConsultantIds } from "./projectConsultant";
 
-export function EndAssignmentForm({
+// Removing someone without logged time takes no date.
+export const endAssignmentForm = z.object({
+  endsOn: z.string().refine(isIsoDate, "Choose a date").optional(),
+});
+
+type EndAssignmentPageProps = {
+  ids: ProjectConsultantIds;
+  name: string;
+  projectName: string;
+  hasLoggedTime: boolean;
+  today: string;
+} & FormProps;
+
+export function EndAssignmentPage({
   ids,
   name,
+  projectName,
+  hasLoggedTime,
   today,
-}: {
-  ids: AssignmentIds;
-  name: string;
-  today: string;
-}) {
-  const popoverId = `end-assignment-${ids.userId}`;
-  const dateId = `${popoverId}-date`;
+  values,
+  fieldErrors,
+}: EndAssignmentPageProps) {
   return (
-    <>
-      <Button
-        type="button"
-        popovertarget={popoverId}
-        class="aspect-square p-0"
-        data-variant="plain"
-        data-size="small"
-        aria-label={`End ${name}'s assignment`}
-      >
-        <Icon name="close" />
-      </Button>
-      <Popover id={popoverId} data-type="tooltip" data-position="left" class="px-2xs py-2xs">
-        <form
-          method="post"
-          action={`/projects/${ids.projectId}/assignments/${ids.userId}/end`}
-          class="stack-v gap-s b-all bc-subtle p-m surface-base br-m shadow-mid"
-        >
-          <div class="stack-v gap-3xs">
-            <Label for={dateId}>Last day on the project</Label>
-            <Input type="date" id={dateId} name="endsOn" value={today} required />
-          </div>
-          <Button type="submit">End assignment</Button>
-        </form>
-      </Popover>
-    </>
+    <Page
+      title={`End ${name}'s assignment`}
+      back={{ href: `/projects/${ids.projectId}`, label: `Back to ${projectName}` }}
+    >
+      <form method="post" class="stack-v items-start gap-m">
+        {hasLoggedTime ? (
+          <>
+            <FormField
+              name="endsOn"
+              label="Last day on the project"
+              type="date"
+              value={values?.endsOn ?? today}
+              errors={fieldErrors?.endsOn}
+              required
+            />
+            <Button type="submit">End assignment</Button>
+          </>
+        ) : (
+          <>
+            <p>{name} has no hours logged and can be safely removed from the project.</p>
+            <Button type="submit">Remove from project</Button>
+          </>
+        )}
+      </form>
+    </Page>
   );
 }

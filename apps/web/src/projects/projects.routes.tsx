@@ -18,4 +18,4 @@ export const projects = new Hono<UserEnv>()
   .get("/:projectId/report", projectReport)
   .get("/:projectId/report/print", projectReportPrint)
   .on(["GET", "POST"], "/:id/edit", projectManagersOnly, editProject)
-  .post("/:id/tasks", projectManagersOnly, addTask);
+  .on(["GET", "POST"], "/:id/tasks/new", projectManagersOnly, addTask);

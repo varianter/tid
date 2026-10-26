@@ -4,9 +4,9 @@ import { clients, projectOrganizations, projects, users } from "@tid/db/schema";
 import { and, eq } from "drizzle-orm";
 import { database } from "../database";
 import { onlyRow, organizationIdBySlug } from "../testing/rows";
-import { assignToProject } from "./assignConsultant.command";
-import { assignmentState } from "./assignment";
-import { unassignFromProject } from "./removeConsultant.command";
+import { assignToProject } from "./assignConsultants.command";
+import { unassignFromProject } from "./endAssignment.command";
+import { assignmentState } from "./projectConsultant";
 
 let projectId: number;
 let ownerId: number;
@@ -53,7 +53,7 @@ beforeAll(async () => {
 });
 
 test("assigning someone from outside the project brings their organization in", async () => {
-  expect(await assignToProject({ projectId, userId: guestId })).toBe(true);
+  await assignToProject(projectId, [{ userId: guestId, orgId: guestOrgId }]);
   expect(await participation(guestOrgId)).toHaveLength(1);
 });
 
@@ -63,13 +63,13 @@ test("unassigning the last one from an organization takes it out of the project"
 });
 
 test("the contract owner stays after its last consultant leaves", async () => {
-  await assignToProject({ projectId, userId: ownerId });
+  await assignToProject(projectId, [{ userId: ownerId, orgId: ownerOrgId }]);
   await unassignFromProject({ projectId, userId: ownerId });
   expect(await participation(ownerOrgId)).toHaveLength(1);
 });
 
 test("an organization open to members stays after its last consultant leaves", async () => {
-  await assignToProject({ projectId, userId: guestId });
+  await assignToProject(projectId, [{ userId: guestId, orgId: guestOrgId }]);
   await database
     .update(projectOrganizations)
     .set({ openToMembers: true })
@@ -81,11 +81,6 @@ test("an organization open to members stays after its last consultant leaves", a
     );
   await unassignFromProject({ projectId, userId: guestId });
   expect(await participation(guestOrgId)).toHaveLength(1);
-});
-
-test("assigning a user or project that doesn't exist fails", async () => {
-  expect(await assignToProject({ projectId, userId: 999999 })).toBe(false);
-  expect(await assignToProject({ projectId: 999999, userId: guestId })).toBe(false);
 });
 
 test("an assignment counts until its last day, and leaving the company overrides it", () => {

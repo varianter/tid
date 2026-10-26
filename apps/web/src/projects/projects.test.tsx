@@ -13,9 +13,9 @@ import {
 } from "@tid/db/schema";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
-import { assignments } from "../assignments/assignments.routes";
 import { database } from "../database";
 import type { UserEnv } from "../login/user";
+import { projectConsultants } from "../projectConsultants/projectConsultants.routes";
 import { loadLoggedInUser, type UserRow } from "../testing/loggedInUser";
 import { organizationIdBySlug } from "../testing/rows";
 import { projects } from "./projects.routes";
@@ -28,14 +28,19 @@ let oslo: number;
 let bergen: number;
 let clientId: number;
 
-function requestAs(user: UserRow, path: string, form?: Record<string, string>) {
+// Pairs repeat a field, like several ticked checkboxes.
+function requestAs(
+  user: UserRow,
+  path: string,
+  form?: Record<string, string> | [string, string][],
+) {
   const app = new Hono<UserEnv>()
     .use(async (c, next) => {
       c.set("user", await loadLoggedInUser(user));
       await next();
     })
     .route("/projects", projects)
-    .route("/projects/:projectId/assignments", assignments);
+    .route("/projects/:projectId/consultants", projectConsultants);
   return app.request(
     path,
     form ? { method: "POST", body: new URLSearchParams(form) } : { method: "GET" },
@@ -97,7 +102,7 @@ test("the contract owner moves to the chosen organization on edit", async () => 
   expect(await participants(projectId)).toEqual([{ orgId: oslo, isContractOwner: true }]);
 
   expect((await requestAs(member, `/projects/${projectId}/edit`, fields)).status).toBe(403);
-  const addTask = await requestAs(member, `/projects/${projectId}/tasks`, { name: "Design" });
+  const addTask = await requestAs(member, `/projects/${projectId}/tasks/new`, { name: "Design" });
   expect(addTask.status).toBe(403);
   await requestAs(manager, `/projects/${projectId}/edit`, {
     ...fields,
@@ -167,12 +172,14 @@ test("only managers of a project's organizations change it, but any manager can 
   });
   const projectId = Number(started.headers.get("location")?.split("/").at(-1));
   const addTask = (user: UserRow) =>
-    requestAs(user, `/projects/${projectId}/tasks`, { name: `Task ${user.id}` });
+    requestAs(user, `/projects/${projectId}/tasks/new`, { name: `Task ${user.id}` });
   const assign = (user: UserRow, consultant: UserRow) =>
-    requestAs(user, `/projects/${projectId}/assignments`, { userId: String(consultant.id) });
+    requestAs(user, `/projects/${projectId}/consultants/new`, {
+      userId: String(consultant.id),
+    });
 
   expect((await addTask(bergenManager)).status).toBe(403);
-  expect((await assign(bergenManager, member)).status).toBe(403);
+  expect((await assign(bergenManager, member)).status).toBe(422);
   expect((await assign(bergenManager, bergenMember)).status).toBe(303);
   // Bergen takes part now, so its managers share the project.
   expect((await addTask(bergenManager)).status).toBe(303);
@@ -189,7 +196,11 @@ test("a consultant with logged time is rolled off by ending the assignment, whic
     firstTask: "Consulting",
   });
   const projectId = Number(started.headers.get("location")?.split("/").at(-1));
-  const assignmentPath = `/projects/${projectId}/assignments/${member.id}`;
+  const endPath = `/projects/${projectId}/consultants/${member.id}/end`;
+  const assign = () =>
+    requestAs(manager, `/projects/${projectId}/consultants/new`, {
+      userId: String(member.id),
+    });
   const assignmentEnd = async () =>
     (
       await database
@@ -197,7 +208,7 @@ test("a consultant with logged time is rolled off by ending the assignment, whic
         .from(projectAssignments)
         .where(eq(projectAssignments.projectId, projectId))
     ).map((row) => row.endsOn);
-  await requestAs(manager, `/projects/${projectId}/assignments`, { userId: String(member.id) });
+  await assign();
   const [task] = await database.insert(tasks).values({ projectId, name: "Build" }).returning();
   if (!task) throw new Error("Expected a task");
   await database
@@ -207,17 +218,65 @@ test("a consultant with logged time is rolled off by ending the assignment, whic
     .insert(assignmentRates)
     .values({ projectId, userId: member.id, validFrom: "2026-01-01", rate: 100000 });
 
-  expect((await requestAs(manager, `${assignmentPath}/delete`, {})).status).toBe(409);
-  expect((await requestAs(manager, `${assignmentPath}/end`, { endsOn: "2026-02-01" })).status).toBe(
-    303,
-  );
+  expect((await requestAs(manager, endPath, { endsOn: "2026-02-01" })).status).toBe(303);
   expect(await assignmentEnd()).toEqual(["2026-02-01"]);
 
-  await requestAs(manager, `/projects/${projectId}/assignments`, { userId: String(member.id) });
+  await assign();
   expect(await assignmentEnd()).toEqual([null]);
   expect(
     await database.select().from(assignmentRates).where(eq(assignmentRates.projectId, projectId)),
   ).toHaveLength(1);
+});
+
+const startNonBillable = async (code: string) => {
+  const started = await requestAs(manager, "/projects/new/non_billable", {
+    name: `Internal ${code}`,
+    code,
+    billing: "non_billable",
+    contractOwnerId: String(oslo),
+    clientId: String(clientId),
+    firstTask: "Consulting",
+  });
+  return Number(started.headers.get("location")?.split("/").at(-1));
+};
+
+const assignedIds = async (projectId: number) =>
+  (
+    await database
+      .select({ userId: projectAssignments.userId })
+      .from(projectAssignments)
+      .where(eq(projectAssignments.projectId, projectId))
+  )
+    .map((row) => row.userId)
+    .toSorted((a, b) => a - b);
+
+test("consultants are assigned together, and one without logged time is removed by ending the assignment", async () => {
+  const projectId = await startNonBillable("ACME-10");
+  await requestAs(manager, `/projects/${projectId}/consultants/new`, [
+    ["userId", String(member.id)],
+    ["userId", String(bergenMember.id)],
+  ]);
+  expect(await assignedIds(projectId)).toEqual(
+    [member.id, bergenMember.id].toSorted((a, b) => a - b),
+  );
+
+  const ended = await requestAs(manager, `/projects/${projectId}/consultants/${member.id}/end`, {});
+  expect(ended.status).toBe(303);
+  expect(await assignedIds(projectId)).toEqual([bergenMember.id]);
+});
+
+test("consultants who have left can't be assigned", async () => {
+  const projectId = await startNonBillable("ACME-11");
+  const [leaver] = await database
+    .insert(users)
+    .values({ name: "Liv", email: "liv@variant.no", orgId: oslo, endsOn: "2026-01-31" })
+    .returning();
+  if (!leaver) throw new Error("Expected a user");
+  const assign = await requestAs(manager, `/projects/${projectId}/consultants/new`, {
+    userId: String(leaver.id),
+  });
+  expect(assign.status).toBe(422);
+  expect(await assignedIds(projectId)).toEqual([]);
 });
 
 test("a project without logged time changes billing through that billing's form", async () => {

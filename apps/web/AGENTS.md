@@ -57,4 +57,4 @@ Plumbing that every feature builds on, like `formAction` and the database client
 
 Generic code stays generic: `packages/ui/AGENTS.md` says what counts as domain knowledge.
 
-A feature with more than about ten slices holds more than one subject. Split it by subject, the way `assignments/` is split from `projects/`.
+A feature with more than about ten slices holds more than one subject. Split it by subject, the way `projectConsultants/` is split from `projects/`.

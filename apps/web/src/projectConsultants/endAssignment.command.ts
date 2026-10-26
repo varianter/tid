@@ -1,24 +1,71 @@
-import { isIsoDate } from "@tid/calendar/isoDate";
-import { projectAssignments } from "@tid/db/schema";
-import type { Context } from "hono";
+import { todayInOslo } from "@tid/calendar/osloClock";
+import {
+  assignmentRates,
+  projectAssignments,
+  projects,
+  tasks,
+  timeEntries,
+  users,
+} from "@tid/db/schema";
+import { and, eq } from "drizzle-orm";
 import { database } from "../database";
-import { type AssignmentIds, assignment, idParams } from "./assignment";
+import { formAction } from "../form/formAction";
+import { removeUnneededParticipation } from "../projects/projectParticipation";
+import { EndAssignmentPage, endAssignmentForm } from "./endAssignment.form";
+import { assignment, idParams, type ProjectConsultantIds, ratesOf } from "./projectConsultant";
 
-export const endAssignment = async (c: Context) => {
-  const ids = idParams(c.req.param());
-  if (!ids) return c.notFound();
-  const { endsOn } = await c.req.parseBody();
-  if (typeof endsOn !== "string" || !isIsoDate(endsOn)) return c.text("Bad request", 400);
-  if (!(await endAssignmentOn(ids, endsOn))) return c.notFound();
-  return c.redirect(`/projects/${ids.projectId}`, 303);
-};
+// Without logged time there's nothing to keep, so ending removes the consultant instead.
+export const endAssignment = formAction({
+  schema: endAssignmentForm,
+  loader: async (c) => {
+    const ids = idParams(c.req.param());
+    if (!ids) return c.notFound();
+    const [consultant] = await database
+      .select({ name: users.name, projectName: projects.name })
+      .from(projectAssignments)
+      .innerJoin(users, eq(users.id, projectAssignments.userId))
+      .innerJoin(projects, eq(projects.id, projectAssignments.projectId))
+      .where(assignment(ids));
+    if (!consultant) return c.notFound();
+    return { ids, ...consultant, hasLoggedTime: await hasLoggedTime(ids), today: todayInOslo() };
+  },
+  onSubmit: async (_c, { endsOn }, { ids, hasLoggedTime }) => {
+    if (!hasLoggedTime) {
+      await unassignFromProject(ids);
+    } else if (endsOn) {
+      // Keeps the assignment and its rates, so logged time can still be repriced.
+      await database.update(projectAssignments).set({ endsOn }).where(assignment(ids));
+    } else {
+      return { fieldErrors: { endsOn: ["Choose a date"] } };
+    }
+    return { redirect: `/projects/${ids.projectId}` };
+  },
+  view: EndAssignmentPage,
+});
 
-/** Keeps the assignment and its rates, so logged time can still be repriced. Returns false when there's no assignment. */
-export async function endAssignmentOn(ids: AssignmentIds, endsOn: string) {
-  const ended = await database
-    .update(projectAssignments)
-    .set({ endsOn })
-    .where(assignment(ids))
-    .returning({ userId: projectAssignments.userId });
-  return ended.length > 0;
+async function hasLoggedTime({ projectId, userId }: ProjectConsultantIds) {
+  const [entry] = await database
+    .select({ id: timeEntries.id })
+    .from(timeEntries)
+    .innerJoin(tasks, eq(tasks.id, timeEntries.taskId))
+    .where(and(eq(tasks.projectId, projectId), eq(timeEntries.userId, userId)))
+    .limit(1);
+  return entry !== undefined;
+}
+
+/**
+ * Undoes a mistaken assignment: removes it with its rates, and the user's organization from the
+ * project once nothing else keeps it there.
+ */
+export async function unassignFromProject(ids: ProjectConsultantIds) {
+  await database.transaction(async (transaction) => {
+    await transaction.delete(assignmentRates).where(ratesOf(ids));
+    const removed = await transaction
+      .delete(projectAssignments)
+      .where(assignment(ids))
+      .returning({ orgId: projectAssignments.orgId });
+    for (const { orgId } of removed) {
+      await removeUnneededParticipation(transaction, { projectId: ids.projectId, orgId });
+    }
+  });
 }

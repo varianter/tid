@@ -2,20 +2,20 @@ import { Hono } from "hono";
 import type { UserEnv } from "../login/user";
 import { managersOnly, projectManagersOnly } from "../managers/manager";
 import { addRate } from "./addRate.command";
-import { assignConsultant } from "./assignConsultant.command";
+import { assignConsultants } from "./assignConsultants.command";
 import { deleteRate } from "./deleteRate.command";
 import { endAssignment } from "./endAssignment.command";
-import { removeConsultant } from "./removeConsultant.command";
+import { projectRates } from "./projectRates.query";
 import { repriceEntries } from "./repriceEntries.command";
 
-// Mounted under /projects/:projectId/assignments.
+// Mounted under /projects/:projectId/consultants.
 // Any manager may assign their own organization's consultants, which brings it into the project;
-// assignConsultant checks that. Everything else is for the project's managers.
-export const assignments = new Hono<UserEnv>()
-  .post("/", managersOnly, assignConsultant)
+// assignConsultants checks that. Everything else is for the project's managers.
+export const projectConsultants = new Hono<UserEnv>()
+  .on(["GET", "POST"], "/new", managersOnly, assignConsultants)
+  .get("/rates", projectManagersOnly, projectRates)
   .use("/:userId/*", projectManagersOnly)
-  .post("/:userId/end", endAssignment)
-  .post("/:userId/delete", removeConsultant)
-  .on(["GET", "POST"], "/:userId/rates", addRate)
+  .on(["GET", "POST"], "/:userId/end", endAssignment)
+  .on(["GET", "POST"], "/:userId/rates/new", addRate)
   .on(["GET", "POST"], "/:userId/rates/reprice", repriceEntries)
   .post("/:userId/rates/:validFrom/delete", deleteRate);

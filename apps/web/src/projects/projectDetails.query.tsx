@@ -14,18 +14,20 @@ import {
 } from "@tid/db/schema";
 import { formatTotalHours } from "@tid/elements/hours";
 import { Badge, Button, DataGrid, Detail, Icon, Page, Section, Stat, StatList } from "@tid/ui";
-import { and, desc, eq, lte, notExists, type SQL, sql } from "drizzle-orm";
+import { and, desc, eq, lte, type SQL, sql } from "drizzle-orm";
 import type { Context } from "hono";
 import { formatAmount } from "../amount/amount";
-import { AssignConsultantForm, ReassignConsultantForm } from "../assignments/assignConsultant.form";
-import { type AssignmentState, assignmentState, stateOrder } from "../assignments/assignment";
-import { EndAssignmentForm } from "../assignments/endAssignment.form";
-import { RemoveConsultantForm } from "../assignments/removeConsultant.form";
 import { consultantPath } from "../consultants/consultantsUrl";
 import { database } from "../database";
 import type { UserEnv } from "../login/user";
 import { managesProject } from "../managers/manager";
-import { AddTaskForm } from "./addTask.form";
+import {
+  type AssignmentState,
+  assignmentState,
+  projectConsultantsPath,
+  projectRatesPath,
+  stateOrder,
+} from "../projectConsultants/projectConsultant";
 import { billingLabels } from "./billing";
 import { type ProjectSummary, projectSummary } from "./projectSummary";
 import { projectReportUrl } from "./projectsUrl";
@@ -117,25 +119,6 @@ export const projectDetails = async (c: Context<UserEnv>) => {
 
   const user = c.get("user");
   const canManageProject = await managesProject(user, id);
-  // Other managers may only bring in their own organization's consultants.
-  const assignablePeople = await database
-    .select({ id: users.id, name: users.name, orgName: organizations.name })
-    .from(users)
-    .innerJoin(organizations, eq(organizations.id, users.orgId))
-    .where(
-      and(
-        canManageProject ? undefined : eq(users.orgId, user.orgId),
-        notExists(
-          database
-            .select()
-            .from(projectAssignments)
-            .where(
-              and(eq(projectAssignments.projectId, id), eq(projectAssignments.userId, users.id)),
-            ),
-        ),
-      ),
-    )
-    .orderBy(organizations.name, users.name);
 
   return c.render(
     <ProjectDetailsPage
@@ -145,8 +128,6 @@ export const projectDetails = async (c: Context<UserEnv>) => {
       assignedPeople={assignedPeople
         .map((person) => ({ ...person, state: assignmentState(person, today) }))
         .toSorted((a, b) => stateOrder.indexOf(a.state) - stateOrder.indexOf(b.state))}
-      today={today}
-      assignablePeople={assignablePeople}
       participations={participations}
       canManageProject={canManageProject}
       canAssign={user.isManager}
@@ -193,9 +174,6 @@ type ProjectDetailsPageProps = {
   tasks: TaskTotal[];
   /** On the project first, then those who rolled off, then those who left the company. */
   assignedPeople: Consultant[];
-  today: string;
-  /** Everyone not assigned yet, sorted by organization so the picker can group them. */
-  assignablePeople: (Person & { orgName: string })[];
   /** The contract owner first, so it reads as the lead organization. */
   participations: Participation[];
   /** Edit the project, its tasks, consultants and rates. */
@@ -211,8 +189,6 @@ function ProjectDetailsPage({
   hours,
   tasks,
   assignedPeople,
-  today,
-  assignablePeople,
   participations,
   canManageProject,
   canAssign,
@@ -240,6 +216,11 @@ function ProjectDetailsPage({
             <Icon name="bar_chart" />
             Report
           </Button>
+          {canManageProject && isHourly && (
+            <Button as="a" href={projectRatesPath(project.id)} data-variant="outlined">
+              Rates
+            </Button>
+          )}
           {canManageProject && (
             <Button as="a" href={`/projects/${project.id}/edit`} data-variant="outlined">
               <Icon name="settings" />
@@ -283,9 +264,10 @@ function ProjectDetailsPage({
       <Section
         title="Consultants"
         actions={
-          canAssign &&
-          assignablePeople.length > 0 && (
-            <AssignConsultantForm projectId={project.id} assignablePeople={assignablePeople} />
+          canAssign && (
+            <Button as="a" href={`${projectConsultantsPath(project.id)}/new`}>
+              Assign
+            </Button>
           )
         }
       >
@@ -322,48 +304,36 @@ function ProjectDetailsPage({
                   (person.rate === null || project.currency === null
                     ? "–"
                     : `${formatAmount(person.rate / 100, project.currency, 2)}/h`)}
-                {canManageProject && (
-                  <span class="stack-h justify-end gap-xs">
-                    {isHourly && (
-                      <Button
-                        as="a"
-                        href={`/projects/${project.id}/assignments/${person.id}/rates`}
-                        data-variant="plain"
-                        data-size="small"
-                        aria-label={`${person.name}'s rates`}
-                      >
-                        Rates
-                      </Button>
-                    )}
-                    {person.state === "onProject" && (
-                      <EndAssignmentForm
-                        ids={{ projectId: project.id, userId: person.id }}
-                        name={person.name}
-                        today={today}
-                      />
-                    )}
-                    {person.state === "onProject" && person.total === 0 && (
-                      <RemoveConsultantForm
-                        projectId={project.id}
-                        userId={person.id}
-                        name={person.name}
-                      />
-                    )}
-                    {person.state === "offProject" && (
-                      <ReassignConsultantForm
-                        projectId={project.id}
-                        userId={person.id}
-                        name={person.name}
-                      />
-                    )}
-                  </span>
-                )}
+                {canManageProject &&
+                  (person.state === "onProject" ? (
+                    <Button
+                      as="a"
+                      href={`${projectConsultantsPath(project.id)}/${person.id}/end`}
+                      class="aspect-square p-0"
+                      data-variant="plain"
+                      data-size="small"
+                      aria-label={`End ${person.name}'s assignment`}
+                    >
+                      <Icon name="close" />
+                    </Button>
+                  ) : (
+                    ""
+                  ))}
               </DataGrid.Row>
             ))}
           </DataGrid>
         )}
       </Section>
-      <Section title="Tasks" actions={canManageProject && <AddTaskForm projectId={project.id} />}>
+      <Section
+        title="Tasks"
+        actions={
+          canManageProject && (
+            <Button as="a" href={`/projects/${project.id}/tasks/new`}>
+              Add task
+            </Button>
+          )
+        }
+      >
         {tasks.length === 0 ? (
           <p class="ink-subtle">No tasks yet.</p>
         ) : (

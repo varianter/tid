@@ -4,7 +4,7 @@ import { Badge, Button, DataGrid, Page } from "@tid/ui";
 import { z } from "zod";
 import { formatAmount } from "../amount/amount";
 import type { FormProps } from "../form/formAction";
-import { type Consultant, ratesPath } from "./assignment";
+import { type Consultant, projectRatesPath } from "./projectConsultant";
 import type { NewRate } from "./repricing";
 
 // Confirming takes no fields; what to reprice comes from the query.
@@ -32,7 +32,7 @@ export function RepricePage({ consultant, newRate, entries }: RepricePageProps) 
   return (
     <Page
       title={`New rate for ${consultant.name} from ${formatDate(newRate.validFrom)}`}
-      back={{ href: ratesPath(consultant), label: "Back to billable rates" }}
+      back={{ href: projectRatesPath(consultant.projectId), label: "Back to rates" }}
     >
       <p>
         {money(newRate.rate)} reprices {entries.length} logged{" "}
@@ -70,7 +70,7 @@ export function RepricePage({ consultant, newRate, entries }: RepricePageProps) 
       </DataGrid>
       <form method="post" class="stack-h gap-xs">
         <Button type="submit">Add rate and reprice</Button>
-        <Button as="a" href={ratesPath(consultant)} data-variant="plain">
+        <Button as="a" href={projectRatesPath(consultant.projectId)} data-variant="plain">
           Cancel
         </Button>
       </form>

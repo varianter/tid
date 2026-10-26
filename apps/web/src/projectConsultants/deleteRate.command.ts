@@ -4,7 +4,7 @@ import { assignmentRates } from "@tid/db/schema";
 import { and, eq } from "drizzle-orm";
 import type { Context } from "hono";
 import { database } from "../database";
-import { idParams, ratesOf, ratesPath } from "./assignment";
+import { idParams, projectRatesPath, ratesOf } from "./projectConsultant";
 
 // Only a rate that hasn't started can go. A started one has priced logged time, so it's
 // corrected by adding a rate on the same day instead.
@@ -16,5 +16,5 @@ export const deleteRate = async (c: Context) => {
   await database
     .delete(assignmentRates)
     .where(and(ratesOf(ids), eq(assignmentRates.validFrom, validFrom)));
-  return c.redirect(ratesPath(ids), 303);
+  return c.redirect(projectRatesPath(ids.projectId), 303);
 };

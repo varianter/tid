@@ -1,8 +1,14 @@
 import { formatDate } from "@tid/calendar/dateDisplay";
 import { Button } from "@tid/ui";
-import { type AssignmentIds, ratesPath } from "./assignment";
+import { type ProjectConsultantIds, ratesPath } from "./projectConsultant";
 
-export function DeleteRateForm({ ids, validFrom }: { ids: AssignmentIds; validFrom: string }) {
+export function DeleteRateForm({
+  ids,
+  validFrom,
+}: {
+  ids: ProjectConsultantIds;
+  validFrom: string;
+}) {
   return (
     <form method="post" action={`${ratesPath(ids)}/${validFrom}/delete`}>
       <Button

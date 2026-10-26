@@ -88,8 +88,6 @@ const impureImports = allImports.filter(
 // and a `.data.ts`, `.middleware.ts` or slice.
 const impureFiles = [
   "administration/organizationMember.ts",
-  "assignments/assignment.ts",
-  "assignments/repricing.ts",
   "clients/client.ts",
   "consultants/consultantsUrl.ts",
   "consultants/currentBillableProjects.ts",
@@ -98,6 +96,7 @@ const impureFiles = [
   "organizations/companyFilter.tsx",
   "organizations/organization.ts",
   "organizations/organizationSelect.tsx",
+  "projectConsultants/repricing.ts",
   "projects/projectCurrency.ts",
   "projects/projectParticipation.ts",
   "projects/projectReport.tsx",

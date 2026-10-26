@@ -1,7 +1,8 @@
 import { isIsoDate } from "@tid/calendar/isoDate";
 import { z } from "zod";
 import { formAction } from "../form/formAction";
-import { idParams, loadConsultant, ratesPath } from "./assignment";
+import { idParams, projectRatesPath } from "./projectConsultant";
+import { loadConsultant } from "./projectConsultant.data";
 import { RepricePage, repriceEntriesForm } from "./repriceEntries.form";
 import { addRateAndReprice, entriesToReprice } from "./repricing";
 
@@ -24,7 +25,7 @@ export const repriceEntries = formAction({
   },
   onSubmit: async (_c, _form, { consultant, newRate }) => {
     await addRateAndReprice(consultant, newRate);
-    return { redirect: ratesPath(consultant) };
+    return { redirect: projectRatesPath(consultant.projectId) };
   },
   view: RepricePage,
 });

@@ -1,10 +1,8 @@
 import { todayInOslo } from "@tid/calendar/osloClock";
-import { assignmentRates } from "@tid/db/schema";
-import { desc } from "drizzle-orm";
-import { database } from "../database";
 import { formAction } from "../form/formAction";
-import { addRateForm, RatesPage } from "./addRate.form";
-import { idParams, loadConsultant, ratesOf, ratesPath } from "./assignment";
+import { AddRatePage, addRateForm } from "./addRate.form";
+import { idParams, projectRatesPath, ratesPath } from "./projectConsultant";
+import { loadConsultant } from "./projectConsultant.data";
 import { addRateAndReprice, entriesToReprice } from "./repricing";
 
 export const addRate = formAction({
@@ -14,12 +12,7 @@ export const addRate = formAction({
     if (!ids) return c.notFound();
     const consultant = await loadConsultant(ids);
     if (!consultant) return c.notFound();
-    const rates = await database
-      .select({ validFrom: assignmentRates.validFrom, rate: assignmentRates.rate })
-      .from(assignmentRates)
-      .where(ratesOf(ids))
-      .orderBy(desc(assignmentRates.validFrom));
-    return { consultant, rates, today: todayInOslo() };
+    return { consultant, today: todayInOslo() };
   },
   // A rate that changes logged time is confirmed on its own page first.
   onSubmit: async (_c, form, { consultant }) => {
@@ -29,7 +22,7 @@ export const addRate = formAction({
       return { redirect: `${ratesPath(consultant)}/reprice?${query}` };
     }
     await addRateAndReprice(consultant, newRate);
-    return { redirect: ratesPath(consultant) };
+    return { redirect: projectRatesPath(consultant.projectId) };
   },
-  view: RatesPage,
+  view: AddRatePage,
 });

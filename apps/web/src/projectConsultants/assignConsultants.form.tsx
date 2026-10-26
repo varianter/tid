@@ -1,57 +1,73 @@
-import { Button, Select } from "@tid/ui";
+import { formatDate } from "@tid/calendar/dateDisplay";
+import { Button, Checkbox, DataGrid, FormError, Page } from "@tid/ui";
+import { z } from "zod";
+import type { FormProps } from "../form/formAction";
 
-export type AssignablePerson = { id: number; name: string; orgName: string };
+// One ticked box comes as a string, several as an array, none as nothing.
+export const assignConsultantsForm = z.object({
+  userId: z.preprocess(
+    (value) => (value === undefined ? [] : [value].flat()),
+    z.array(z.coerce.number().int()).min(1, "Choose at least one consultant"),
+  ),
+});
 
-export function AssignConsultantForm({
-  projectId,
-  assignablePeople,
-}: {
-  projectId: number;
-  assignablePeople: AssignablePerson[];
-}) {
-  return (
-    <form
-      method="post"
-      action={`/projects/${projectId}/assignments`}
-      class="stack-h items-center gap-xs"
-    >
-      <Select
-        name="userId"
-        aria-label="Consultant to assign"
-        required
-        options={assignablePeople.map((person) => ({
-          value: person.id,
-          label: person.name,
-          group: person.orgName,
-        }))}
-      >
-        <option value="">Choose a consultant</option>
-      </Select>
-      <Button type="submit">Assign</Button>
-    </form>
-  );
-}
-
-export function ReassignConsultantForm({
-  projectId,
-  userId,
-  name,
-}: {
-  projectId: number;
-  userId: number;
+type AssignablePerson = {
+  id: number;
   name: string;
-}) {
+  orgName: string;
+  /** Set when they were on the project before. */
+  leftProjectOn: string | null;
+};
+
+type AssignConsultantsPageProps = {
+  project: { id: number; name: string };
+  /** Sorted by organization, so they group. */
+  people: AssignablePerson[];
+} & FormProps;
+
+export function AssignConsultantsPage({
+  project,
+  people,
+  fieldErrors,
+}: AssignConsultantsPageProps) {
+  const organizations = Map.groupBy(people, (person) => person.orgName);
   return (
-    <form method="post" action={`/projects/${projectId}/assignments`}>
-      <input type="hidden" name="userId" value={userId} />
-      <Button
-        type="submit"
-        data-variant="plain"
-        data-size="small"
-        aria-label={`Reassign ${name} to the project`}
-      >
-        Reassign
-      </Button>
-    </form>
+    <Page
+      title={`Assign consultants to ${project.name}`}
+      back={{ href: `/projects/${project.id}`, label: `Back to ${project.name}` }}
+    >
+      {people.length === 0 ? (
+        <p class="ink-subtle">Everyone is assigned already.</p>
+      ) : (
+        <form method="post" class="stack-v items-start gap-m">
+          {fieldErrors?.userId && <FormError id="userId-error" errors={fieldErrors.userId} />}
+          <DataGrid columns={[{ kind: "fit" }, { label: "Consultant" }]}>
+            {[...organizations].map(([orgName, orgPeople]) => (
+              <>
+                <DataGrid.Group>{orgName}</DataGrid.Group>
+                {orgPeople.map((person) => (
+                  <DataGrid.Row for={`consultant-${person.id}`}>
+                    <Checkbox
+                      id={`consultant-${person.id}`}
+                      name="userId"
+                      value={String(person.id)}
+                    />
+                    <DataGrid.Title
+                      secondary={
+                        person.leftProjectOn &&
+                        `Left project ${formatDate(person.leftProjectOn, "numeric")}`
+                      }
+                    >
+                      {person.name}
+                    </DataGrid.Title>
+                  </DataGrid.Row>
+                ))}
+              </>
+            ))}
+          </DataGrid>
+          <Button type="submit">Assign</Button>
+        </form>
+      )}
+    </Page>
   );
 }

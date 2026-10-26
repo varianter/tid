@@ -1,14 +1,13 @@
 import { assignmentRates, tasks, timeEntries, users } from "@tid/db/schema";
 import { and, asc, eq, gt, gte, inArray, isNull, lt, ne, or, sql } from "drizzle-orm";
 import { database } from "../database";
-
-type AssignmentIds = { projectId: number; userId: number };
+import type { ProjectConsultantIds } from "./projectConsultant";
 
 export type NewRate = { validFrom: string; rate: number; currency: string };
 
 // A rate prices the entries from its start until the next rate takes over. Entries outside that
 // period keep their price, so history imported from Harvest isn't flattened to today's rates.
-async function periodOf(ids: AssignmentIds, validFrom: string) {
+async function periodOf(ids: ProjectConsultantIds, validFrom: string) {
   const [next] = await database
     .select({ validFrom: assignmentRates.validFrom })
     .from(assignmentRates)
@@ -41,7 +40,7 @@ const pricedDifferently = (newRate: NewRate) =>
   );
 
 /** The logged entries whose price changes when the rate is added. */
-export async function entriesToReprice(ids: AssignmentIds, newRate: NewRate) {
+export async function entriesToReprice(ids: ProjectConsultantIds, newRate: NewRate) {
   return database
     .select({
       id: timeEntries.id,
@@ -63,7 +62,7 @@ export async function entriesToReprice(ids: AssignmentIds, newRate: NewRate) {
  * Adds the rate and reprices the entries in its period, locked months included.
  * A rate with the same start date replaces the old one, which is how a mistake is corrected.
  */
-export async function addRateAndReprice(ids: AssignmentIds, newRate: NewRate) {
+export async function addRateAndReprice(ids: ProjectConsultantIds, newRate: NewRate) {
   const period = await periodOf(ids, newRate.validFrom);
   await database.transaction(async (transaction) => {
     await transaction

@@ -1,12 +1,8 @@
-import { formatDate } from "@tid/calendar/dateDisplay";
 import { isIsoDate } from "@tid/calendar/isoDate";
-import { Badge, Button, DataGrid, EmptyState, FormField, Page } from "@tid/ui";
+import { Button, FormField, Page } from "@tid/ui";
 import { z } from "zod";
-import { formatAmount } from "../amount/amount";
 import type { FormProps } from "../form/formAction";
-import type { Consultant } from "./assignment";
-import { DeleteRateForm } from "./deleteRate.form";
-import { ratePeriods } from "./ratePeriods";
+import { type Consultant, projectRatesPath } from "./projectConsultant";
 
 export const addRateForm = z.object({
   rate: z
@@ -20,22 +16,15 @@ export const addRateForm = z.object({
   validFrom: z.string().refine(isIsoDate, "Choose a date"),
 });
 
-type RatesPageProps = {
-  consultant: Consultant;
-  rates: { validFrom: string; rate: number }[];
-  today: string;
-} & FormProps;
+type AddRatePageProps = { consultant: Consultant; today: string } & FormProps;
 
-export function RatesPage({ consultant, rates, today, values, fieldErrors }: RatesPageProps) {
+export function AddRatePage({ consultant, today, values, fieldErrors }: AddRatePageProps) {
   return (
     <Page
-      title={`Billable rates for ${consultant.name}`}
-      back={{
-        href: `/projects/${consultant.projectId}`,
-        label: `Back to ${consultant.projectName}`,
-      }}
+      title={`New rate for ${consultant.name}`}
+      back={{ href: projectRatesPath(consultant.projectId), label: "Back to rates" }}
     >
-      <form method="post" class="stack-h items-end gap-xs wrap">
+      <form method="post" class="stack-v items-start gap-m">
         <FormField
           name="rate"
           label={`Hourly rate (${consultant.currency})`}
@@ -56,36 +45,6 @@ export function RatesPage({ consultant, rates, today, values, fieldErrors }: Rat
         />
         <Button type="submit">Add rate</Button>
       </form>
-      {rates.length === 0 ? (
-        <EmptyState emoji="💰" title="No rates yet">
-          Hours logged on this project have no billable amount until it has a rate.
-        </EmptyState>
-      ) : (
-        <DataGrid
-          columns={[
-            { label: "Hourly rate" },
-            { label: "Start date", kind: "fit" },
-            { label: "End date", kind: "fit" },
-            { kind: "action" },
-          ]}
-        >
-          {ratePeriods(rates, today).map((period) => (
-            <DataGrid.Row>
-              <span>
-                {formatAmount(period.rate / 100, consultant.currency, 2)}
-                {period.isCurrent && <Badge class="ml-xs">Current</Badge>}
-              </span>
-              {formatDate(period.validFrom, "numeric")}
-              {period.validUntil ? formatDate(period.validUntil, "numeric") : "No end date"}
-              {period.validFrom > today ? (
-                <DeleteRateForm ids={consultant} validFrom={period.validFrom} />
-              ) : (
-                ""
-              )}
-            </DataGrid.Row>
-          ))}
-        </DataGrid>
-      )}
     </Page>
   );
 }
