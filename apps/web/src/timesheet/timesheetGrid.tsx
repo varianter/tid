@@ -118,7 +118,7 @@ export function TimesheetGrid({
               <DayTint
                 tint={tints[index]}
                 weekStart={startsWeek[index]}
-                class="py-2xs px-2xs stack-v justify-center items-end"
+                class="py-3xs px-3xs stack-v justify-center items-end"
               >
                 <TimesheetCell
                   task={task}
