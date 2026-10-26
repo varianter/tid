@@ -9,7 +9,7 @@ import type { UserEnv } from "../login/user";
 import { type CompanyFilter, CompanySelect, resolveCompany } from "../organizations/companyFilter";
 import { Filtered } from "../query/filter";
 import { consultantPath } from "./consultantsUrl";
-import { loadCurrentBillableProjects } from "./currentBillableProjects";
+import { loadCurrentBillableProjects } from "./currentBillableProjects.data";
 
 export const consultantList = async (c: Context<UserEnv>) => {
   const company = await resolveCompany(c);

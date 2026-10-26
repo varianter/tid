@@ -3,8 +3,7 @@ import { and, eq, exists, ne } from "drizzle-orm";
 import { database } from "../database";
 import { formAction } from "../form/formAction";
 import type { User } from "../login/user";
-import { findOrganizationCurrency } from "../organizations/organization";
-import { listOrganizations } from "../organizations/organizationSelect";
+import { findOrganizationCurrency, listOrganizations } from "../organizations/organization.data";
 import {
   editProjectForm,
   ProjectFields,
@@ -12,12 +11,12 @@ import {
   projectColumns,
   projectFrame,
 } from "./project.form";
-import { listProjectCurrencies } from "./projectCurrency";
+import { listProjectCurrencies } from "./projectCurrency.data";
 import {
   ensureParticipation,
   participation,
   removeUnneededParticipation,
-} from "./projectParticipation";
+} from "./projectParticipation.data";
 
 export const editProject = formAction({
   schema: editProjectForm,

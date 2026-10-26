@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import type { UserEnv } from "../login/user";
-import { managersOnly } from "../managers/manager";
+import { managersOnly } from "../managers/manager.middleware";
 import { addClient } from "./addClient.command";
 import { clientDetails } from "./clientDetails.query";
 import { clientList } from "./clientList.query";

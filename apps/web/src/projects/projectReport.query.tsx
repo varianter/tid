@@ -13,7 +13,8 @@ import { Filtered } from "../query/filter";
 import { type QueryProps, queryPage } from "../query/queryPage";
 import { MonthEntries, type MonthEntry } from "../timeEntries/monthEntries";
 import { billingLabels } from "./billing";
-import { loadProjectEntries, loadProjectReport, type ProjectReport } from "./projectReport";
+import type { ProjectReport } from "./projectReport";
+import { loadProjectEntries, loadProjectReport } from "./projectReport.data";
 import { projectReportPrintUrl, projectReportUrl } from "./projectsUrl";
 
 export const projectReport = queryPage({

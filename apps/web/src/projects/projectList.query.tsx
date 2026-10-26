@@ -6,7 +6,8 @@ import { database } from "../database";
 import type { UserEnv } from "../login/user";
 import { type CompanyFilter, CompanySelect, resolveCompany } from "../organizations/companyFilter";
 import { Filtered } from "../query/filter";
-import { listProjects, type ProjectSummary, ProjectTable } from "./projectSummary";
+import { type ProjectSummary, ProjectTable } from "./projectSummary";
+import { listProjects } from "./projectSummary.data";
 
 export const projectList = async (c: Context<UserEnv>) => {
   const company = await resolveCompany(c);

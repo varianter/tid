@@ -4,7 +4,7 @@ import { formAction } from "../form/formAction";
 import { idParams, projectRatesPath } from "./projectConsultant";
 import { loadConsultant } from "./projectConsultant.data";
 import { RepriceFields, repriceEntriesForm, repriceFrame } from "./repriceEntries.form";
-import { addRateAndReprice, entriesToReprice } from "./repricing";
+import { addRateAndReprice, entriesToReprice } from "./repricing.data";
 
 // The rate in minor units, as the rates form passes it on.
 const repriceQuery = z.object({

@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import type { UserEnv } from "../login/user";
-import { managersOnly } from "../managers/manager";
+import { managersOnly } from "../managers/manager.middleware";
 import { applesauce as applesaucePage } from "./applesauce.query";
 
 // Spans every office, so it's for managers, who may see every country.

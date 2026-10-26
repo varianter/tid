@@ -2,7 +2,7 @@ import { clients } from "@tid/db/schema";
 import { and, eq, ne } from "drizzle-orm";
 import { database } from "../database";
 import { formAction } from "../form/formAction";
-import { findClient } from "./client";
+import { findClient } from "./client.data";
 import { alreadyExists, ClientFields, clientFields, clientFrame } from "./client.form";
 
 export const renameClient = formAction({

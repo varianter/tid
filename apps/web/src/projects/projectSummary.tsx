@@ -8,8 +8,7 @@ import {
 } from "@tid/db/schema";
 import { formatTotalHours } from "@tid/elements/hours";
 import { DataGrid } from "@tid/ui";
-import { eq, type SQL, sql } from "drizzle-orm";
-import { database } from "../database";
+import { sql } from "drizzle-orm";
 import type { Billing } from "./billing";
 
 const spentMinutes = sql<number>`(
@@ -50,15 +49,6 @@ export type ProjectSummary = {
   spentMinutes: number;
   organizations: string[];
 };
-
-// Every project, or a client's with `where`, sorted by client so they group.
-export const listProjects = (where?: SQL) =>
-  database
-    .select(projectSummary)
-    .from(projects)
-    .innerJoin(clients, eq(clients.id, projects.clientId))
-    .where(where)
-    .orderBy(clients.name, projects.name);
 
 /** Projects with their organizations and time spent, under a heading per client unless `groupByClient` is off. */
 export function ProjectTable({

@@ -26,7 +26,7 @@ import { capacityMinutes } from "../reports/capacity";
 import { formatShare } from "../share/share";
 import { MonthEntries, type MonthEntry } from "../timeEntries/monthEntries";
 import { consultantsPath, consultantUrl } from "./consultantsUrl";
-import { loadCurrentBillableProjects } from "./currentBillableProjects";
+import { loadCurrentBillableProjects } from "./currentBillableProjects.data";
 
 export const consultantDetails = queryPage({
   url: consultantUrl,

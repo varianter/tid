@@ -7,7 +7,7 @@ import { employeeCountry } from "./employeeEmail";
 import { NotAnEmployeePage } from "./notAnEmployeePage";
 import { readProxyIdentity } from "./proxyLogin.middleware";
 import { SignUpFields, type SignUpProps, signUpForm, signUpFrame } from "./signUp.form";
-import { findUserByEmail, findUserByIdentity, identityProvider } from "./userIdentity";
+import { findUserByEmail, findUserByIdentity, identityProvider } from "./userIdentity.data";
 
 type Identity = { subject: string; email: string; name?: string };
 

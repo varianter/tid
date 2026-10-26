@@ -1,7 +1,7 @@
 import { Checkbox, DataGrid, EmptyState } from "@tid/ui";
 import { z } from "zod";
 import type { FormProps } from "../form/formAction";
-import type { OrganizationOption } from "../organizations/organizationSelect";
+import type { OrganizationOption } from "../organizations/organization";
 import { administrationPath } from "./administrationUrl";
 import { OtherOrganizationNotice } from "./organizationSwitch";
 

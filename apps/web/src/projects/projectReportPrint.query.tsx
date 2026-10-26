@@ -5,7 +5,8 @@ import type { UserEnv } from "../login/user";
 import { resolveCompany } from "../organizations/companyFilter";
 import { renderForPrint } from "../printLayout";
 import { VariantSymbol, VariantWordmark } from "../variantLogo";
-import { loadProjectReport, type ProjectReport } from "./projectReport";
+import type { ProjectReport } from "./projectReport";
+import { loadProjectReport } from "./projectReport.data";
 import { projectReportPrintUrl, projectReportUrl } from "./projectsUrl";
 
 export const projectReportPrint = async (c: Context<UserEnv>) => {

@@ -42,14 +42,9 @@ test("only routers import queries", () => {
   expect(stray.map(describe)).toEqual([]);
 });
 
-// ponytail: `.command.tsx` lends its form to other pages until every feature splits it out
-// into a `.form.tsx`, like projects/. Then the exception goes.
 test("only routers import commands", () => {
   const stray = namedImports.filter(
-    ({ file, name, from }) =>
-      /\.command\.tsx?$/.test(from) &&
-      !file.endsWith(".routes.tsx") &&
-      !(from.endsWith(".command.tsx") && name.endsWith("Form")),
+    ({ file, from }) => /\.command\.tsx?$/.test(from) && !file.endsWith(".routes.tsx"),
   );
   expect(stray.map(describe)).toEqual([]);
 });
@@ -84,25 +79,10 @@ const impureImports = allImports.filter(
     (from === "database.ts" || doesIO(from) || isIOPackage(from)),
 );
 
-// ponytail: these did I/O before the rule. Each leaves the list when it's split into a pure file
-// and a `.data.ts`, `.middleware.ts` or slice.
-const impureFiles = [
-  "administration/organizationMember.ts",
-  "clients/client.ts",
-  "consultants/consultantsUrl.ts",
-  "consultants/currentBillableProjects.ts",
-  "login/userIdentity.ts",
-  "managers/manager.ts",
-  "organizations/companyFilter.tsx",
-  "organizations/organization.ts",
-  "organizations/organizationSelect.tsx",
-  "projectConsultants/repricing.ts",
-  "projects/projectCurrency.ts",
-  "projects/projectParticipation.ts",
-  "projects/projectReport.tsx",
-  "projects/projectSummary.tsx",
-  "timesheet/loggableTasks.ts",
-];
+// ponytail: splitting these would only appease the rule. loggableTasks builds SQL, which is pure,
+// but with the database client. companyFilter reads the request for the queries that call it, a
+// role no suffix names yet.
+const impureFiles = ["organizations/companyFilter.tsx", "timesheet/loggableTasks.ts"];
 
 test("files without an I/O suffix are pure", () => {
   const stray = impureImports.filter(({ file }) => !impureFiles.includes(file));

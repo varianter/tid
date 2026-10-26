@@ -4,8 +4,8 @@ import { and, eq, gte, isNull, lt, or } from "drizzle-orm";
 import { database } from "../database";
 import { formAction } from "../form/formAction";
 import type { User } from "../login/user";
-import { managesProject } from "../managers/manager";
-import { ensureParticipation } from "../projects/projectParticipation";
+import { managesProject } from "../managers/manager.data";
+import { ensureParticipation } from "../projects/projectParticipation.data";
 import {
   AssignConsultantsFields,
   assignConsultantsForm,

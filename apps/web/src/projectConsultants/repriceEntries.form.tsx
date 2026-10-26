@@ -4,8 +4,8 @@ import { Badge, DataGrid } from "@tid/ui";
 import { z } from "zod";
 import { formatAmount } from "../amount/amount";
 import type { FormProps } from "../form/formAction";
+import type { NewRate } from "./projectConsultant";
 import { type Consultant, projectRatesPath } from "./projectConsultant";
-import type { NewRate } from "./repricing";
 
 // Confirming takes no fields; what to reprice comes from the query.
 export const repriceEntriesForm = z.object({});

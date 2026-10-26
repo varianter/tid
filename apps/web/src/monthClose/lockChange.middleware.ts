@@ -2,7 +2,8 @@ import { isIsoMonth } from "@tid/calendar/isoDate";
 import type { organizations } from "@tid/db/schema";
 import { createMiddleware } from "hono/factory";
 import type { UserEnv } from "../login/user";
-import { findVisibleOrganization, managesOrganization } from "../managers/manager";
+import { managesOrganization } from "../managers/manager";
+import { findVisibleOrganization } from "../managers/manager.data";
 
 export type LockChangeEnv = UserEnv & {
   Variables: { organization: typeof organizations.$inferSelect; month: string };

@@ -3,7 +3,7 @@ import { assignmentRates, projectAssignments, tasks, timeEntries, users } from "
 import { and, eq } from "drizzle-orm";
 import { database } from "../database";
 import { formAction } from "../form/formAction";
-import { removeUnneededParticipation } from "../projects/projectParticipation";
+import { removeUnneededParticipation } from "../projects/projectParticipation.data";
 import { EndAssignmentFields, endAssignmentForm, endAssignmentFrame } from "./endAssignment.form";
 import { assignment, idParams, type ProjectConsultantIds, ratesOf } from "./projectConsultant";
 

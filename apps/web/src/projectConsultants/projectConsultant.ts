@@ -3,6 +3,8 @@ import { and, eq } from "drizzle-orm";
 
 export type ProjectConsultantIds = { projectId: number; userId: number };
 
+export type NewRate = { validFrom: string; rate: number; currency: string };
+
 export function idParams(params: Record<string, string>) {
   const projectId = Number(params.projectId);
   const userId = Number(params.userId);

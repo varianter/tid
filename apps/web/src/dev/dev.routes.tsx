@@ -7,7 +7,7 @@ import { createMiddleware } from "hono/factory";
 import { database } from "../database";
 import { signupPath } from "../login/signupUrl";
 import type { PublicEnv } from "../login/user";
-import { findUserByEmail } from "../login/userIdentity";
+import { findUserByEmail } from "../login/userIdentity.data";
 
 // Trusts whoever is named in a cookie, so only dev.ts turns it on.
 const cookieName = "dev_user_email";

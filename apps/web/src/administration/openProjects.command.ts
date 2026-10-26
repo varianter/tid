@@ -3,13 +3,12 @@ import { eq } from "drizzle-orm";
 import { database } from "../database";
 import { formAction } from "../form/formAction";
 import type { User } from "../login/user";
-import { findOrganizationBySlug } from "../organizations/organization";
-import { listOrganizations } from "../organizations/organizationSelect";
+import { findOrganizationBySlug, listOrganizations } from "../organizations/organization.data";
 import {
   ensureParticipation,
   participation,
   removeUnneededParticipation,
-} from "../projects/projectParticipation";
+} from "../projects/projectParticipation.data";
 import { openProjectsPath } from "./administrationUrl";
 import { OpenProjectsFields, openProjectsForm, openProjectsFrame } from "./openProjects.form";
 

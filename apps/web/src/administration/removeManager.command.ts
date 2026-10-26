@@ -4,11 +4,13 @@ import type { Context } from "hono";
 import { database } from "../database";
 import type { UserEnv } from "../login/user";
 import { managersPath } from "./administrationUrl";
-import { findOrganizationMember } from "./organizationMember";
+import { findOrganizationMember } from "./organizationMember.data";
 
 // Nothing stops the last manager removing themselves; the role is then restored in the database.
-export const removeManager = async (c: Context<UserEnv>) => {
-  const member = await findOrganizationMember(c);
+export const removeManager = async (
+  c: Context<UserEnv, "/:organization/managers/:userId/delete">,
+) => {
+  const member = await findOrganizationMember(c.req.param("organization"), c.req.param("userId"));
   if (!member) return c.notFound();
   await database
     .delete(userRoles)

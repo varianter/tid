@@ -15,7 +15,7 @@ import {
 import { asc, eq } from "drizzle-orm";
 import { database } from "../database";
 import { onlyRow } from "../testing/rows";
-import { addRateAndReprice, entriesToReprice } from "./repricing";
+import { addRateAndReprice, entriesToReprice } from "./repricing.data";
 
 let ids: { projectId: number; userId: number };
 

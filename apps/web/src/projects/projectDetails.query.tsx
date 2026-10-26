@@ -20,7 +20,7 @@ import { formatAmount } from "../amount/amount";
 import { consultantPath } from "../consultants/consultantsUrl";
 import { database } from "../database";
 import type { UserEnv } from "../login/user";
-import { managesProject } from "../managers/manager";
+import { managesProject } from "../managers/manager.data";
 import {
   type AssignmentState,
   assignmentState,

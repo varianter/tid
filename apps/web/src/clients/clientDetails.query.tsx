@@ -4,8 +4,10 @@ import { Detail, Page, Section } from "@tid/ui";
 import { eq } from "drizzle-orm";
 import type { Context } from "hono";
 import type { UserEnv } from "../login/user";
-import { listProjects, type ProjectSummary, ProjectTable } from "../projects/projectSummary";
-import { type Client, findClient } from "./client";
+import { type ProjectSummary, ProjectTable } from "../projects/projectSummary";
+import { listProjects } from "../projects/projectSummary.data";
+import type { Client } from "./client";
+import { findClient } from "./client.data";
 
 export const clientDetails = async (c: Context<UserEnv>) => {
   const client = await findClient(c.req.param("id"));

@@ -11,7 +11,7 @@ import {
 import { and, eq } from "drizzle-orm";
 import { database } from "../database";
 import { onlyRow } from "../testing/rows";
-import { ensureParticipation, removeUnneededParticipation } from "./projectParticipation";
+import { ensureParticipation, removeUnneededParticipation } from "./projectParticipation.data";
 
 let ids: { projectId: number; orgId: number };
 let userId: number;

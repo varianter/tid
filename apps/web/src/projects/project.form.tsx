@@ -12,7 +12,7 @@ import {
 } from "@tid/ui";
 import { z } from "zod";
 import type { FormProps } from "../form/formAction";
-import type { OrganizationOption } from "../organizations/organizationSelect";
+import type { OrganizationOption } from "../organizations/organization";
 import { type Billing, billingLabels, billings } from "./billing";
 
 const checkbox = z

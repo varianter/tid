@@ -1,9 +1,7 @@
 import { assignmentRates, tasks, timeEntries, users } from "@tid/db/schema";
 import { and, asc, eq, gt, gte, inArray, isNull, lt, ne, or, sql } from "drizzle-orm";
 import { database } from "../database";
-import type { ProjectConsultantIds } from "./projectConsultant";
-
-export type NewRate = { validFrom: string; rate: number; currency: string };
+import type { NewRate, ProjectConsultantIds } from "./projectConsultant";
 
 // A rate prices the entries from its start until the next rate takes over. Entries outside that
 // period keep their price, so history imported from Harvest isn't flattened to today's rates.
