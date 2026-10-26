@@ -25,7 +25,7 @@ export function MonthEntries({
 }) {
   const days = Map.groupBy(entries, (entry) => entry.spentOn);
   return (
-    <Section title="Entries" class="flex-1">
+    <Section title="Entries">
       {days.size === 0 ? (
         <p class="ink-subtle">No time was logged in {formatDate(month, "month")}.</p>
       ) : (

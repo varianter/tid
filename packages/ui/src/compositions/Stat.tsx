@@ -1,9 +1,13 @@
 import type { Child, PropsWithChildren } from "hono/jsx";
 
-/** A row of `Stat` cards that share its height. */
-export function StatList({ children }: PropsWithChildren) {
+/** `Stat` cards in a row that share its height, or in a column that share its width. */
+export function StatList({
+  orientation = "horizontal",
+  children,
+}: PropsWithChildren<{ orientation?: "horizontal" | "vertical" }>) {
+  const stack = orientation === "horizontal" ? "stack-h" : "stack-v";
   return (
-    <dl composite-component="StatList" class="stack-h items-stretch gap-s t-tabular">
+    <dl composite-component="StatList" class={`${stack} items-stretch gap-s t-tabular`}>
       {children}
     </dl>
   );

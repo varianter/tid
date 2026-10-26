@@ -10,6 +10,7 @@ import {
   PeriodNavigation,
   ProgressBar,
   Section,
+  SidebarLayout,
   Stat,
   StatList,
 } from "@tid/ui";
@@ -140,22 +141,25 @@ function ConsultantDetailsPage({
         </PeriodNavigation>
       }
     >
-      <div class="stack-h items-start gap-m">
-        <div class="stack-v gap-m flex-1">
-          <MonthHours
-            minutes={minutes}
-            billableMinutes={billableMinutes}
-            capacityMinutes={monthCapacityMinutes}
-          />
-          <CurrentProjects
-            projects={currentBillableProjects}
-            projectHref={(projectId) =>
-              projectReportUrl.path({ projectId, month, company: user.organizationSlug })
-            }
-          />
-        </div>
+      <SidebarLayout
+        sidebar={
+          <div class="stack-v gap-m">
+            <MonthHours
+              minutes={minutes}
+              billableMinutes={billableMinutes}
+              capacityMinutes={monthCapacityMinutes}
+            />
+            <CurrentProjects
+              projects={currentBillableProjects}
+              projectHref={(projectId) =>
+                projectReportUrl.path({ projectId, month, company: user.organizationSlug })
+              }
+            />
+          </div>
+        }
+      >
         <MonthEntries month={month} entries={entries} titleLabel="Project" />
-      </div>
+      </SidebarLayout>
     </Page>
   );
 }
@@ -198,7 +202,7 @@ function MonthHours({
 }) {
   const nonBillableMinutes = minutes - billableMinutes;
   return (
-    <StatList>
+    <StatList orientation="vertical">
       <Stat
         label="Logged"
         value={formatTotalHours(minutes)}

@@ -12,6 +12,7 @@ export { PeriodNavigation } from "./compositions/PeriodNavigation";
 export { Section } from "./compositions/Section";
 export { Stat, StatList } from "./compositions/Stat";
 export { Tabs } from "./compositions/Tabs";
+export { SidebarLayout } from "./custom/SidebarLayout";
 export { Badge } from "./primitives/Badge";
 export { Button, type ButtonProps } from "./primitives/Button";
 export { Checkbox } from "./primitives/Checkbox";
