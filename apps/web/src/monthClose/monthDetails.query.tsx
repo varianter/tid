@@ -21,7 +21,7 @@ import type { Context } from "hono";
 import { consultantPath } from "../consultants/consultantsUrl";
 import { database } from "../database";
 import type { UserEnv } from "../login/user";
-import { isManager, managesOrganization } from "../managers/manager";
+import { managesOrganization } from "../managers/manager";
 import {
   type Company,
   type CompanyFilter,
@@ -112,11 +112,8 @@ export const monthDetails = queryPage({
       };
     });
 
-    const [activeLock, canChangeLock, viewerIsManager] = await Promise.all([
-      findActiveLock(organization.id, month),
-      managesOrganization(c.get("user"), organization.id),
-      isManager(c.get("user")),
-    ]);
+    const activeLock = await findActiveLock(organization.id, month);
+    const canChangeLock = managesOrganization(c.get("user"), organization.id);
     return {
       company: {
         selected: company.selected,
@@ -124,7 +121,7 @@ export const monthDetails = queryPage({
       },
       organizationSlug: organization.slug,
       rows,
-      canOpenConsultants: viewerIsManager,
+      canOpenConsultants: c.get("user").isManager,
       activeLock,
       canChangeLock,
     };

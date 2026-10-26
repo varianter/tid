@@ -4,7 +4,6 @@ import { Button, Detail, Page, Section } from "@tid/ui";
 import { eq } from "drizzle-orm";
 import type { Context } from "hono";
 import type { UserEnv } from "../login/user";
-import { isManager } from "../managers/manager";
 import { listProjects, type ProjectSummary, ProjectTable } from "../projects/projectSummary";
 import { type Client, findClient } from "./client";
 
@@ -16,7 +15,7 @@ export const clientDetails = async (c: Context<UserEnv>) => {
     <ClientDetailsPage
       client={client}
       projects={clientProjects}
-      canChange={await isManager(c.get("user"))}
+      canChange={c.get("user").isManager}
     />,
   );
 };

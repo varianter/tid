@@ -1,16 +1,21 @@
-import { timeOfDayInOslo } from "@tid/calendar/osloClock";
+import { thisMonthInOslo, timeOfDayInOslo } from "@tid/calendar/osloClock";
 import { Icon, type IconName, Popover } from "@tid/ui";
 import { css, Style } from "hono/css";
 import type { PropsWithChildren } from "hono/jsx";
-import { consultantPath } from "./consultants/consultantsUrl";
+import { administrationPath } from "./administration/administrationUrl";
+import { applesauceUrl } from "./applesauce/applesauceUrl";
+import { consultantPath, consultantsPath } from "./consultants/consultantsUrl";
+import type { User } from "./login/user";
+import { projectsPath } from "./projects/projectsUrl";
+import { reportUrl } from "./reports/reportsUrl";
 import { TidSymbol, tidFaviconHref } from "./tidLogo";
+import { monthPath } from "./timesheet/timesheetUrl";
 
 export const vardeStylesheet = "https://varde.variant.dev/v/2.0.1/styles.css";
 
 type LayoutProps = PropsWithChildren<{
   currentPath: string;
-  user?: { id: number; name: string };
-  isManager: boolean;
+  user?: User;
   logoutUrl: string;
   /** The bundled custom elements, loaded on every page. */
   elementsSrc: string;
@@ -18,51 +23,75 @@ type LayoutProps = PropsWithChildren<{
 
 type NavigationSection = {
   heading?: string;
-  links: { href: string; label: string; icon: IconName }[];
+  /** `section` marks the link current; `href` is where it goes, when not straight to `section`. */
+  links: { section: string; href?: string; label: string; icon: IconName }[];
 };
 
-const navigation: NavigationSection[] = [
-  {
-    links: [
-      { href: "/timesheet", label: "Timesheet", icon: "table" },
-      { href: "/reports", label: "Reports", icon: "bar_chart" },
-      {
-        href: "/month-close",
-        label: "Month close",
-        icon: "event_available",
-      },
-    ],
-  },
-  {
-    heading: "Manage",
-    links: [
-      { href: "/projects", label: "Projects", icon: "folder" },
-      { href: "/clients", label: "Clients", icon: "domain" },
-    ],
-  },
-];
-
-const managerNavigation: NavigationSection = {
-  heading: "Admin",
-  links: [
-    { href: "/applesauce", label: "Applesauce", icon: "bar_chart" },
-    { href: "/consultants", label: "Consultants", icon: "group" },
-    { href: "/administration", label: "Administration", icon: "settings" },
-  ],
-};
-
-function isActive(href: string, currentPath: string) {
-  return currentPath === href || currentPath.startsWith(`${href}/`);
+// Each link goes straight to its page's canonical URL, which a bare section path redirects to.
+// Month close picks its month from the database, so it keeps the redirect.
+function navigationFor(user: User | undefined): NavigationSection[] {
+  const month = thisMonthInOslo();
+  const company = user?.organization.slug;
+  const sections: NavigationSection[] = [
+    {
+      links: [
+        { section: "/timesheet", href: monthPath(month, false), label: "Timesheet", icon: "table" },
+        {
+          section: "/reports",
+          href: company && reportUrl.path({ company, month, tab: "projects", billable: undefined }),
+          label: "Reports",
+          icon: "bar_chart",
+        },
+        { section: "/month-close", label: "Month close", icon: "event_available" },
+      ],
+    },
+    {
+      heading: "Manage",
+      links: [
+        {
+          section: "/projects",
+          href: company && projectsPath(company),
+          label: "Projects",
+          icon: "folder",
+        },
+        { section: "/clients", label: "Clients", icon: "domain" },
+      ],
+    },
+  ];
+  if (!user?.isManager) return sections;
+  return [
+    ...sections,
+    {
+      heading: "Admin",
+      links: [
+        {
+          section: "/applesauce",
+          href: applesauceUrl.path({ period: month }),
+          label: "Applesauce",
+          icon: "bar_chart",
+        },
+        {
+          section: "/consultants",
+          href: company && consultantsPath(company),
+          label: "Consultants",
+          icon: "group",
+        },
+        {
+          section: "/administration",
+          href: company && administrationPath(company),
+          label: "Administration",
+          icon: "settings",
+        },
+      ],
+    },
+  ];
 }
 
-export function Layout({
-  currentPath,
-  user,
-  isManager,
-  logoutUrl,
-  elementsSrc,
-  children,
-}: LayoutProps) {
+function isActive(section: string, currentPath: string) {
+  return currentPath === section || currentPath.startsWith(`${section}/`);
+}
+
+export function Layout({ currentPath, user, logoutUrl, elementsSrc, children }: LayoutProps) {
   return (
     <html lang="en">
       <head>
@@ -157,28 +186,26 @@ export function Layout({
             <span class="stack-h nowrap items-center gap-2xs fs-l fw-bold px-xs py-2xs mb-xs">
               <TidSymbol time={timeOfDayInOslo(new Date())} />
             </span>
-            {[...navigation, ...(isManager ? [managerNavigation] : [])].map(
-              ({ heading, links }) => (
-                <>
-                  {heading && (
-                    <span class="fs-xs  ink-subtle px-xs pt-s pb-4xs fw-medium">{heading}</span>
-                  )}
-                  {links.map(({ href, label, icon }) => {
-                    const active = isActive(href, currentPath);
-                    return (
-                      <a
-                        href={href}
-                        aria-current={active ? "page" : undefined}
-                        class={`stack-h nowrap items-center gap-xs px-xs py-2xs br-m ${active ? "surface-tinted ink-prominent" : "ink-subtle bg-wash:hover"}`}
-                      >
-                        <Icon name={icon} class="lh-snug fs-xs" />
-                        <p class="fs-s">{label}</p>
-                      </a>
-                    );
-                  })}
-                </>
-              ),
-            )}
+            {navigationFor(user).map(({ heading, links }) => (
+              <>
+                {heading && (
+                  <span class="fs-xs  ink-subtle px-xs pt-s pb-4xs fw-medium">{heading}</span>
+                )}
+                {links.map(({ section, href, label, icon }) => {
+                  const active = isActive(section, currentPath);
+                  return (
+                    <a
+                      href={href ?? section}
+                      aria-current={active ? "page" : undefined}
+                      class={`stack-h nowrap items-center gap-xs px-xs py-2xs br-m ${active ? "surface-tinted ink-prominent" : "ink-subtle bg-wash:hover"}`}
+                    >
+                      <Icon name={icon} class="lh-snug fs-xs" />
+                      <p class="fs-s">{label}</p>
+                    </a>
+                  );
+                })}
+              </>
+            ))}
             {user && (
               <div class="stack-v mt-auto px-xs py-2xs">
                 <a href={consultantPath(user.id)} class="fw-medium">

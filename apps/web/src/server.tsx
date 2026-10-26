@@ -21,13 +21,12 @@ import { signupRouter } from "./login/login.routes";
 import { proxyLogoutUrl, requireProxyUser } from "./login/proxyLogin.middleware";
 import { signupPath } from "./login/signupUrl";
 import type { PublicEnv } from "./login/user";
-import { isManager } from "./managers/manager";
 import { monthClose } from "./monthClose/monthClose.routes";
 import { projects } from "./projects/projects.routes";
 import { reports } from "./reports/reports.routes";
 import { reportDatabaseTiming, reportRenderTiming, timeMiddleware } from "./serverTiming";
-import { monthPath } from "./timesheet/monthPage";
 import { timesheet } from "./timesheet/timesheet.routes";
+import { monthPath } from "./timesheet/timesheetUrl";
 
 const isDevLoginEnabled = process.env.DEV_LOGIN === "true";
 
@@ -89,7 +88,6 @@ app.use(
       <Layout
         currentPath={c.req.path}
         user={user}
-        isManager={user ? await isManager(user) : false}
         logoutUrl={login.logoutUrl}
         elementsSrc={elements.path}
       >

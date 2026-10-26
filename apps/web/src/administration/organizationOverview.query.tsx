@@ -2,15 +2,13 @@ import { formatTotalHours } from "@tid/elements/hours";
 import { ActionList, ActionListItem, Button, Detail, Page } from "@tid/ui";
 import type { Context } from "hono";
 import type { UserEnv } from "../login/user";
-import { findOrganizationBySlug, findOrganizationSlug } from "../organizations/organization";
+import { findOrganizationBySlug } from "../organizations/organization";
 import { listOrganizations, type OrganizationOption } from "../organizations/organizationSelect";
 import { administrationPath, managersPath, openProjectsPath } from "./administrationUrl";
 import { OrganizationSwitcher, OtherOrganizationNotice } from "./organizationSwitch";
 
 export const organizationOverviewRedirect = async (c: Context<UserEnv>) => {
-  const slug = await findOrganizationSlug(c.get("user").orgId);
-  if (!slug) return c.notFound();
-  return c.redirect(administrationPath(slug));
+  return c.redirect(administrationPath(c.get("user").organization.slug));
 };
 
 export const organizationOverview = async (c: Context<UserEnv>) => {

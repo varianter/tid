@@ -15,22 +15,23 @@ import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { assignments } from "../assignments/assignments.routes";
 import { database } from "../database";
-import type { User, UserEnv } from "../login/user";
+import type { UserEnv } from "../login/user";
+import { loadLoggedInUser, type UserRow } from "../testing/loggedInUser";
 import { organizationIdBySlug } from "../testing/rows";
 import { projects } from "./projects.routes";
 
-let manager: User;
-let member: User;
-let bergenManager: User;
-let bergenMember: User;
+let manager: UserRow;
+let member: UserRow;
+let bergenManager: UserRow;
+let bergenMember: UserRow;
 let oslo: number;
 let bergen: number;
 let clientId: number;
 
-function requestAs(user: User, path: string, form?: Record<string, string>) {
+function requestAs(user: UserRow, path: string, form?: Record<string, string>) {
   const app = new Hono<UserEnv>()
     .use(async (c, next) => {
-      c.set("user", user);
+      c.set("user", await loadLoggedInUser(user));
       await next();
     })
     .route("/projects", projects)
@@ -62,7 +63,7 @@ beforeAll(async () => {
       { name: "Siri", email: "siri@variant.no", orgId: bergen },
       { name: "Per", email: "per@variant.no", orgId: bergen },
     ])
-    .returning()) as [User, User, User, User];
+    .returning()) as [UserRow, UserRow, UserRow, UserRow];
   await database.insert(userRoles).values([
     { userId: manager.id, role: "manager" },
     { userId: bergenManager.id, role: "manager" },
@@ -165,9 +166,9 @@ test("only managers of a project's organizations change it, but any manager can 
     firstTask: "Consulting",
   });
   const projectId = Number(started.headers.get("location")?.split("/").at(-1));
-  const addTask = (user: User) =>
+  const addTask = (user: UserRow) =>
     requestAs(user, `/projects/${projectId}/tasks`, { name: `Task ${user.id}` });
-  const assign = (user: User, consultant: User) =>
+  const assign = (user: UserRow, consultant: UserRow) =>
     requestAs(user, `/projects/${projectId}/assignments`, { userId: String(consultant.id) });
 
   expect((await addTask(bergenManager)).status).toBe(403);

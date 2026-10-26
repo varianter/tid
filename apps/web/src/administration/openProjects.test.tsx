@@ -4,21 +4,22 @@ import { clients, projectOrganizations, projects, userRoles, users } from "@tid/
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { database } from "../database";
-import type { User, UserEnv } from "../login/user";
+import type { UserEnv } from "../login/user";
+import { loadLoggedInUser, type UserRow } from "../testing/loggedInUser";
 import { organizationIdBySlug } from "../testing/rows";
 import { administration } from "./administration.routes";
 
-let manager: User;
-let member: User;
-let bergenManager: User;
+let manager: UserRow;
+let member: UserRow;
+let bergenManager: UserRow;
 let osloId: number;
 let internalId: number;
 let billableId: number;
 
-function requestAs(user: User, path: string, form?: Record<string, string>) {
+function requestAs(user: UserRow, path: string, form?: Record<string, string>) {
   const app = new Hono<UserEnv>()
     .use(async (c, next) => {
-      c.set("user", user);
+      c.set("user", await loadLoggedInUser(user));
       await next();
     })
     .route("/administration", administration);
@@ -44,7 +45,7 @@ beforeAll(async () => {
       { name: "Ola", email: "ola@variant.no", orgId: osloId },
       { name: "Bjørn", email: "bjorn@variant.no", orgId: await organizationIdBySlug("bergen") },
     ])
-    .returning()) as [User, User, User];
+    .returning()) as [UserRow, UserRow, UserRow];
   await database.insert(userRoles).values([
     { userId: manager.id, role: "manager" },
     { userId: bergenManager.id, role: "manager" },

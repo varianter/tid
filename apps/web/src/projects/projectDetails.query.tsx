@@ -24,7 +24,7 @@ import { RemoveConsultantForm } from "../assignments/removeConsultant.form";
 import { consultantPath } from "../consultants/consultantsUrl";
 import { database } from "../database";
 import type { UserEnv } from "../login/user";
-import { isManager, managesProject } from "../managers/manager";
+import { managesProject } from "../managers/manager";
 import { AddTaskForm } from "./addTask.form";
 import { billingLabels } from "./billing";
 import { type ProjectSummary, projectSummary } from "./projectSummary";
@@ -116,10 +116,7 @@ export const projectDetails = async (c: Context<UserEnv>) => {
     .orderBy(desc(projectOrganizations.isContractOwner), organizations.name);
 
   const user = c.get("user");
-  const [canManageProject, viewerIsManager] = await Promise.all([
-    managesProject(user, id),
-    isManager(user),
-  ]);
+  const canManageProject = await managesProject(user, id);
   // Other managers may only bring in their own organization's consultants.
   const assignablePeople = await database
     .select({ id: users.id, name: users.name, orgName: organizations.name })
@@ -152,8 +149,8 @@ export const projectDetails = async (c: Context<UserEnv>) => {
       assignablePeople={assignablePeople}
       participations={participations}
       canManageProject={canManageProject}
-      canAssign={viewerIsManager}
-      canOpenConsultants={viewerIsManager}
+      canAssign={user.isManager}
+      canOpenConsultants={user.isManager}
     />,
   );
 };

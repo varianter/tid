@@ -3,7 +3,6 @@ import { eq } from "drizzle-orm";
 import { database } from "../database";
 import { formAction } from "../form/formAction";
 import type { User } from "../login/user";
-import { findOrganizationCurrency } from "../organizations/organization";
 import { listOrganizations } from "../organizations/organizationSelect";
 import { ProjectFormPage, parseBilling, projectColumns, startProjectForm } from "./project.form";
 import { suggestProjectCode } from "./projectCode";
@@ -34,7 +33,7 @@ export const startProject = formAction({
       organizations: await listOrganizations(),
       currencies: await listProjectCurrencies(),
       // The user's organization is the suggested contract owner, so its currency is the likely one.
-      currency: (await findOrganizationCurrency(user.orgId)) ?? "",
+      currency: user.organization.currency,
       // Non-billable projects usually have no one invoicing them.
       contractOwnerId: billing === "non_billable" ? null : user.orgId,
     };

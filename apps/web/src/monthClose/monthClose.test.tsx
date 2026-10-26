@@ -5,20 +5,21 @@ import { rebuildDatabase } from "@tid/db/client";
 import { userRoles, users } from "@tid/db/schema";
 import { Hono } from "hono";
 import { database } from "../database";
-import type { User, UserEnv } from "../login/user";
+import type { UserEnv } from "../login/user";
+import { loadLoggedInUser, type UserRow } from "../testing/loggedInUser";
 import { organizationIdBySlug } from "../testing/rows";
 import { monthClose } from "./monthClose.routes";
 import { findActiveLock } from "./monthLock.data";
 
-let manager: User;
-let member: User;
-let osloManager: User;
+let manager: UserRow;
+let member: UserRow;
+let osloManager: UserRow;
 let trondheimId: number;
 
-function requestAs(user: User, path: string, method = "GET") {
+function requestAs(user: UserRow, path: string, method = "GET") {
   const app = new Hono<UserEnv>()
     .use(async (c, next) => {
-      c.set("user", user);
+      c.set("user", await loadLoggedInUser(user));
       await next();
     })
     .route("/month-close", monthClose);
@@ -37,7 +38,7 @@ beforeAll(async () => {
       { name: "Ola", email: "ola@variant.no", orgId: trondheimId },
       { name: "Kari", email: "kari@variant.no", orgId: await organizationIdBySlug("oslo") },
     ])
-    .returning()) as [User, User, User];
+    .returning()) as [UserRow, UserRow, UserRow];
   await database.insert(userRoles).values([
     { userId: manager.id, role: "manager" },
     { userId: osloManager.id, role: "manager" },

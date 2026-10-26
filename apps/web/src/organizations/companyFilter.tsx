@@ -93,10 +93,11 @@ export async function findCompanyFilter(
   user: User,
   value: string | undefined,
 ): Promise<CompanyFilter | undefined> {
-  const [canViewCountry, allOrganizations] = await Promise.all([
-    countryVisibility(user),
-    database.select().from(organizations).orderBy(organizations.country, organizations.name),
-  ]);
+  const canViewCountry = countryVisibility(user);
+  const allOrganizations = await database
+    .select()
+    .from(organizations)
+    .orderBy(organizations.country, organizations.name);
   const companies = listCompanies(allOrganizations).filter((company) =>
     canViewCountry(company.country),
   );

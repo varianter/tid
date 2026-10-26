@@ -17,7 +17,6 @@ import { and, between, desc, eq, sql } from "drizzle-orm";
 import type { Context } from "hono";
 import { database } from "../database";
 import type { UserEnv } from "../login/user";
-import { isManager } from "../managers/manager";
 import { type Billing, billingLabels } from "../projects/billing";
 import { projectReportUrl } from "../projects/projectsUrl";
 import { type QueryProps, queryPage } from "../query/queryPage";
@@ -31,8 +30,7 @@ export const consultantDetails = queryPage({
   url: consultantUrl,
   loader: async (c: Context<UserEnv>, { userId, month }) => {
     const viewer = c.get("user");
-    const viewerIsManager = await isManager(viewer);
-    if (viewer.id !== userId && !viewerIsManager) {
+    if (viewer.id !== userId && !viewer.isManager) {
       return c.text("Only managers can see other users", 403);
     }
     const [user] = await database
@@ -87,7 +85,7 @@ export const consultantDetails = queryPage({
 
     return {
       user,
-      viewerIsManager,
+      viewerIsManager: viewer.isManager,
       currentBillableProjects,
       minutes: monthTotals?.minutes ?? 0,
       billableMinutes: monthTotals?.billableMinutes ?? 0,

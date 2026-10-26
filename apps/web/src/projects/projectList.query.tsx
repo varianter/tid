@@ -4,7 +4,6 @@ import { and, eq, exists, inArray } from "drizzle-orm";
 import type { Context } from "hono";
 import { database } from "../database";
 import type { UserEnv } from "../login/user";
-import { isManager } from "../managers/manager";
 import { type CompanyFilter, CompanySelect, resolveCompany } from "../organizations/companyFilter";
 import { listProjects, type ProjectSummary, ProjectTable } from "./projectSummary";
 
@@ -30,7 +29,7 @@ export const projectList = async (c: Context<UserEnv>) => {
     <ProjectListPage
       projects={await listProjects(participates)}
       {...company}
-      canStartProjects={await isManager(c.get("user"))}
+      canStartProjects={c.get("user").isManager}
     />,
   );
 };

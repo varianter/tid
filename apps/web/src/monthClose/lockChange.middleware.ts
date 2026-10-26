@@ -16,7 +16,7 @@ export const lockChangeManagersOnly = createMiddleware<LockChangeEnv>(async (c, 
     c.req.param("organization") ?? "",
   );
   if (!organization || !isIsoMonth(month)) return c.notFound();
-  if (!(await managesOrganization(c.get("user"), organization.id))) {
+  if (!managesOrganization(c.get("user"), organization.id)) {
     return c.text("Only the organization's managers can do this", 403);
   }
   c.set("organization", organization);

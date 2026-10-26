@@ -1,14 +1,31 @@
-import { userIdentities, users } from "@tid/db/schema";
-import { and, eq, getTableColumns, sql } from "drizzle-orm";
+import { organizations, userIdentities, userRoles, users } from "@tid/db/schema";
+import { and, eq, exists, getTableColumns, sql } from "drizzle-orm";
 import { database } from "../database";
 import type { User } from "./user";
 
 export const identityProvider = "entra";
 
-export async function findUserByIdentity(tenantId: string, subject: string) {
-  const [user] = await database
-    .select(getTableColumns(users))
+// One query for everything login hands on, since it runs on every request.
+const selectUsers = () =>
+  database
+    .select({
+      ...getTableColumns(users),
+      organization: getTableColumns(organizations),
+      isManager: exists(
+        database
+          .select()
+          .from(userRoles)
+          .where(and(eq(userRoles.userId, users.id), eq(userRoles.role, "manager"))),
+      ).mapWith(Boolean),
+    })
     .from(users)
+    .innerJoin(organizations, eq(organizations.id, users.orgId));
+
+export async function findUserByIdentity(
+  tenantId: string,
+  subject: string,
+): Promise<User | undefined> {
+  const [user] = await selectUsers()
     .innerJoin(userIdentities, eq(userIdentities.userId, users.id))
     .where(
       and(
@@ -20,11 +37,8 @@ export async function findUserByIdentity(tenantId: string, subject: string) {
   return user;
 }
 
-export async function findUserByEmail(email: string) {
-  const [user] = await database
-    .select()
-    .from(users)
-    .where(sql`lower(${users.email}) = lower(${email})`);
+export async function findUserByEmail(email: string): Promise<User | undefined> {
+  const [user] = await selectUsers().where(sql`lower(${users.email}) = lower(${email})`);
   return user;
 }
 

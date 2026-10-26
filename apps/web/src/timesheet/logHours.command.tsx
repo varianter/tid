@@ -7,8 +7,9 @@ import { database } from "../database";
 import type { User, UserEnv } from "../login/user";
 import { isLockedOn, isMonthLockedError } from "../monthClose/monthLock.data";
 import { loggableBy, userTasks } from "./loggableTasks";
-import { cellsActionOf, renderMonth } from "./monthPage";
+import { renderMonth } from "./monthPage";
 import { cellFields, cellHours, hoursHint, TimesheetCell } from "./timesheetCell";
+import { cellsActionOf } from "./timesheetUrl";
 
 const entryOn = (userId: number, taskId: number, spentOn: string) =>
   and(

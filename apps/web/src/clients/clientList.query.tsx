@@ -5,7 +5,6 @@ import { countDistinct, eq, sql } from "drizzle-orm";
 import type { Context } from "hono";
 import { database } from "../database";
 import type { UserEnv } from "../login/user";
-import { isManager } from "../managers/manager";
 import type { Client } from "./client";
 
 export const clientList = async (c: Context<UserEnv>) => {
@@ -22,7 +21,7 @@ export const clientList = async (c: Context<UserEnv>) => {
     .leftJoin(timeEntries, eq(timeEntries.taskId, tasks.id))
     .groupBy(clients.id)
     .orderBy(clients.name);
-  return c.render(<ClientListPage clients={rows} canAddClients={await isManager(c.get("user"))} />);
+  return c.render(<ClientListPage clients={rows} canAddClients={c.get("user").isManager} />);
 };
 
 type ClientRow = Client & { projectCount: number; spentMinutes: number };

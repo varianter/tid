@@ -10,18 +10,19 @@ import {
 } from "@tid/db/schema";
 import { Hono } from "hono";
 import { database } from "../database";
-import type { User, UserEnv } from "../login/user";
+import type { UserEnv } from "../login/user";
+import { loadLoggedInUser, type UserRow } from "../testing/loggedInUser";
 import { onlyRow, organizationIdBySlug } from "../testing/rows";
 import { consultants } from "./consultants.routes";
 import { consultantPath } from "./consultantsUrl";
 
-let manager: User;
-let member: User;
+let manager: UserRow;
+let member: UserRow;
 
-function requestAs(user: User, path: string, method = "GET") {
+function requestAs(user: UserRow, path: string, method = "GET") {
   const app = new Hono<UserEnv>()
     .use(async (c, next) => {
-      c.set("user", user);
+      c.set("user", await loadLoggedInUser(user));
       await next();
     })
     .route("/consultants", consultants);
@@ -38,7 +39,7 @@ beforeAll(async () => {
       { name: "Ola", email: "ola@variant.no", orgId: oslo },
       { name: "Bjørn", email: "bjorn@variant.no", orgId: await organizationIdBySlug("bergen") },
     ])
-    .returning()) as [User, User];
+    .returning()) as [UserRow, UserRow];
   await database.insert(userRoles).values({ userId: manager.id, role: "manager" });
 });
 
