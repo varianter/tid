@@ -3,7 +3,8 @@ import { classes, type Props } from "./attributes";
 
 type PopoverData = {
   "data-type"?: "dialog" | "drawer" | "tooltip";
-  "data-position"?: "top" | "right" | "bottom" | "left";
+  "data-side"?: "top" | "right" | "bottom" | "left";
+  "data-align"?: "left" | "center" | "right";
   "data-backdrop"?: boolean;
 };
 

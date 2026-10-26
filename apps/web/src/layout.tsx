@@ -177,7 +177,7 @@ export function Layout({ currentPath, user, logoutUrl, elementsSrc, children }: 
         </Style>
       </head>
       <body class="stack-h nowrap items-stretch">
-        <Popover id="nav-popover" data-type="drawer" data-position="left">
+        <Popover id="nav-popover" data-type="drawer" data-side="left">
           <nav
             class="stack-v gap-4xs b-all br-xl bc-subtle p-2xs w-max-content w-full surface-tinted"
             style="min-width: 200px;"

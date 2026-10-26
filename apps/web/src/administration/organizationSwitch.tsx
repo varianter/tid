@@ -19,7 +19,7 @@ export function OrganizationSwitcher({ organizations, current }: OrganizationSwi
         <Icon name="domain" />
         {current.name}
       </Button>
-      <Popover id="organization-switch" data-type="tooltip" data-position="bottom">
+      <Popover id="organization-switch" data-type="tooltip" data-side="bottom">
         <nav
           aria-label="Organizations"
           class="stack-v gap-4xs b-all bc-subtle p-2xs surface-base br-m shadow-mid"
