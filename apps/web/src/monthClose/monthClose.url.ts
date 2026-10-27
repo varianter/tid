@@ -1,11 +1,11 @@
 import { z } from "zod";
-import { companyField } from "../organizations/companyFilter";
+import { organizationField } from "../organizations/organizationFilter";
 import { monthParam } from "../query/pageMonth";
 import { pageUrl } from "../query/pageUrl";
 
 export const monthUrl = pageUrl(
   "/month-close/:month",
-  z.object({ month: monthParam, ...companyField }),
+  z.object({ month: monthParam, ...organizationField }),
 );
 
 /** Where a form locks or unlocks an organization's month. */

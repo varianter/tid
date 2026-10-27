@@ -7,8 +7,8 @@ import type { User } from "../login/user";
 import { Filtered, FilterForm, PageSearch } from "../query/filter";
 import { capacityMinutes } from "../reports/capacity";
 import { CellShortcuts } from "./cellShortcuts";
+import { cellsActionOf, monthPath } from "./timesheet.url";
 import { type MonthError, TimesheetGrid, type TimesheetGridProps } from "./timesheetGrid";
-import { cellsActionOf, monthPath } from "./timesheetUrl";
 
 type Timesheet = Pick<TimesheetGridProps, "tasks" | "entries" | "assignedTaskIds"> & {
   locked: boolean;

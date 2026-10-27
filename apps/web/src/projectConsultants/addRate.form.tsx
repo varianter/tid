@@ -2,7 +2,8 @@ import { isIsoDate } from "@tid/calendar/isoDate";
 import { FormField } from "@tid/ui";
 import { z } from "zod";
 import type { FormProps } from "../form/formAction";
-import { type Consultant, projectRatesPath } from "./projectConsultant";
+import type { Consultant } from "./projectConsultant";
+import { projectRatesPath } from "./projectConsultants.url";
 
 export const addRateForm = z.object({
   rate: z

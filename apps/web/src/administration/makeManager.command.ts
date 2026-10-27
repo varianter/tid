@@ -2,7 +2,7 @@ import { userRoles } from "@tid/db/schema";
 import type { Context } from "hono";
 import { database } from "../database";
 import type { UserEnv } from "../login/user";
-import { managersPath } from "./administrationUrl";
+import { managersPath } from "./administration.url";
 import { findOrganizationMember } from "./organizationMember.data";
 
 export const makeManager = async (c: Context<UserEnv, "/:organization/managers/:userId">) => {

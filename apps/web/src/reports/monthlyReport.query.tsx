@@ -17,28 +17,28 @@ import { and, between, eq, gte, inArray, isNull, or, sql } from "drizzle-orm";
 import type { Child } from "hono/jsx";
 import { type Amounts, addAmounts, formatAmounts } from "../amount/amount";
 import { BillableSelect, billableCondition } from "../billable/billableFilter";
-import { consultantPath } from "../consultants/consultantsUrl";
+import { consultantPath } from "../consultants/consultants.url";
 import { database } from "../database";
 import {
-  type CompanyFilter,
-  CompanySelect,
-  completeCompany,
-  resolveCompany,
-} from "../organizations/companyFilter";
-import { projectReportUrl } from "../projects/projectsUrl";
+  completeOrganization,
+  type OrganizationFilter,
+  OrganizationSelect,
+  resolveOrganizationFilter,
+} from "../organizations/organizationFilter";
+import { projectReportUrl } from "../projects/projects.url";
 import { Filtered } from "../query/filter";
 import { type QueryProps, queryPage } from "../query/queryPage";
 import { formatShare } from "../share/share";
 import { capacityMinutes } from "./capacity";
-import { reportUrl, type Tab, tabs } from "./reportsUrl";
+import { reportUrl, type Tab, tabs } from "./reports.url";
 
 export const monthlyReport = queryPage({
   url: reportUrl,
-  complete: completeCompany,
+  complete: completeOrganization,
   loader: async (c, { month, tab, billable }) => {
-    const company = await resolveCompany(c);
-    if (company instanceof Response) return company;
-    const { selected } = company;
+    const organizationFilter = await resolveOrganizationFilter(c);
+    if (organizationFilter instanceof Response) return organizationFilter;
+    const { selected } = organizationFilter;
     const view = timeEntriesExport;
     const inReport = and(
       inArray(
@@ -162,7 +162,7 @@ export const monthlyReport = queryPage({
           sum + capacityMinutes(month, selected.country, selected.fullDayMinutes, endsOn),
         0,
       ) / 60;
-    return { company, report, total, capacityHours, currency };
+    return { organizationFilter, report, total, capacityHours, currency };
   },
   view: ReportPage,
 });
@@ -223,7 +223,7 @@ const tabLabels: Record<Tab, string> = {
 };
 
 function ReportPage({
-  company,
+  organizationFilter,
   report,
   total,
   capacityHours,
@@ -231,7 +231,7 @@ function ReportPage({
   query,
   href,
 }: {
-  company: CompanyFilter;
+  organizationFilter: OrganizationFilter;
   report: ReportRows;
   total: Totals;
   capacityHours: number;
@@ -239,7 +239,7 @@ function ReportPage({
 } & QueryProps<typeof reportUrl>) {
   const { month } = query;
   const projectHref = (projectId: number) =>
-    projectReportUrl.path({ projectId, month, company: company.selected.value });
+    projectReportUrl.path({ projectId, month, organization: organizationFilter.selected.value });
   const consultantHref = (userId: number) => consultantPath(userId, month);
   const table = reportTable(report, total, currency, projectHref, consultantHref);
   return (
@@ -247,7 +247,7 @@ function ReportPage({
       <Filtered
         by={
           <>
-            <CompanySelect {...company} />
+            <OrganizationSelect {...organizationFilter} />
             <BillableSelect />
             <PeriodNavigation
               previousHref={href({ month: addMonths(month, -1) })}

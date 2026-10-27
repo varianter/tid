@@ -80,9 +80,9 @@ const impureImports = allImports.filter(
 );
 
 // ponytail: splitting these would only appease the rule. loggableTasks builds SQL, which is pure,
-// but with the database client. companyFilter reads the request for the queries that call it, a
+// but with the database client. organizationFilter reads the request for the queries that call it, a
 // role no suffix names yet.
-const impureFiles = ["organizations/companyFilter.tsx", "timesheet/loggableTasks.ts"];
+const impureFiles = ["organizations/organizationFilter.tsx", "timesheet/loggableTasks.ts"];
 
 test("files without an I/O suffix are pure", () => {
   const stray = impureImports.filter(({ file }) => !impureFiles.includes(file));
@@ -98,6 +98,16 @@ const filesContaining = (pattern: RegExp) =>
   sourceFiles.filter((file) => pattern.test(readFileSync(join(import.meta.dir, file), "utf8")));
 
 const isDevTooling = (file: string) => file.startsWith("dev/");
+
+// One file per feature holds its addresses, so a route and the links to it can't disagree.
+test("a feature's URLs live in <feature>.url.ts", () => {
+  const isFeatureUrlFile = (file: string) => file === `${dirname(file)}/${dirname(file)}.url.ts`;
+  const urlFiles = sourceFiles.filter((file) => file.endsWith(".url.ts"));
+  const strayUrls = filesContaining(/export const \w*(Path|Url)\b|\bpageUrl\(/).filter(
+    (file) => !file.endsWith(".url.ts") && file !== "query/pageUrl.ts" && !isDevTooling(file),
+  );
+  expect([...urlFiles.filter((file) => !isFeatureUrlFile(file)), ...strayUrls]).toEqual([]);
+});
 
 // A form page is what an action opens, so `formAction` frames it: a page of its own couldn't
 // tell the browser, or an overlay later, that it's a form.

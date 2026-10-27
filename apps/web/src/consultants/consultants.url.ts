@@ -3,8 +3,8 @@ import { z } from "zod";
 import { monthField } from "../query/pageMonth";
 import { idParam, pageUrl } from "../query/pageUrl";
 
-export const consultantsPath = (company: string) =>
-  `/consultants?${new URLSearchParams({ company })}`;
+export const consultantsPath = (organization: string) =>
+  `/consultants?${new URLSearchParams({ organization })}`;
 
 export const consultantUrl = pageUrl(
   "/consultants/:userId",

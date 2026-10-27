@@ -19,14 +19,6 @@ export const assignment = ({ projectId, userId }: ProjectConsultantIds) =>
 export const ratesOf = ({ projectId, userId }: ProjectConsultantIds) =>
   and(eq(assignmentRates.projectId, projectId), eq(assignmentRates.userId, userId));
 
-export const projectConsultantsPath = (projectId: number) => `/projects/${projectId}/consultants`;
-
-export const ratesPath = ({ projectId, userId }: ProjectConsultantIds) =>
-  `${projectConsultantsPath(projectId)}/${userId}/rates`;
-
-/** Every consultant's rates on the project. */
-export const projectRatesPath = (projectId: number) => `${projectConsultantsPath(projectId)}/rates`;
-
 export type Consultant = ProjectConsultantIds & {
   name: string;
   projectName: string;

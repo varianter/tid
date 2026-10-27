@@ -9,8 +9,8 @@ import { isLockedOn, isMonthLockedError } from "../monthClose/monthLock.data";
 import { loggableBy, userTasks } from "./loggableTasks";
 import { MonthPage } from "./monthPage";
 import { loadTimesheet } from "./timesheet.data";
+import { cellsActionOf } from "./timesheet.url";
 import { cellFields, cellHours, hoursHint, TimesheetCell } from "./timesheetCell";
-import { cellsActionOf } from "./timesheetUrl";
 
 const entryOn = (userId: number, taskId: number, spentOn: string) =>
   and(

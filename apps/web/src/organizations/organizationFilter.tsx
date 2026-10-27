@@ -15,8 +15,8 @@ type Organization = typeof organizations.$inferSelect;
  * countries, so a page can count on one length of day and holiday calendar. Amounts can still be in
  * several currencies, since each project has its own; `currency` is the organizations'.
  */
-export type Company = {
-  /** The `company` query parameter: an organization's slug, or a lowercase country code. */
+export type OrganizationOption = {
+  /** The `organization` query parameter: an organization's slug, or a lowercase country code. */
   value: string;
   name: string;
   country: Country;
@@ -28,7 +28,7 @@ export type Company = {
 const countryNames: Record<Country, string> = { NO: "Norway", SE: "Sweden" };
 
 /** Each country as a whole, followed by its organizations. */
-export function listCompanies(organizations: Organization[]): Company[] {
+export function listOrganizationOptions(organizations: Organization[]): OrganizationOption[] {
   const byCountry = Map.groupBy(organizations, (organization) => organization.country);
   return [...byCountry].flatMap(([country, members]) => {
     const [first] = members;
@@ -43,7 +43,7 @@ export function listCompanies(organizations: Organization[]): Company[] {
     const collision = members.find((organization) => organization.slug === value);
     if (collision) throw new Error(`${collision.name}'s slug is taken by its country`);
 
-    const companyOf = (name: string, value: string, organizations: Organization[]) => ({
+    const optionOf = (name: string, value: string, organizations: Organization[]) => ({
       value,
       name,
       country,
@@ -52,30 +52,32 @@ export function listCompanies(organizations: Organization[]): Company[] {
       organizations,
     });
     return [
-      companyOf(`All of ${countryNames[country]}`, value, members),
+      optionOf(`All of ${countryNames[country]}`, value, members),
       ...members.map((organization) =>
-        companyOf(organization.name, organization.slug, [organization]),
+        optionOf(organization.name, organization.slug, [organization]),
       ),
     ];
   });
 }
 
-const field = "company";
+const field = "organization";
 
-/** `?company=` names a Company's `value`. Spread into a page's query; `resolveCompany` fills it in when missing. */
-export const companyField = { [field]: z.string().optional().catch(undefined) };
+/** `?organization=` names an OrganizationOption's `value`. Spread into a page's query; `resolveOrganizationFilter` fills it in when missing. */
+export const organizationField = { [field]: z.string().optional().catch(undefined) };
 
-/** The company a list page is narrowed to, among those the user may pick. */
-export type CompanyFilter = { selected: Company; companies: Company[] };
+/** The organizations a list page is narrowed to, among those the user may pick. */
+export type OrganizationFilter = { selected: OrganizationOption; options: OrganizationOption[] };
 
 /**
- * The company a list page is narrowed to, or a response to return instead: a redirect that picks
+ * The organizations a list page is narrowed to, or a response to return instead: a redirect that picks
  * the user's own organization when none is given, or not found for an unknown one or one in a
  * country the user may not see.
  */
-export async function resolveCompany(c: Context<UserEnv>): Promise<CompanyFilter | Response> {
+export async function resolveOrganizationFilter(
+  c: Context<UserEnv>,
+): Promise<OrganizationFilter | Response> {
   const value = c.req.query(field);
-  const filter = await findCompanyFilter(c.get("user"), value);
+  const filter = await findOrganizationFilter(c.get("user"), value);
   if (!filter) return c.notFound();
   if (!value) {
     const url = new URL(c.req.url);
@@ -86,55 +88,55 @@ export async function resolveCompany(c: Context<UserEnv>): Promise<CompanyFilter
 }
 
 /**
- * The companies the user may pick, with the one `value` names selected, or their own organization
+ * The options the user may pick, with the one `value` names selected, or their own organization
  * when it names none. Undefined when that isn't one they may pick.
  */
-export async function findCompanyFilter(
+export async function findOrganizationFilter(
   user: User,
   value: string | undefined,
-): Promise<CompanyFilter | undefined> {
+): Promise<OrganizationFilter | undefined> {
   const canViewCountry = countryVisibility(user);
   const allOrganizations = await database
     .select()
     .from(organizations)
     .orderBy(organizations.country, organizations.name);
-  const companies = listCompanies(allOrganizations).filter((company) =>
-    canViewCountry(company.country),
+  const options = listOrganizationOptions(allOrganizations).filter((option) =>
+    canViewCountry(option.country),
   );
-  const selected = companies.find((company) =>
+  const selected = options.find((option) =>
     value
-      ? company.value === value
-      : company.organizations.length === 1 && company.organizations[0]?.id === user.orgId,
+      ? option.value === value
+      : option.organizations.length === 1 && option.organizations[0]?.id === user.orgId,
   );
-  return selected && { selected, companies };
+  return selected && { selected, options };
 }
 
 /**
  * For `queryPage`'s `complete`: picks the user's own organization when the query names no
- * company, so a single redirect reaches the canonical URL.
+ * organization, so a single redirect reaches the canonical URL.
  */
-export async function completeCompany<Query extends { company?: string }>(
+export async function completeOrganization<Query extends { organization?: string }>(
   c: Context<UserEnv>,
   query: Query,
 ): Promise<Query | Response> {
-  if (query.company) return query;
-  const filter = await findCompanyFilter(c.get("user"), undefined);
-  return filter ? { ...query, company: filter.selected.value } : c.notFound();
+  if (query.organization) return query;
+  const filter = await findOrganizationFilter(c.get("user"), undefined);
+  return filter ? { ...query, organization: filter.selected.value } : c.notFound();
 }
 
-export function CompanySelect({ selected, companies }: CompanyFilter) {
+export function OrganizationSelect({ selected, options }: OrganizationFilter) {
   return (
     <FilterForm field={field}>
-      <Label for={field}>Company</Label>
+      <Label for={field}>Organization</Label>
       <Select
         id={field}
         name={field}
         data-size="small"
         selected={selected.value}
-        options={companies.map((company) => ({
-          value: company.value,
-          label: company.name,
-          group: countryNames[company.country],
+        options={options.map((option) => ({
+          value: option.value,
+          label: option.name,
+          group: countryNames[option.country],
         }))}
       />
     </FilterForm>

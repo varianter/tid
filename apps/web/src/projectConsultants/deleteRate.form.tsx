@@ -1,6 +1,7 @@
 import { formatDate } from "@tid/calendar/dateDisplay";
 import { Button } from "@tid/ui";
-import { type ProjectConsultantIds, ratesPath } from "./projectConsultant";
+import type { ProjectConsultantIds } from "./projectConsultant";
+import { ratesPath } from "./projectConsultants.url";
 
 export function DeleteRateForm({
   ids,

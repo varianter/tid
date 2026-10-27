@@ -2,14 +2,14 @@ import { thisMonthInOslo, timeOfDayInOslo } from "@tid/calendar/osloClock";
 import { Icon, type IconName, Popover } from "@tid/ui";
 import { css, Style } from "hono/css";
 import type { PropsWithChildren } from "hono/jsx";
-import { administrationPath } from "./administration/administrationUrl";
-import { applesauceUrl } from "./applesauce/applesauceUrl";
-import { consultantPath, consultantsPath } from "./consultants/consultantsUrl";
+import { administrationPath } from "./administration/administration.url";
+import { consultantPath, consultantsPath } from "./consultants/consultants.url";
 import type { User } from "./login/user";
-import { projectsPath } from "./projects/projectsUrl";
-import { reportUrl } from "./reports/reportsUrl";
+import { officeSummaryUrl } from "./officeSummary/officeSummary.url";
+import { projectsPath } from "./projects/projects.url";
+import { reportUrl } from "./reports/reports.url";
 import { TidSymbol, tidFaviconHref } from "./tidLogo";
-import { monthPath } from "./timesheet/timesheetUrl";
+import { monthPath } from "./timesheet/timesheet.url";
 
 export const vardeStylesheet = "https://varde.variant.dev/v/2.0.1/styles.css";
 
@@ -31,14 +31,16 @@ type NavigationSection = {
 // Month close picks its month from the database, so it keeps the redirect.
 function navigationFor(user: User | undefined): NavigationSection[] {
   const month = thisMonthInOslo();
-  const company = user?.organization.slug;
+  const organization = user?.organization.slug;
   const sections: NavigationSection[] = [
     {
       links: [
         { section: "/timesheet", href: monthPath(month, false), label: "Timesheet", icon: "table" },
         {
           section: "/reports",
-          href: company && reportUrl.path({ company, month, tab: "projects", billable: undefined }),
+          href:
+            organization &&
+            reportUrl.path({ organization, month, tab: "projects", billable: undefined }),
           label: "Reports",
           icon: "bar_chart",
         },
@@ -50,7 +52,7 @@ function navigationFor(user: User | undefined): NavigationSection[] {
       links: [
         {
           section: "/projects",
-          href: company && projectsPath(company),
+          href: organization && projectsPath(organization),
           label: "Projects",
           icon: "folder",
         },
@@ -65,20 +67,20 @@ function navigationFor(user: User | undefined): NavigationSection[] {
       heading: "Admin",
       links: [
         {
-          section: "/applesauce",
-          href: applesauceUrl.path({ period: month }),
-          label: "Applesauce",
+          section: "/office-summary",
+          href: officeSummaryUrl.path({ period: month }),
+          label: "Office summary",
           icon: "bar_chart",
         },
         {
           section: "/consultants",
-          href: company && consultantsPath(company),
+          href: organization && consultantsPath(organization),
           label: "Consultants",
           icon: "group",
         },
         {
           section: "/administration",
-          href: company && administrationPath(company),
+          href: organization && administrationPath(organization),
           label: "Administration",
           icon: "settings",
         },

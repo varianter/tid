@@ -1,6 +1,6 @@
 import { formatDate } from "@tid/calendar/dateDisplay";
 import { Button, Icon } from "@tid/ui";
-import { monthLockPath } from "./monthUrl";
+import { monthLockPath } from "./monthClose.url";
 
 export function UnlockMonthForm({
   organizationSlug,

@@ -2,7 +2,7 @@ import { type Calendar, calendarFor } from "@tid/calendar";
 import { formatDate } from "@tid/calendar/dateDisplay";
 import { daysOfMonth } from "@tid/calendar/isoDate";
 import { formatAmount } from "../amount/amount";
-import type { Company } from "../organizations/companyFilter";
+import type { OrganizationOption } from "../organizations/organizationFilter";
 import type { Billing } from "./billing";
 
 type Consultant = { name: string; hoursByDay: Map<string, number>; hours: number };
@@ -34,7 +34,7 @@ export function buildProjectReport(
   project: ProjectReport["project"] & { currency: string | null },
   entries: DayEntry[],
   month: string,
-  company: Company,
+  selected: OrganizationOption,
 ): ProjectReport {
   const consultants = new Map<string, Consultant>();
   for (const entry of entries) {
@@ -52,7 +52,7 @@ export function buildProjectReport(
     project,
     period: formatDate(month, "month"),
     days: daysOfMonth(month),
-    calendar: calendarFor(company.country),
+    calendar: calendarFor(selected.country),
     consultants: [...consultants.values()],
     hours: entries.reduce((total, entry) => total + entry.hours, 0),
     amount:

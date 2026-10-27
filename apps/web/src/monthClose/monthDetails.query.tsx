@@ -19,50 +19,53 @@ import {
 } from "@tid/ui";
 import { and, between, eq, gte, isNull, or, sql } from "drizzle-orm";
 import type { Context } from "hono";
-import { consultantPath } from "../consultants/consultantsUrl";
+import { consultantPath } from "../consultants/consultants.url";
 import { database } from "../database";
 import type { UserEnv } from "../login/user";
 import { managesOrganization } from "../managers/manager";
 import {
-  type Company,
-  type CompanyFilter,
-  CompanySelect,
-  completeCompany,
-  findCompanyFilter,
-  resolveCompany,
-} from "../organizations/companyFilter";
+  completeOrganization,
+  findOrganizationFilter,
+  type OrganizationFilter,
+  type OrganizationOption,
+  OrganizationSelect,
+  resolveOrganizationFilter,
+} from "../organizations/organizationFilter";
 import { Filtered } from "../query/filter";
 import { type QueryProps, queryPage } from "../query/queryPage";
 import { capacityMinutes } from "../reports/capacity";
 import { formatShare } from "../share/share";
 import { LockMonthForm } from "./lockMonth.form";
+import { monthUrl } from "./monthClose.url";
 import { findActiveLock } from "./monthLock.data";
-import { monthUrl } from "./monthUrl";
 import { UnlockMonthForm } from "./unlockMonth.form";
 
 // Months are locked per organization, so a whole country has no month close.
-const organizationOf = (company: Company) =>
-  company.organizations.length === 1 ? company.organizations[0] : undefined;
+const organizationOf = (option: OrganizationOption) =>
+  option.organizations.length === 1 ? option.organizations[0] : undefined;
 
 // The month being closed: last month until it's locked, then this one.
 export const monthDetailsRedirect = async (c: Context<UserEnv>) => {
-  const company = await findCompanyFilter(c.get("user"), c.req.query("company"));
-  if (!company) return c.notFound();
-  const organization = organizationOf(company.selected);
+  const organizationFilter = await findOrganizationFilter(
+    c.get("user"),
+    c.req.query("organization"),
+  );
+  if (!organizationFilter) return c.notFound();
+  const organization = organizationOf(organizationFilter.selected);
   if (!organization) return c.notFound();
   const thisMonth = thisMonthInOslo();
   const lastMonth = addMonths(thisMonth, -1);
   const month = (await findActiveLock(organization.id, lastMonth)) ? thisMonth : lastMonth;
-  return c.redirect(monthUrl.path({ month, company: company.selected.value }));
+  return c.redirect(monthUrl.path({ month, organization: organizationFilter.selected.value }));
 };
 
 export const monthDetails = queryPage({
   url: monthUrl,
-  complete: completeCompany,
+  complete: completeOrganization,
   loader: async (c: Context<UserEnv>, { month }) => {
-    const company = await resolveCompany(c);
-    if (company instanceof Response) return company;
-    const organization = organizationOf(company.selected);
+    const organizationFilter = await resolveOrganizationFilter(c);
+    if (organizationFilter instanceof Response) return organizationFilter;
+    const organization = organizationOf(organizationFilter.selected);
     if (!organization) return c.notFound();
 
     const first = firstDayOfMonth(month);
@@ -117,9 +120,9 @@ export const monthDetails = queryPage({
     const activeLock = await findActiveLock(organization.id, month);
     const canChangeLock = managesOrganization(c.get("user"), organization.id);
     return {
-      company: {
-        selected: company.selected,
-        companies: company.companies.filter((option) => organizationOf(option)),
+      organizationFilter: {
+        selected: organizationFilter.selected,
+        options: organizationFilter.options.filter((option) => organizationOf(option)),
       },
       organizationSlug: organization.slug,
       rows,
@@ -141,7 +144,7 @@ type ConsultantRow = {
 };
 
 function MonthDetailsPage({
-  company,
+  organizationFilter,
   organizationSlug,
   rows,
   canOpenConsultants,
@@ -150,7 +153,7 @@ function MonthDetailsPage({
   query: { month },
   href,
 }: {
-  company: CompanyFilter;
+  organizationFilter: OrganizationFilter;
   organizationSlug: string;
   rows: ConsultantRow[];
   canOpenConsultants: boolean;
@@ -173,7 +176,7 @@ function MonthDetailsPage({
       <Filtered
         by={
           <>
-            <CompanySelect {...company} />
+            <OrganizationSelect {...organizationFilter} />
             <PeriodNavigation
               previousHref={href({ month: addMonths(month, -1) })}
               nextHref={href({ month: addMonths(month, 1) })}

@@ -19,13 +19,13 @@ import type { Context } from "hono";
 import { database } from "../database";
 import type { UserEnv } from "../login/user";
 import { type Billing, billingLabels } from "../projects/billing";
-import { projectReportUrl } from "../projects/projectsUrl";
+import { projectReportUrl } from "../projects/projects.url";
 import { Filtered } from "../query/filter";
 import { type QueryProps, queryPage } from "../query/queryPage";
 import { capacityMinutes } from "../reports/capacity";
 import { formatShare } from "../share/share";
 import { MonthEntries, type MonthEntry } from "../timeEntries/monthEntries";
-import { consultantsPath, consultantUrl } from "./consultantsUrl";
+import { consultantsPath, consultantUrl } from "./consultants.url";
 import { loadCurrentBillableProjects } from "./currentBillableProjects.data";
 
 export const consultantDetails = queryPage({
@@ -155,7 +155,7 @@ function ConsultantDetailsPage({
               <CurrentProjects
                 projects={currentBillableProjects}
                 projectHref={(projectId) =>
-                  projectReportUrl.path({ projectId, month, company: user.organizationSlug })
+                  projectReportUrl.path({ projectId, month, organization: user.organizationSlug })
                 }
               />
             </div>

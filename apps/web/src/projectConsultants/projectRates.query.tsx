@@ -7,7 +7,7 @@ import type { Context } from "hono";
 import { formatAmount } from "../amount/amount";
 import { database } from "../database";
 import { DeleteRateForm } from "./deleteRate.form";
-import { ratesPath } from "./projectConsultant";
+import { ratesPath } from "./projectConsultants.url";
 import { ratePeriods } from "./ratePeriods";
 
 // Only hourly projects have rates.

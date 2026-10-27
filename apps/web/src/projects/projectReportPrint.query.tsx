@@ -2,19 +2,19 @@ import { formatHours, formatTotalHours } from "@tid/elements/hours";
 import type { Context } from "hono";
 import { css } from "hono/css";
 import type { UserEnv } from "../login/user";
-import { resolveCompany } from "../organizations/companyFilter";
+import { resolveOrganizationFilter } from "../organizations/organizationFilter";
 import { renderForPrint } from "../printLayout";
 import { VariantSymbol, VariantWordmark } from "../variantLogo";
 import type { ProjectReport } from "./projectReport";
 import { loadProjectReport } from "./projectReport.data";
-import { projectReportPrintUrl, projectReportUrl } from "./projectsUrl";
+import { projectReportPrintUrl, projectReportUrl } from "./projects.url";
 
 export const projectReportPrint = async (c: Context<UserEnv>) => {
   const query = projectReportPrintUrl.read(c.req.url);
   if (!query) return c.notFound();
-  const company = await resolveCompany(c);
-  if (company instanceof Response) return company;
-  const report = await loadProjectReport(query.projectId, query.month, company.selected);
+  const organizationFilter = await resolveOrganizationFilter(c);
+  if (organizationFilter instanceof Response) return organizationFilter;
+  const report = await loadProjectReport(query.projectId, query.month, organizationFilter.selected);
   if (!report) return c.notFound();
 
   return renderForPrint(
@@ -25,7 +25,10 @@ export const projectReportPrint = async (c: Context<UserEnv>) => {
     },
     <TimesheetDetails
       report={report}
-      reportHref={projectReportUrl.path({ ...query, company: company.selected.value })}
+      reportHref={projectReportUrl.path({
+        ...query,
+        organization: organizationFilter.selected.value,
+      })}
     />,
   );
 };

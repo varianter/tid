@@ -2,15 +2,15 @@ import { firstDayOfMonth, lastDayOfMonth } from "@tid/calendar/isoDate";
 import { clients, projects, tasks, timeEntries, timeEntriesExport, users } from "@tid/db/schema";
 import { and, between, desc, eq, inArray, sql } from "drizzle-orm";
 import { database } from "../database";
-import type { Company } from "../organizations/companyFilter";
+import type { OrganizationOption } from "../organizations/organizationFilter";
 import type { MonthEntry } from "../timeEntries/monthEntries";
 import { buildProjectReport, type ProjectReport } from "./projectReport";
 
-/** A project's hours in `month` by the consultants of `company`, or undefined for no such project. */
+/** A project's hours in `month` by the consultants of `organization`, or undefined for no such project. */
 export async function loadProjectReport(
   projectId: number,
   month: string,
-  company: Company,
+  selected: OrganizationOption,
 ): Promise<ProjectReport | undefined> {
   const [project] = await database
     .select({
@@ -42,7 +42,7 @@ export async function loadProjectReport(
         // Each organization invoices the work of its own consultants.
         inArray(
           view.accountName,
-          company.organizations.map((organization) => organization.legalName),
+          selected.organizations.map((organization) => organization.legalName),
         ),
         eq(view.projectCode, project.code),
         between(view.spentDate, firstDayOfMonth(month), lastDayOfMonth(month)),
@@ -51,14 +51,14 @@ export async function loadProjectReport(
     .groupBy(view.userEmail, view.userName, view.spentDate)
     .orderBy(view.userName);
 
-  return buildProjectReport(project, entries, month, company);
+  return buildProjectReport(project, entries, month, selected);
 }
 
-/** Each entry on the project in `month` by the consultants of `company`, newest first. */
+/** Each entry on the project in `month` by the consultants of `organization`, newest first. */
 export const loadProjectEntries = (
   projectId: number,
   month: string,
-  company: Company,
+  selected: OrganizationOption,
 ): Promise<MonthEntry[]> =>
   database
     .select({
@@ -76,7 +76,7 @@ export const loadProjectEntries = (
         eq(tasks.projectId, projectId),
         inArray(
           users.orgId,
-          company.organizations.map((organization) => organization.id),
+          selected.organizations.map((organization) => organization.id),
         ),
         between(timeEntries.spentOn, firstDayOfMonth(month), lastDayOfMonth(month)),
       ),

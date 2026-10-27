@@ -154,9 +154,9 @@ test("a project starts with its first task", async () => {
 });
 
 test("employees see only their own country's projects, managers every country's", async () => {
-  expect((await requestAs(member, "/projects?company=no")).status).toBe(200);
-  expect((await requestAs(member, "/projects?company=se")).status).toBe(404);
-  expect((await requestAs(manager, "/projects?company=se")).status).toBe(200);
+  expect((await requestAs(member, "/projects?organization=no")).status).toBe(200);
+  expect((await requestAs(member, "/projects?organization=se")).status).toBe(404);
+  expect((await requestAs(manager, "/projects?organization=se")).status).toBe(200);
 });
 
 test("only managers of a project's organizations change it, but any manager can staff it with their own consultants", async () => {
@@ -321,17 +321,17 @@ test("a project's report shows a month on screen and links to its print version"
     firstTask: "Consulting",
   });
   const projectId = Number(started.headers.get("location")?.split("/").at(-1));
-  const report = `/projects/${projectId}/report?company=oslo&month=2026-10`;
+  const report = `/projects/${projectId}/report?organization=oslo&month=2026-10`;
 
   expect((await requestAs(member, `/projects/${projectId}/report?month=2026-10`)).status).toBe(302);
   const screen = await requestAs(member, report);
   expect(screen.status).toBe(200);
   expect(await screen.text()).toContain(
-    `/projects/${projectId}/report/print?company=oslo&amp;month=2026-10`,
+    `/projects/${projectId}/report/print?organization=oslo&amp;month=2026-10`,
   );
   const print = await requestAs(
     member,
-    `/projects/${projectId}/report/print?company=oslo&month=2026-10`,
+    `/projects/${projectId}/report/print?organization=oslo&month=2026-10`,
   );
   expect(await print.text()).toContain("Timesheet details");
 });

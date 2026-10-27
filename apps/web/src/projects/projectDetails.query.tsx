@@ -17,20 +17,22 @@ import { Badge, Button, DataGrid, Detail, Icon, Page, Section, Stat, StatList } 
 import { and, desc, eq, lte, type SQL, sql } from "drizzle-orm";
 import type { Context } from "hono";
 import { formatAmount } from "../amount/amount";
-import { consultantPath } from "../consultants/consultantsUrl";
+import { consultantPath } from "../consultants/consultants.url";
 import { database } from "../database";
 import type { UserEnv } from "../login/user";
 import { managesProject } from "../managers/manager.data";
 import {
   type AssignmentState,
   assignmentState,
-  projectConsultantsPath,
-  projectRatesPath,
   stateOrder,
 } from "../projectConsultants/projectConsultant";
+import {
+  projectConsultantsPath,
+  projectRatesPath,
+} from "../projectConsultants/projectConsultants.url";
 import { billingLabels } from "./billing";
 import { type ProjectSummary, projectSummary } from "./projectSummary";
-import { projectReportUrl } from "./projectsUrl";
+import { projectReportUrl } from "./projects.url";
 
 type HoursSpent = { total: number; lastMonth: number; thisMonth: number };
 

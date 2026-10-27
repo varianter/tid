@@ -9,7 +9,7 @@ import {
   participation,
   removeUnneededParticipation,
 } from "../projects/projectParticipation.data";
-import { openProjectsPath } from "./administrationUrl";
+import { openProjectsPath } from "./administration.url";
 import { OpenProjectsFields, openProjectsForm, openProjectsFrame } from "./openProjects.form";
 
 export const chooseOpenProjects = formAction({

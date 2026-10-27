@@ -1,8 +1,9 @@
 import { todayInOslo } from "@tid/calendar/osloClock";
 import { formAction } from "../form/formAction";
 import { AddRateFields, addRateForm, addRateFrame } from "./addRate.form";
-import { idParams, projectRatesPath, ratesPath } from "./projectConsultant";
+import { idParams } from "./projectConsultant";
 import { loadConsultant } from "./projectConsultant.data";
+import { projectRatesPath, ratesPath } from "./projectConsultants.url";
 import { addRateAndReprice, entriesToReprice } from "./repricing.data";
 
 export const addRate = formAction({

@@ -1,8 +1,8 @@
 import { expect, test } from "bun:test";
-import type { Company } from "../organizations/companyFilter";
+import type { OrganizationOption } from "../organizations/organizationFilter";
 import { buildProjectReport } from "./projectReport";
 
-const company = { country: "NO" } as Company;
+const selected = { country: "NO" } as OrganizationOption;
 const project = {
   id: 1,
   code: "VAR1000",
@@ -19,7 +19,7 @@ test("a consultant's days add up to one row, and only hourly projects get an amo
     { email: "a@variant.no", name: "A", day: "2026-10-02", hours: 2, amount: 2000 },
     { email: "b@variant.no", name: "B", day: "2026-10-01", hours: 1, amount: 1000 },
   ];
-  const report = buildProjectReport(project, entries, "2026-10", company);
+  const report = buildProjectReport(project, entries, "2026-10", selected);
   expect(report.consultants.map(({ name, hours }) => ({ name, hours }))).toEqual([
     { name: "A", hours: 9.5 },
     { name: "B", hours: 1 },
@@ -31,7 +31,7 @@ test("a consultant's days add up to one row, and only hourly projects get an amo
     { ...project, billing: "fixed_fee" },
     entries,
     "2026-10",
-    company,
+    selected,
   );
   expect(fixed.amount).toBeUndefined();
 });

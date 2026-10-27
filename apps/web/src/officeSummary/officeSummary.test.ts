@@ -1,5 +1,4 @@
 import { expect, test } from "bun:test";
-import { monthsOf, shiftPeriod, togglePeriod } from "./applesaucePeriod";
 import {
   amountPerConsultant,
   averageRates,
@@ -8,6 +7,7 @@ import {
   summarizeOffices,
   totalOfOffices,
 } from "./officeSummary";
+import { monthsOf, shiftPeriod, togglePeriod } from "./officeSummaryPeriod";
 
 const offices = [
   { legalName: "Oslo AS", country: "NO" as const, fullDayMinutes: 450 },

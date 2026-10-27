@@ -4,41 +4,41 @@ import { Button, Detail, Page, PeriodNavigation } from "@tid/ui";
 import type { Context } from "hono";
 import type { UserEnv } from "../login/user";
 import {
-  type CompanyFilter,
-  CompanySelect,
-  completeCompany,
-  resolveCompany,
-} from "../organizations/companyFilter";
+  completeOrganization,
+  type OrganizationFilter,
+  OrganizationSelect,
+  resolveOrganizationFilter,
+} from "../organizations/organizationFilter";
 import { Filtered } from "../query/filter";
 import { type QueryProps, queryPage } from "../query/queryPage";
 import { MonthEntries, type MonthEntry } from "../timeEntries/monthEntries";
 import { billingLabels } from "./billing";
 import type { ProjectReport } from "./projectReport";
 import { loadProjectEntries, loadProjectReport } from "./projectReport.data";
-import { projectReportPrintUrl, projectReportUrl } from "./projectsUrl";
+import { projectReportPrintUrl, projectReportUrl } from "./projects.url";
 
 export const projectReport = queryPage({
   url: projectReportUrl,
-  complete: completeCompany,
+  complete: completeOrganization,
   loader: async (c: Context<UserEnv>, { projectId, month }) => {
-    const company = await resolveCompany(c);
-    if (company instanceof Response) return company;
-    const report = await loadProjectReport(projectId, month, company.selected);
+    const organizationFilter = await resolveOrganizationFilter(c);
+    if (organizationFilter instanceof Response) return organizationFilter;
+    const report = await loadProjectReport(projectId, month, organizationFilter.selected);
     if (!report) return c.notFound();
-    const entries = await loadProjectEntries(projectId, month, company.selected);
-    return { company, report, entries };
+    const entries = await loadProjectEntries(projectId, month, organizationFilter.selected);
+    return { organizationFilter, report, entries };
   },
   view: ProjectReportPage,
 });
 
 function ProjectReportPage({
-  company,
+  organizationFilter,
   report,
   entries,
   query,
   href,
 }: {
-  company: CompanyFilter;
+  organizationFilter: OrganizationFilter;
   report: ProjectReport;
   entries: MonthEntry[];
 } & QueryProps<typeof projectReportUrl>) {
@@ -52,7 +52,7 @@ function ProjectReportPage({
       <Filtered
         by={
           <>
-            <CompanySelect {...company} />
+            <OrganizationSelect {...organizationFilter} />
             <PeriodNavigation
               previousHref={href({ month: addMonths(query.month, -1) })}
               nextHref={href({ month: addMonths(query.month, 1) })}

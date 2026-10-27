@@ -10,7 +10,7 @@ export const usePageSearch = () => useContext(PageSearch);
 
 /**
  * Filters above the part of the page they narrow. A filter that changes everything on the page,
- * like its company or month, wraps all of the page's content.
+ * like its organization or month, wraps all of the page's content.
  */
 export function Filtered({ by, children }: PropsWithChildren<{ by: Child }>) {
   return (

@@ -6,14 +6,18 @@ import { and, eq, exists, inArray } from "drizzle-orm";
 import type { Context } from "hono";
 import { database } from "../database";
 import type { UserEnv } from "../login/user";
-import { type CompanyFilter, CompanySelect, resolveCompany } from "../organizations/companyFilter";
+import {
+  type OrganizationFilter,
+  OrganizationSelect,
+  resolveOrganizationFilter,
+} from "../organizations/organizationFilter";
 import { Filtered } from "../query/filter";
-import { consultantPath } from "./consultantsUrl";
+import { consultantPath } from "./consultants.url";
 import { loadCurrentBillableProjects } from "./currentBillableProjects.data";
 
 export const consultantList = async (c: Context<UserEnv>) => {
-  const company = await resolveCompany(c);
-  if (company instanceof Response) return company;
+  const organizationFilter = await resolveOrganizationFilter(c);
+  if (organizationFilter instanceof Response) return organizationFilter;
 
   const rows = await database
     .select({
@@ -32,7 +36,7 @@ export const consultantList = async (c: Context<UserEnv>) => {
     .where(
       inArray(
         users.orgId,
-        company.selected.organizations.map((organization) => organization.id),
+        organizationFilter.selected.organizations.map((organization) => organization.id),
       ),
     )
     .orderBy(users.name);
@@ -46,7 +50,7 @@ export const consultantList = async (c: Context<UserEnv>) => {
         ...row,
         projectNames: (projectsByUser.get(row.id) ?? []).map((project) => project.name),
       }))}
-      {...company}
+      {...organizationFilter}
     />,
   );
 };
@@ -63,11 +67,11 @@ type ConsultantRow = {
 function ConsultantListPage({
   consultants,
   selected,
-  companies,
-}: { consultants: ConsultantRow[] } & CompanyFilter) {
+  options,
+}: { consultants: ConsultantRow[] } & OrganizationFilter) {
   return (
     <Page title="Consultants">
-      <Filtered by={<CompanySelect selected={selected} companies={companies} />}>
+      <Filtered by={<OrganizationSelect selected={selected} options={options} />}>
         {consultants.length === 0 ? (
           <EmptyState emoji="👥" title="No consultants yet" />
         ) : (

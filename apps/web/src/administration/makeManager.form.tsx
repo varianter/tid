@@ -1,5 +1,5 @@
 import { Button } from "@tid/ui";
-import { managersPath } from "./administrationUrl";
+import { managersPath } from "./administration.url";
 
 export function MakeManagerForm({
   organizationSlug,

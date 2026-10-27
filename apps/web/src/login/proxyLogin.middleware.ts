@@ -1,7 +1,7 @@
 import type { Context } from "hono";
 import { createMiddleware } from "hono/factory";
 import { z } from "zod";
-import { signupPath } from "./signupUrl";
+import { signupPath } from "./login.url";
 import type { PublicEnv } from "./user";
 import { findUserByEmail, findUserByIdentity, linkIdentity } from "./userIdentity.data";
 

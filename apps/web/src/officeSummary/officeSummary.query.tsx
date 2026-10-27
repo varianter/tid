@@ -20,8 +20,6 @@ import { database } from "../database";
 import { Filtered } from "../query/filter";
 import { type QueryProps, queryPage } from "../query/queryPage";
 import { formatShare } from "../share/share";
-import { isYear, monthsOf, type Period, shiftPeriod, togglePeriod } from "./applesaucePeriod";
-import { applesauceUrl } from "./applesauceUrl";
 import {
   amountPerConsultant,
   averageRates,
@@ -31,6 +29,8 @@ import {
   summarizeOffices,
   totalOfOffices,
 } from "./officeSummary";
+import { officeSummaryUrl } from "./officeSummary.url";
+import { isYear, monthsOf, type Period, shiftPeriod, togglePeriod } from "./officeSummaryPeriod";
 
 type Office = typeof organizations.$inferSelect;
 
@@ -64,8 +64,8 @@ async function loadLoggedTime(period: Period): Promise<LoggedTime[]> {
     .groupBy(view.accountName, users.id, users.endsOn, month, projects.currency);
 }
 
-export const applesauce = queryPage({
-  url: applesauceUrl,
+export const officeSummary = queryPage({
+  url: officeSummaryUrl,
   loader: async (_c, { period }) => {
     const offices = await database
       .select()
@@ -87,12 +87,12 @@ export const applesauce = queryPage({
       previousTotal: totalOfOffices([...previous.values()]),
     };
   },
-  view: ApplesaucePage,
+  view: OfficeSummaryPage,
 });
 
 const formatPeriod = (period: Period) => (isYear(period) ? period : formatDate(period, "month"));
 
-function ApplesaucePage({
+function OfficeSummaryPage({
   billableByMonth,
   offices,
   total,
@@ -104,13 +104,13 @@ function ApplesaucePage({
   offices: { office: Office; totals: OfficeTotals }[];
   total: ReturnType<typeof totalOfOffices>;
   previousTotal: ReturnType<typeof totalOfOffices>;
-} & QueryProps<typeof applesauceUrl>) {
+} & QueryProps<typeof officeSummaryUrl>) {
   const { period } = query;
   const unit = isYear(period) ? "year" : "month";
   const previous = formatPeriod(shiftPeriod(period, -1));
   const toggled = togglePeriod(period, thisMonthInOslo());
   return (
-    <Page title="Applesauce">
+    <Page title="Office summary">
       <Filtered
         by={
           <>

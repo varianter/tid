@@ -4,7 +4,7 @@ import type { Context } from "hono";
 import type { UserEnv } from "../login/user";
 import { MonthPage } from "./monthPage";
 import { loadTimesheet } from "./timesheet.data";
-import { monthPath } from "./timesheetUrl";
+import { monthPath } from "./timesheet.url";
 
 export const timesheetMonthRedirect = (c: Context<UserEnv>) =>
   c.redirect(monthPath(thisMonthInOslo(), false));

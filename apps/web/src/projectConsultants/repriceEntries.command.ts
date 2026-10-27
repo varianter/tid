@@ -1,8 +1,9 @@
 import { isIsoDate } from "@tid/calendar/isoDate";
 import { z } from "zod";
 import { formAction } from "../form/formAction";
-import { idParams, projectRatesPath } from "./projectConsultant";
+import { idParams } from "./projectConsultant";
 import { loadConsultant } from "./projectConsultant.data";
+import { projectRatesPath } from "./projectConsultants.url";
 import { RepriceFields, repriceEntriesForm, repriceFrame } from "./repriceEntries.form";
 import { addRateAndReprice, entriesToReprice } from "./repricing.data";
 

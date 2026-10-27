@@ -4,14 +4,18 @@ import { and, eq, exists, inArray } from "drizzle-orm";
 import type { Context } from "hono";
 import { database } from "../database";
 import type { UserEnv } from "../login/user";
-import { type CompanyFilter, CompanySelect, resolveCompany } from "../organizations/companyFilter";
+import {
+  type OrganizationFilter,
+  OrganizationSelect,
+  resolveOrganizationFilter,
+} from "../organizations/organizationFilter";
 import { Filtered } from "../query/filter";
 import { type ProjectSummary, ProjectTable } from "./projectSummary";
 import { listProjects } from "./projectSummary.data";
 
 export const projectList = async (c: Context<UserEnv>) => {
-  const company = await resolveCompany(c);
-  if (company instanceof Response) return company;
+  const organizationFilter = await resolveOrganizationFilter(c);
+  if (organizationFilter instanceof Response) return organizationFilter;
 
   const participates = exists(
     database
@@ -22,7 +26,7 @@ export const projectList = async (c: Context<UserEnv>) => {
           eq(projectOrganizations.projectId, projects.id),
           inArray(
             projectOrganizations.orgId,
-            company.selected.organizations.map((organization) => organization.id),
+            organizationFilter.selected.organizations.map((organization) => organization.id),
           ),
         ),
       ),
@@ -30,7 +34,7 @@ export const projectList = async (c: Context<UserEnv>) => {
   return c.render(
     <ProjectListPage
       projects={await listProjects(participates)}
-      {...company}
+      {...organizationFilter}
       canStartProjects={c.get("user").isManager}
     />,
   );
@@ -41,12 +45,12 @@ const newProject: Action = { label: "New project", href: "/projects/new" };
 function ProjectListPage({
   projects,
   selected,
-  companies,
+  options,
   canStartProjects,
-}: { projects: ProjectSummary[]; canStartProjects: boolean } & CompanyFilter) {
+}: { projects: ProjectSummary[]; canStartProjects: boolean } & OrganizationFilter) {
   return (
     <Page title="Projects" actions={[canStartProjects && newProject]}>
-      <Filtered by={<CompanySelect selected={selected} companies={companies} />}>
+      <Filtered by={<OrganizationSelect selected={selected} options={options} />}>
         {projects.length === 0 ? (
           <EmptyState
             emoji="📁"

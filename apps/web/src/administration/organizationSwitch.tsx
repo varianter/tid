@@ -1,6 +1,6 @@
 import { Button, ColorMode, Icon, Popover } from "@tid/ui";
 import type { OrganizationOption } from "../organizations/organization";
-import { administrationPath } from "./administrationUrl";
+import { administrationPath } from "./administration.url";
 
 type OrganizationSwitchProps = {
   organizations: OrganizationOption[];

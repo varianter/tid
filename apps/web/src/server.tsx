@@ -9,7 +9,6 @@ import { jsxRenderer } from "hono/jsx-renderer";
 import { secureHeaders } from "hono/secure-headers";
 import { timing } from "hono/timing";
 import { administration } from "./administration/administration.routes";
-import { applesauce } from "./applesauce/applesauce.routes";
 import { clients } from "./clients/clients.routes";
 import { consultants } from "./consultants/consultants.routes";
 import { dev, devLogoutUrl, devTenantId, readDevIdentity, requireDevUser } from "./dev/dev.routes";
@@ -17,16 +16,17 @@ import { ErrorPage } from "./errors/errorPage";
 import { errorReport } from "./errors/errorReport";
 import { Layout, vardeStylesheet } from "./layout";
 import { signupRouter } from "./login/login.routes";
+import { signupPath } from "./login/login.url";
 import { proxyLogoutUrl, requireProxyUser } from "./login/proxyLogin.middleware";
-import { signupPath } from "./login/signupUrl";
 import type { PublicEnv } from "./login/user";
 import { monthClose } from "./monthClose/monthClose.routes";
+import { officeSummary } from "./officeSummary/officeSummary.routes";
 import { projectConsultants } from "./projectConsultants/projectConsultants.routes";
 import { projects } from "./projects/projects.routes";
 import { reports } from "./reports/reports.routes";
 import { reportDatabaseTiming, reportRenderTiming, timeMiddleware } from "./serverTiming";
 import { timesheet } from "./timesheet/timesheet.routes";
-import { monthPath } from "./timesheet/timesheetUrl";
+import { monthPath } from "./timesheet/timesheet.url";
 
 const isDevLoginEnabled = process.env.DEV_LOGIN === "true";
 
@@ -144,7 +144,7 @@ app.route("/reports", reports);
 app.route("/month-close", monthClose);
 app.route("/consultants", consultants);
 app.route("/administration", administration);
-app.route("/applesauce", applesauce);
+app.route("/office-summary", officeSummary);
 
 // Dev login lets anyone act as any user, so it must not be reachable from the network.
 // Otherwise listen on all interfaces, which the Docker container needs.

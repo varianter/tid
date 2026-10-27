@@ -5,7 +5,7 @@ import type { UserEnv } from "../login/user";
 import type { OrganizationOption } from "../organizations/organization";
 import { findOrganizationBySlug, listOrganizations } from "../organizations/organization.data";
 import { Filtered } from "../query/filter";
-import { administrationPath, managersPath, openProjectsPath } from "./administrationUrl";
+import { administrationPath, managersPath, openProjectsPath } from "./administration.url";
 import { OrganizationSwitcher, OtherOrganizationNotice } from "./organizationSwitch";
 
 export const organizationOverviewRedirect = async (c: Context<UserEnv>) => {

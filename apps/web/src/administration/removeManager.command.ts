@@ -3,7 +3,7 @@ import { and, eq } from "drizzle-orm";
 import type { Context } from "hono";
 import { database } from "../database";
 import type { UserEnv } from "../login/user";
-import { managersPath } from "./administrationUrl";
+import { managersPath } from "./administration.url";
 import { findOrganizationMember } from "./organizationMember.data";
 
 // Nothing stops the last manager removing themselves; the role is then restored in the database.

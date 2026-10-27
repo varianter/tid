@@ -2,7 +2,7 @@ import { Checkbox, DataGrid, EmptyState } from "@tid/ui";
 import { z } from "zod";
 import type { FormProps } from "../form/formAction";
 import type { OrganizationOption } from "../organizations/organization";
-import { administrationPath } from "./administrationUrl";
+import { administrationPath } from "./administration.url";
 import { OtherOrganizationNotice } from "./organizationSwitch";
 
 // One ticked box comes as a string, several as an array, none as nothing.

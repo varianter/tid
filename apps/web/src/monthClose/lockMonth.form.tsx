@@ -1,7 +1,7 @@
 import { formatDate } from "@tid/calendar/dateDisplay";
 import { hasMonthStarted } from "@tid/calendar/osloClock";
 import { Button, Icon } from "@tid/ui";
-import { monthLockPath } from "./monthUrl";
+import { monthLockPath } from "./monthClose.url";
 
 /** Future months can be unlocked but not locked, so they get no form. */
 export function LockMonthForm({

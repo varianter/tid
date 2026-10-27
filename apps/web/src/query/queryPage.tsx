@@ -19,7 +19,7 @@ export type QueryProps<Url> = {
 export function queryPage<State, P extends object>(opts: {
   url: PageUrl<State>;
   /**
-   * Fills in defaults that depend on the request, like the user's own company, before the query is
+   * Fills in defaults that depend on the request, like the user's own organization, before the query is
    * made canonical, so a sloppy URL takes one redirect. Returns a Response (404) to stop.
    */
   complete?: (c: Context, query: State) => Promise<State | Response>;

@@ -5,11 +5,11 @@ import { type Context, Hono } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { createMiddleware } from "hono/factory";
 import { database } from "../database";
-import { signupPath } from "../login/signupUrl";
+import { signupPath } from "../login/login.url";
 import type { PublicEnv } from "../login/user";
 import { findUserByEmail } from "../login/userIdentity.data";
 
-// Trusts whoever is named in a cookie, so only dev.ts turns it on.
+// Trusts whoever is named in a cookie, so only startDevelopment.ts turns it on.
 const cookieName = "dev_user_email";
 const loginPath = "/dev/login";
 // Picking another user is all a dev logout needs.

@@ -14,7 +14,7 @@ import type { UserEnv } from "../login/user";
 import { loadLoggedInUser, type UserRow } from "../testing/loggedInUser";
 import { onlyRow, organizationIdBySlug } from "../testing/rows";
 import { consultants } from "./consultants.routes";
-import { consultantPath } from "./consultantsUrl";
+import { consultantPath } from "./consultants.url";
 
 let manager: UserRow;
 let member: UserRow;
@@ -49,21 +49,21 @@ test("members can't see the consultants", async () => {
 
 test("the list starts at the manager's own organization", async () => {
   const response = await requestAs(manager, "/consultants");
-  expect(response.headers.get("location")).toBe("/consultants?company=oslo");
+  expect(response.headers.get("location")).toBe("/consultants?organization=oslo");
 });
 
 test("managers list an organization's consultants, with who's a manager", async () => {
-  const page = await (await requestAs(manager, "/consultants?company=oslo")).text();
+  const page = await (await requestAs(manager, "/consultants?organization=oslo")).text();
   expect(page).toContain("ola@variant.no");
   expect(page).not.toContain("bjorn@variant.no");
-  expect((await requestAs(manager, "/consultants?company=nowhere")).status).toBe(404);
+  expect((await requestAs(manager, "/consultants?organization=nowhere")).status).toBe(404);
 });
 
 test("managers list a whole country's consultants", async () => {
-  const norway = await (await requestAs(manager, "/consultants?company=no")).text();
+  const norway = await (await requestAs(manager, "/consultants?organization=no")).text();
   expect(norway).toContain("ola@variant.no");
   expect(norway).toContain("bjorn@variant.no");
-  const sweden = await (await requestAs(manager, "/consultants?company=se")).text();
+  const sweden = await (await requestAs(manager, "/consultants?organization=se")).text();
   expect(sweden).not.toContain("ola@variant.no");
 });
 
