@@ -194,7 +194,7 @@ export function Layout({ currentPath, user, logoutUrl, elementsSrc, children }: 
             }
 
             @media (prefers-reduced-motion: reduce) {
-              ::view-transition-new(content),
+              ::view-transition-new(content) {
                 animation: none;
               }
             }
