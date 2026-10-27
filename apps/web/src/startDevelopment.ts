@@ -1,3 +1,5 @@
+import { watch } from "node:fs";
+import { dirname } from "node:path";
 import { createDatabase, migrateDatabase } from "@tid/db/client";
 import { startDevelopmentDatabase } from "@tid/db/container";
 import { users } from "@tid/db/schema";
@@ -13,10 +15,30 @@ await database.$client.close();
 console.log(`Postgres running at ${databaseUrl}`);
 
 // Watching only the server keeps the database running while code reloads.
-const server = Bun.spawn([process.execPath, "--watch", `${import.meta.dir}/server.tsx`], {
-  env: { ...process.env, DATABASE_URL: databaseUrl, DEV_LOGIN: "true" },
-  stdio: ["inherit", "inherit", "inherit"],
-});
+const startServer = () =>
+  Bun.spawn([process.execPath, "--watch", `${import.meta.dir}/server.tsx`], {
+    env: { ...process.env, DATABASE_URL: databaseUrl, DEV_LOGIN: "true" },
+    stdio: ["inherit", "inherit", "inherit"],
+  });
+let server = startServer();
+
+// `--watch` only sees what the server imports, and the server bundles these instead.
+for (const browserPackage of ["@tid/elements", "@tid/via"]) {
+  const source = dirname(Bun.fileURLToPath(import.meta.resolve(`${browserPackage}/browser`)));
+  watch(source, { recursive: true }, restartServer);
+}
+
+let restarting = false;
+// One save can fire several events, so those during a restart are dropped rather than starting
+// a second server. The new one bundles after they've landed.
+async function restartServer() {
+  if (restarting) return;
+  restarting = true;
+  server.kill();
+  await server.exited;
+  server = startServer();
+  restarting = false;
+}
 
 async function stopDevelopment() {
   server.kill();

@@ -19,7 +19,7 @@ export function remainingMinutes(fullDay: number, others: number[]) {
 
 /**
  * Spreadsheet keys for the timesheet's cells: arrows move between cells, T jumps to today,
- * shift+↑/↓ steps half an hour, and F fills in what's left of the day. Values only change in the input;
+ * shift+↑/↓ steps half an hour, F fills in what's left of the day, and A opens the task picker. Values only change in the input;
  * leaving the cell saves.
  */
 export class CellKeys {
@@ -71,6 +71,11 @@ export class CellKeys {
         case "T":
           // Handled even when today isn't on the sheet, so no "t" gets typed.
           this.#moveToToday(form);
+          return true;
+        case "a":
+        case "A":
+          // Handled even when there are no tasks to add, so no "a" gets typed.
+          this.#grid.querySelector<HTMLSelectElement>('select[name="add"]')?.showPicker();
           return true;
         default:
           return false;
