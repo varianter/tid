@@ -11,12 +11,14 @@ import {
 import { database } from "../framework/database";
 import { onlyRow, organizationIdBySlug } from "../testing/rows";
 import { onBillableAssignment, userTasks } from "./loggableTasks";
+import { loadTimesheet } from "./timesheet.data";
 
 let userId: number;
+let orgId: number;
 
 beforeAll(async () => {
   await rebuildDatabase(database);
-  const orgId = await organizationIdBySlug("oslo");
+  orgId = await organizationIdBySlug("oslo");
   userId = onlyRow(
     await database
       .insert(users)
@@ -57,4 +59,9 @@ test("the timesheet shows billable projects the user is assigned to, unless they
     "Hourly",
     "Starts later",
   ]);
+});
+
+test("a user who hides billable assignments gets none shown unasked", async () => {
+  const { assignedTaskIds } = await loadTimesheet({ id: userId, orgId }, "2026-10", false);
+  expect(assignedTaskIds).toEqual([]);
 });

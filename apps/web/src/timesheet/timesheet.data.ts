@@ -6,8 +6,15 @@ import { database } from "../framework/database";
 import { isLockedOn } from "../monthClose/monthLock.data";
 import { offeredTo, onBillableAssignment, userTasks } from "./loggableTasks";
 
-/** The user's entries in the month, the tasks the timesheet offers them, those it shows unasked, and whether the month is locked. */
-export async function loadTimesheet(user: Pick<User, "id" | "orgId">, month: string) {
+/**
+ * The user's entries in the month, the tasks the timesheet offers them, those it shows unasked
+ * unless `showBillableAssignments` is false, and whether the month is locked.
+ */
+export async function loadTimesheet(
+  user: Pick<User, "id" | "orgId">,
+  month: string,
+  showBillableAssignments: boolean,
+) {
   const from = firstDayOfMonth(month);
   const till = lastDayOfMonth(month);
   const [entries, assignedTasks, tasks, locked] = await Promise.all([
@@ -19,7 +26,7 @@ export async function loadTimesheet(user: Pick<User, "id" | "orgId">, month: str
       })
       .from(timeEntries)
       .where(and(eq(timeEntries.userId, user.id), between(timeEntries.spentOn, from, till))),
-    userTasks().where(onBillableAssignment(user.id, from)),
+    showBillableAssignments ? userTasks().where(onBillableAssignment(user.id, from)) : [],
     userTasks().where(offeredTo(user.id, from, till)),
     isLockedOn(user.orgId, from),
   ]);

@@ -3,9 +3,11 @@ import { isIsoMonth } from "@tid/calendar/isoDate";
 import { tasks, timeEntries } from "@tid/db/schema";
 import { and, eq, sql } from "drizzle-orm";
 import type { Context } from "hono";
+import { getCookie } from "hono/cookie";
 import type { User, UserEnv } from "../domain/users/user";
 import { database } from "../framework/database";
 import { isLockedOn, isMonthLockedError } from "../monthClose/monthLock.data";
+import { hideBillableAssignmentsCookie } from "./billableAssignments";
 import { loggableBy, userTasks } from "./loggableTasks";
 import { MonthPage } from "./monthPage";
 import { loadTimesheet } from "./timesheet.data";
@@ -83,13 +85,15 @@ export const logHours = async (c: Context<UserEnv, "/month/:month">) => {
   const { user, task, day } = cell;
   const saved = await saveHours(user, task.id, day, cell.hours);
   if (saved.error) {
+    const showBillableAssignments = getCookie(c, hideBillableAssignmentsCookie) === undefined;
     c.status(422);
     return c.render(
       <MonthPage
         month={month}
         user={user}
         search={new URL(c.req.url).search}
-        timesheet={await loadTimesheet(user, month)}
+        timesheet={await loadTimesheet(user, month, showBillableAssignments)}
+        showBillableAssignments={showBillableAssignments}
         error={{ taskId: task.id, day, ...saved.error }}
       />,
     );

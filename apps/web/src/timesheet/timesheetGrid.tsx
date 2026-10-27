@@ -185,10 +185,11 @@ function AddTaskForm({ addableTasks, class: className }: { addableTasks: Task[];
           class="w-full"
           data-size="small"
           aria-label="Add task"
-          options={addableTasks.map((task) => ({
+          options={addableTasks.toSorted(billableFirst).map((task) => ({
             value: task.id,
             label: task.name,
             group: task.projectName,
+            section: task.billing === "non_billable" ? "non-billable" : "billable",
           }))}
         >
           <option value="" selected disabled>
@@ -203,6 +204,11 @@ function AddTaskForm({ addableTasks, class: className }: { addableTasks: Task[];
       </form>
     </auto-submit>
   );
+}
+
+// Stable, so each section keeps the project and name order.
+function billableFirst(a: Task, b: Task) {
+  return Number(a.billing === "non_billable") - Number(b.billing === "non_billable");
 }
 
 function byProjectThenName(a: Task, b: Task) {

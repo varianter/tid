@@ -8,8 +8,15 @@ import {
 } from "@tid/db/schema";
 import { and, between, eq, exists, gte, isNull, ne, or } from "drizzle-orm";
 import { database } from "../framework/database";
+import type { Billing } from "../projects/billing";
 
-export type Task = { id: number; name: string; projectId: number; projectName: string };
+export type Task = {
+  id: number;
+  name: string;
+  projectId: number;
+  projectName: string;
+  billing: Billing;
+};
 
 const openToOrganizationOf = (userId: number) =>
   exists(
@@ -82,6 +89,12 @@ export const onBillableAssignment = (userId: number, from: string) =>
 
 export const userTasks = () =>
   database
-    .select({ id: tasks.id, name: tasks.name, projectId: projects.id, projectName: projects.name })
+    .select({
+      id: tasks.id,
+      name: tasks.name,
+      projectId: projects.id,
+      projectName: projects.name,
+      billing: projects.billing,
+    })
     .from(tasks)
     .innerJoin(projects, eq(projects.id, tasks.projectId));

@@ -7,3 +7,6 @@ export const monthPath = (month: string, showWeekends: boolean) =>
 // The query rides along, so a save can return to the same view.
 export const cellsActionOf = (month: string, search: string) =>
   `/timesheet/month/${month}/cells${search}`;
+
+export const billableAssignmentsActionOf = (month: string, search: string) =>
+  `/timesheet/month/${month}/billable-assignments${search}`;

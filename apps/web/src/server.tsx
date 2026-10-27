@@ -24,7 +24,7 @@ import { projectConsultants } from "./projectConsultants/projectConsultants.rout
 import { projects } from "./projects/projects.routes";
 import { reports } from "./reports/reports.routes";
 import { ErrorPage } from "./shell/errorPage";
-import { Layout, vardeStylesheet } from "./shell/layout";
+import { Layout, themeScriptSource, vardeStylesheet } from "./shell/layout";
 import { timesheet } from "./timesheet/timesheet.routes";
 import { monthPath } from "./timesheet/timesheet.url";
 
@@ -59,7 +59,7 @@ app.use(
   secureHeaders({
     contentSecurityPolicy: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'"],
+      scriptSrc: ["'self'", themeScriptSource],
       // Pages size grids and bars with style attributes.
       styleSrc: ["'self'", "'unsafe-inline'", "https://varde.variant.dev"],
       fontSrc: ["https://varde.variant.dev"],

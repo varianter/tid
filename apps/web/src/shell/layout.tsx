@@ -1,6 +1,7 @@
 import { thisMonthInOslo, timeOfDayInOslo } from "@tid/calendar/osloClock";
-import { Icon, type IconName, Popover } from "@tid/ui";
+import { Button, Icon, type IconName, Popover } from "@tid/ui";
 import { css, Style } from "hono/css";
+import { raw } from "hono/html";
 import type { PropsWithChildren } from "hono/jsx";
 import { administrationPath } from "../administration/administration.url";
 import { consultantPath, consultantsPath } from "../consultants/consultants.url";
@@ -12,6 +13,16 @@ import { monthPath } from "../timesheet/timesheet.url";
 import { TidSymbol, tidFaviconHref } from "./tidLogo";
 
 export const vardeStylesheet = "https://varde.variant.dev/v/2.0.1/styles.css";
+
+// Sets the scheme even without a saved one, so <theme-toggle> knows which way to flip.
+const themeScript = `
+  const saved = document.cookie.match(/(?:^|;\\s*)theme=(dark|light)\\b/)?.[1];
+  document.documentElement.dataset.colorScheme =
+    saved ?? (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+`;
+
+/** Lets the content security policy allow the theme script, and no other inline one. */
+export const themeScriptSource = `'sha256-${new Bun.CryptoHasher("sha256").update(themeScript).digest("base64")}'`;
 
 type LayoutProps = PropsWithChildren<{
   currentPath: string;
@@ -99,6 +110,8 @@ export function Layout({ currentPath, user, logoutUrl, elementsSrc, children }: 
       <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        {/* Inline and blocking, so a saved theme applies before the first paint. */}
+        <script>{raw(themeScript)}</script>
         <link rel="icon" href={tidFaviconHref} />
         <link rel="stylesheet" href={vardeStylesheet} />
         <script type="module" src={elementsSrc} />
@@ -125,6 +138,16 @@ export function Layout({ currentPath, user, logoutUrl, elementsSrc, children }: 
                 top: var(--spacing-2xs);
               }
               .menu-toggle { display: none; }
+            }
+            theme-toggle .v-icon {
+              transition: opacity var(--interaction-transition-duration-enter) var(--interaction-transition-easing-entrance), rotate var(--interaction-transition-duration-enter) var(--interaction-transition-easing-entrance), scale var(--interaction-transition-duration-enter) var(--interaction-transition-easing-entrance);
+            }
+            [data-color-scheme="light"] theme-toggle [data-scheme="light"],
+            [data-color-scheme="dark"] theme-toggle [data-scheme="dark"] {
+              opacity: 0;
+              scale: 0.5;
+              rotate: -90deg;
+              pointer-events: none;
             }
             :root{
               --vw-min: 320;
@@ -216,6 +239,18 @@ export function Layout({ currentPath, user, logoutUrl, elementsSrc, children }: 
                 <a href={logoutUrl} class="fs-s ink-subtle">
                   Log out
                 </a>
+                <theme-toggle class="mt-xs w-full">
+                  <Button
+                    type="button"
+                    class="pile w-full"
+                    data-variant="outlined"
+                    data-size="small"
+                    aria-label="Toggle between light and dark color scheme"
+                  >
+                    <Icon name="dark_mode" data-scheme="dark" />
+                    <Icon name="light_mode" data-scheme="light" />
+                  </Button>
+                </theme-toggle>
               </div>
             )}
           </nav>

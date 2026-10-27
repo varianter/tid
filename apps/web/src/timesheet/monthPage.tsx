@@ -7,6 +7,7 @@ import { capacityMinutes } from "../domain/capacity/capacity";
 import type { User } from "../domain/users/user";
 import { Filtered, FilterForm, PageSearch } from "../framework/filter";
 import { CellShortcuts } from "./cellShortcuts";
+import { ShowBillableAssignmentsForm } from "./showBillableAssignments.form";
 import { cellsActionOf, monthPath } from "./timesheet.url";
 import { type MonthError, TimesheetGrid, type TimesheetGridProps } from "./timesheetGrid";
 
@@ -20,12 +21,14 @@ export function MonthPage({
   user,
   search,
   timesheet: { tasks, entries, assignedTaskIds, locked },
+  showBillableAssignments,
   error,
 }: {
   month: string;
   user: User;
   /** The page's query string, kept by its links and forms. */
   search: string;
+  showBillableAssignments: boolean;
   timesheet: Timesheet;
   error?: MonthError;
 }) {
@@ -48,6 +51,11 @@ export function MonthPage({
                   Show weekends
                 </Label>
               </FilterForm>
+              <ShowBillableAssignmentsForm
+                month={month}
+                search={search}
+                shown={showBillableAssignments}
+              />
               <PeriodNavigation
                 previousHref={monthPath(addMonths(month, -1), showWeekends)}
                 nextHref={monthPath(addMonths(month, 1), showWeekends)}

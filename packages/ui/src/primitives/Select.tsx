@@ -6,6 +6,8 @@ export type SelectOption<Value extends string | number> = {
   label: string;
   /** Options with the same group sit under one `optgroup`. Ungrouped options come first. */
   group?: string;
+  /** Options with the same section sit together, with a rule between sections. */
+  section?: string;
 };
 
 type SelectProps<Value extends string | number> = Sized & {
@@ -32,20 +34,27 @@ export function Select<Value extends string | number>({
       {option.label}
     </option>
   );
-  const groups = Map.groupBy(options, (option) => option.group);
+  const renderGroups = (sectionOptions: SelectOption<Value>[]) =>
+    [...Map.groupBy(sectionOptions, (option) => option.group)].map(([group, items]) =>
+      group === undefined ? (
+        items.map(renderOption)
+      ) : (
+        <optgroup>
+          <legend>{group}</legend>
+          {items.map(renderOption)}
+        </optgroup>
+      ),
+    );
+  const sections = [...Map.groupBy(options, (option) => option.section).values()];
   return (
     <select class={classes("v-select", className)} {...attributes}>
       {children}
-      {[...groups].map(([group, items]) =>
-        group === undefined ? (
-          items.map(renderOption)
-        ) : (
-          <optgroup>
-            <legend>{group}</legend>
-            {items.map(renderOption)}
-          </optgroup>
-        ),
-      )}
+      {sections.map((sectionOptions, index) => (
+        <>
+          {index > 0 && <hr />}
+          {renderGroups(sectionOptions)}
+        </>
+      ))}
     </select>
   );
 }
