@@ -1,4 +1,4 @@
-import { FormPage } from "@tid/ui";
+import { FormPage, type PopoverType } from "@tid/ui";
 import type { Context } from "hono";
 import type { Child, FC } from "hono/jsx";
 import { z } from "zod";
@@ -23,6 +23,8 @@ type FormFrame = {
   cancel?: string;
   /** The submit button's label. Leave it out when there's nothing to submit. */
   submit?: string;
+  /** How the form is shown when it's opened in a layer. */
+  layer?: PopoverType;
 };
 
 /**

@@ -74,6 +74,7 @@ function ProjectRatesPage({ project, consultants, today }: ProjectRatesPageProps
                 label: "Add rate",
                 href: `${ratesPath(ids)}/new`,
                 "aria-label": `Add a rate for ${consultant.name}`,
+                "via-layer": true,
               },
             ]}
           >

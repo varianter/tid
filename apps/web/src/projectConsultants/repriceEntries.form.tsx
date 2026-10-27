@@ -27,6 +27,8 @@ export const repriceFrame = ({ consultant, newRate }: RepriceProps) => ({
   title: `New rate for ${consultant.name} from ${formatDate(newRate.validFrom)}`,
   cancel: projectRatesPath(consultant.projectId),
   submit: "Add rate and reprice",
+  // The entries it reprices can run long.
+  layer: "drawer" as const,
 });
 
 export function RepriceFields({ consultant, newRate, entries }: RepriceProps & FormProps) {

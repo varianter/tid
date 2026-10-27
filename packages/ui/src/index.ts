@@ -22,7 +22,7 @@ export { ColorMode, type Palette } from "./primitives/ColorMode";
 export { findIconSvg, Icon, type IconName, iconNames, iconsPath } from "./primitives/Icon";
 export { Input } from "./primitives/Input";
 export { Label } from "./primitives/Label";
-export { Popover } from "./primitives/Popover";
+export { Popover, type PopoverType } from "./primitives/Popover";
 export { ProgressBar } from "./primitives/ProgressBar";
 export { Radio } from "./primitives/Radio";
 export { Range } from "./primitives/Range";

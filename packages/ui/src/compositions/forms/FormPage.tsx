@@ -1,5 +1,6 @@
 import type { Child, PropsWithChildren } from "hono/jsx";
 import { Button } from "../../primitives/Button";
+import type { PopoverType } from "../../primitives/Popover";
 import { FormError } from "./FormError";
 
 type FormPageProps = PropsWithChildren<{
@@ -12,6 +13,8 @@ type FormPageProps = PropsWithChildren<{
   submit?: string;
   /** What's wrong with the form as a whole, rather than with one field. */
   formError?: string;
+  /** How the form is shown when it's opened in a layer. */
+  layer?: PopoverType;
 }>;
 
 /** A page that is one form, as opposed to a `Page` that shows something. */
@@ -21,6 +24,7 @@ export function FormPage({
   cancel,
   submit,
   formError,
+  layer,
   children,
 }: FormPageProps) {
   const leave = cancel && (
@@ -29,7 +33,7 @@ export function FormPage({
     </Button>
   );
   return (
-    <main composite-component="FormPage" class="py-xl px-s">
+    <main composite-component="FormPage" class="py-xl px-s" via-layer-type={layer}>
       {/* Hono moves a title rendered in the body into the head. */}
       <title>{title}</title>
       <header class="stack-v gap-3xs b-b bc-subtle pb-s mb-s">

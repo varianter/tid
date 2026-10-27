@@ -19,7 +19,7 @@
     "db:studio": "bun --filter @tid/db studio",
     "test": "bun test",
     "e2e": "bun test ./apps/web/e2e/*.e2e.ts",
-    "typecheck": "bun check --no-pretty && bun --filter @tid/elements typecheck",
+    "typecheck": "bun check --no-pretty && bun --filter './packages/*' typecheck",
     "lint": "biome check .",
     "knip": "knip",
     "verify": "bun run typecheck && bun run lint && bun run test"

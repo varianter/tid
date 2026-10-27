@@ -1,5 +1,4 @@
 import { thisMonthInOslo } from "@tid/calendar/osloClock";
-import { bundleElements } from "@tid/elements/bundle";
 import { findIconSvg, iconsPath } from "@tid/ui";
 import { Hono } from "hono";
 import { compress } from "hono/compress";
@@ -13,6 +12,7 @@ import { clients } from "./clients/clients.routes";
 import { consultants } from "./consultants/consultants.routes";
 import { dev, devLogoutUrl, devTenantId, readDevIdentity, requireDevUser } from "./dev/dev.routes";
 import type { PublicEnv } from "./domain/users/user";
+import { bundleBrowserScript } from "./framework/browserScript";
 import { errorReport } from "./framework/errorReport";
 import { reportDatabaseTiming, reportRenderTiming, timeMiddleware } from "./framework/serverTiming";
 import { signupRouter } from "./login/login.routes";
@@ -49,7 +49,10 @@ function chooseLogin() {
 }
 const login = chooseLogin();
 
-const elements = await bundleElements();
+const scripts = await Promise.all([
+  bundleBrowserScript(import.meta.resolve("@tid/elements/browser")),
+  bundleBrowserScript(import.meta.resolve("@tid/via/browser")),
+]);
 
 const app = new Hono<PublicEnv>();
 
@@ -73,14 +76,14 @@ app.use(
 app.use(csrf());
 app.use(
   jsxRenderer(async ({ children }, c) => {
-    // Early discovery of the stylesheet and element bundle, before the browser reaches their tags in head.
+    // Early discovery of the stylesheet and scripts, before the browser reaches their tags in head.
     // The font is fetched with CORS, which needs its own connection to Varde's origin.
     c.header(
       "Link",
       [
         `<${vardeStylesheet}>; rel=preload; as=style`,
         `<${new URL(vardeStylesheet).origin}>; rel=preconnect; crossorigin`,
-        `<${elements.path}>; rel=modulepreload`,
+        ...scripts.map((script) => `<${script.path}>; rel=modulepreload`),
       ].join(", "),
     );
     const user = c.get("user");
@@ -89,7 +92,7 @@ app.use(
         currentPath={c.req.path}
         user={user}
         logoutUrl={login.logoutUrl}
-        elementsSrc={elements.path}
+        scriptSrcs={scripts.map((script) => script.path)}
       >
         {children}
       </Layout>
@@ -123,12 +126,14 @@ app.get(`${iconsPath}/:file`, (c) => {
     "Cache-Control": "public, max-age=31536000, immutable",
   });
 });
-app.get(elements.path, (c) =>
-  c.body(elements.code, 200, {
-    "Content-Type": "text/javascript",
-    "Cache-Control": "public, max-age=31536000, immutable",
-  }),
-);
+for (const script of scripts) {
+  app.get(script.path, (c) =>
+    c.body(script.code, 200, {
+      "Content-Type": "text/javascript",
+      "Cache-Control": "public, max-age=31536000, immutable",
+    }),
+  );
+}
 
 // Registered before the middleware, so logging in and signing up don't require a user.
 if (isDevLoginEnabled) app.route("/dev", dev);

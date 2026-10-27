@@ -28,8 +28,8 @@ type LayoutProps = PropsWithChildren<{
   currentPath: string;
   user?: User;
   logoutUrl: string;
-  /** The bundled custom elements, loaded on every page. */
-  elementsSrc: string;
+  /** The bundled browser scripts, loaded on every page. */
+  scriptSrcs: string[];
 }>;
 
 type NavigationSection = {
@@ -104,7 +104,7 @@ function isActive(section: string, currentPath: string) {
   return currentPath === section || currentPath.startsWith(`${section}/`);
 }
 
-export function Layout({ currentPath, user, logoutUrl, elementsSrc, children }: LayoutProps) {
+export function Layout({ currentPath, user, logoutUrl, scriptSrcs, children }: LayoutProps) {
   return (
     <html lang="en">
       <head>
@@ -114,7 +114,9 @@ export function Layout({ currentPath, user, logoutUrl, elementsSrc, children }: 
         <script>{raw(themeScript)}</script>
         <link rel="icon" href={tidFaviconHref} />
         <link rel="stylesheet" href={vardeStylesheet} />
-        <script type="module" src={elementsSrc} />
+        {scriptSrcs.map((src) => (
+          <script type="module" src={src} />
+        ))}
         <Style />
         <Style>
           {css`
@@ -267,6 +269,16 @@ export function Layout({ currentPath, user, logoutUrl, elementsSrc, children }: 
           </button>
           {children}
         </div>
+        {/* What @tid/via clones for each `a[via-layer]` it opens. */}
+        <template id="via-layer">
+          <Popover role="dialog" tabindex={-1} class="p-m">
+            <div
+              via-layer-content
+              class="surface-base p-m b-all bc-subtle shadow-mid br-l"
+              style="height: 100%; overflow-y: scroll;"
+            />
+          </Popover>
+        </template>
       </body>
     </html>
   );

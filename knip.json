@@ -2,7 +2,10 @@
   "$schema": "https://unpkg.com/knip@6.42.1/schema.json",
   "workspaces": {
     "apps/web": {
-      "entry": ["src/server.tsx"]
+      "entry": ["src/server.tsx", "e2e/*.e2e.ts"]
+    },
+    "packages/via": {
+      "ignoreDependencies": ["@types/dom-navigation"]
     }
   }
 }

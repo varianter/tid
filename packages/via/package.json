@@ -1,0 +1,14 @@
+{
+  "name": "@tid/via",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "bun check --no-pretty"
+  },
+  "devDependencies": {
+    "@types/dom-navigation": "1.0.7"
+  },
+  "exports": {
+    "./browser": "./src/index.ts"
+  }
+}

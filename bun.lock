@@ -17,6 +17,7 @@
         "@tid/db": "workspace:*",
         "@tid/elements": "workspace:*",
         "@tid/ui": "workspace:*",
+        "@tid/via": "workspace:*",
         "drizzle-orm": "catalog:",
         "hono": "4.13.9",
         "zod": "catalog:",
@@ -48,6 +49,12 @@
       "name": "@tid/ui",
       "dependencies": {
         "hono": "4.13.9",
+      },
+    },
+    "packages/via": {
+      "name": "@tid/via",
+      "devDependencies": {
+        "@types/dom-navigation": "1.0.7",
       },
     },
   },
@@ -284,6 +291,8 @@
 
     "@tid/ui": ["@tid/ui@workspace:packages/ui"],
 
+    "@tid/via": ["@tid/via@workspace:packages/via"],
+
     "@tid/web": ["@tid/web@workspace:apps/web"],
 
     "@tybys/wasm-util": ["@tybys/wasm-util@0.10.4", "", { "dependencies": { "tslib": "^2.4.0" } }, "sha512-W3c4gRigFS0T/Ma4qIYF3GDAc5AQdHb1yL5znJT1Zv1YaD9Kitx656wBjvr19qbiosmZT8lWDM5BEMynUqX65A=="],
@@ -293,6 +302,8 @@
     "@types/docker-modem": ["@types/docker-modem@3.0.6", "", { "dependencies": { "@types/node": "*", "@types/ssh2": "*" } }, "sha512-yKpAGEuKRSS8wwx0joknWxsmLha78wNMe9R2S3UNsVOkZded8UqOrV8KoeDXoXsjndxwyF3eIhyClGbO1SEhEg=="],
 
     "@types/dockerode": ["@types/dockerode@4.0.1", "", { "dependencies": { "@types/docker-modem": "*", "@types/node": "*", "@types/ssh2": "*" } }, "sha512-cmUpB+dPN955PxBEuXE3f6lKO1hHiIGYJA46IVF3BJpNsZGvtBDcRnlrHYHtOH/B6vtDOyl2kZ2ShAu3mgc27Q=="],
+
+    "@types/dom-navigation": ["@types/dom-navigation@1.0.7", "", {}, "sha512-Di4W+i2faYquHUnyWUg3bBQp5pTNvjDDA7mIYfD/1WlLgan6sKkeVjGbdL78K0CuNEk5Pfc/c0rfelwkz10mnQ=="],
 
     "@types/node": ["@types/node@26.6.3", "", { "dependencies": { "undici-types": "~8.9.0" } }, "sha512-dsqMQQoeTLqu9wynDD00q573mNzso3IdQOAfHRJqLCcmCFPoGo9A1bDpUcv/9tnKpErQWv9uKeGfl37EIS02Yg=="],
 

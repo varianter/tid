@@ -13,7 +13,7 @@
     "skipLibCheck": true,
     "verbatimModuleSyntax": true
   },
-  // If we even add another package meant to be consumed in the browser, consider making a separate tsconfig for it.
-  // `packages/elements` run in the browser and check with DOM types in their own tsconfig.
-  "exclude": ["**/node_modules", "packages/elements"]
+  // Packages that run in the browser check with DOM types in their own tsconfig, and their own
+  // typecheck script.
+  "exclude": ["**/node_modules", "packages/elements", "packages/via"]
 }

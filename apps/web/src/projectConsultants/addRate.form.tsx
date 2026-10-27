@@ -23,6 +23,7 @@ export const addRateFrame = ({ consultant }: AddRateProps) => ({
   title: `New rate for ${consultant.name}`,
   cancel: projectRatesPath(consultant.projectId),
   submit: "Add rate",
+  layer: "tooltip" as const,
 });
 
 export function AddRateFields({
