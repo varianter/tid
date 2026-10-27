@@ -1,5 +1,5 @@
 import { createDatabase, rebuildDatabase } from "@tid/db/client";
-import { seedDatabase } from "@tid/db/fixture";
+import { seedDatabase } from "@tid/db/seedDatabase";
 
 // Runs the app in this process against a fresh database, so a run needs only Docker and Chrome.
 // Module scope, so every e2e file in a run shares one app and one database.

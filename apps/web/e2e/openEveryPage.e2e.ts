@@ -13,8 +13,10 @@ const pages = [
   { path: "/clients", heading: "Clients" },
   { path: "/projects", heading: "Projects" },
   { path: "/reports", heading: "Reports" },
-  { path: "/end-of-the-month", heading: "End of the month" },
-  { path: "/harvest-import", heading: "Harvest import" },
+  { path: "/month-close", heading: "Month close" },
+  { path: "/consultants", heading: "Consultants" },
+  { path: "/office-summary", heading: "Office summary" },
+  { path: "/administration", heading: "Administration of" },
 ];
 
 test("a manager can open every page without a script error", async () => {

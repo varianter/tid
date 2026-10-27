@@ -16,6 +16,7 @@ test("a user logs in and logs hours on the timesheet", async () => {
   expect(heading).toBe("Timesheet");
 
   const { taskId, day, input } = await findEmptyCell(view);
+  await view.scrollTo(input, { block: "center" });
   await view.click(input);
   await view.type("6,5");
   await view.press("Enter");
