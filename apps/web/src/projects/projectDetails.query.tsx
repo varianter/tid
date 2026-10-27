@@ -16,11 +16,11 @@ import { formatTotalHours } from "@tid/elements/hours";
 import { Badge, Button, DataGrid, Detail, Icon, Page, Section, Stat, StatList } from "@tid/ui";
 import { and, desc, eq, lte, type SQL, sql } from "drizzle-orm";
 import type { Context } from "hono";
-import { formatAmount } from "../amount/amount";
 import { consultantPath } from "../consultants/consultants.url";
-import { database } from "../database";
-import type { UserEnv } from "../login/user";
-import { managesProject } from "../managers/manager.data";
+import { formatAmount } from "../domain/amount/amount";
+import { managesProject } from "../domain/managers/manager.data";
+import type { UserEnv } from "../domain/users/user";
+import { database } from "../framework/database";
 import {
   type AssignmentState,
   assignmentState,

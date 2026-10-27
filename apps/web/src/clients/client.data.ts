@@ -1,6 +1,6 @@
 import { clients } from "@tid/db/schema";
 import { eq } from "drizzle-orm";
-import { database } from "../database";
+import { database } from "../framework/database";
 
 export const findClient = async (idParam: string | undefined) => {
   const id = Number(idParam);

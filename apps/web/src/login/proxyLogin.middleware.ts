@@ -1,8 +1,8 @@
 import type { Context } from "hono";
 import { createMiddleware } from "hono/factory";
 import { z } from "zod";
+import type { PublicEnv } from "../domain/users/user";
 import { signupPath } from "./login.url";
-import type { PublicEnv } from "./user";
 import { findUserByEmail, findUserByIdentity, linkIdentity } from "./userIdentity.data";
 
 // oauth2-proxy logs the user in with Entra and nginx overwrites these headers on every

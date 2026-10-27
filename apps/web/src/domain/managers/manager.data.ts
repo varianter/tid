@@ -1,8 +1,8 @@
 import { projectOrganizations } from "@tid/db/schema";
 import { eq } from "drizzle-orm";
-import { database } from "../database";
-import type { User } from "../login/user";
+import { database } from "../../framework/database";
 import { findOrganizationBySlug } from "../organizations/organization.data";
+import type { User } from "../users/user";
 import { countryVisibility } from "./manager";
 
 /** The organization, unless it's in a country the user may not see. */

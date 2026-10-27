@@ -20,9 +20,8 @@ import {
 import { and, between, eq, gte, isNull, or, sql } from "drizzle-orm";
 import type { Context } from "hono";
 import { consultantPath } from "../consultants/consultants.url";
-import { database } from "../database";
-import type { UserEnv } from "../login/user";
-import { managesOrganization } from "../managers/manager";
+import { capacityMinutes } from "../domain/capacity/capacity";
+import { managesOrganization } from "../domain/managers/manager";
 import {
   completeOrganization,
   findOrganizationFilter,
@@ -30,10 +29,11 @@ import {
   type OrganizationOption,
   OrganizationSelect,
   resolveOrganizationFilter,
-} from "../organizations/organizationFilter";
-import { Filtered } from "../query/filter";
-import { type QueryProps, queryPage } from "../query/queryPage";
-import { capacityMinutes } from "../reports/capacity";
+} from "../domain/organizations/organizationFilter";
+import type { UserEnv } from "../domain/users/user";
+import { database } from "../framework/database";
+import { Filtered } from "../framework/filter";
+import { type QueryProps, queryPage } from "../framework/queryPage";
 import { formatShare } from "../share/share";
 import { LockMonthForm } from "./lockMonth.form";
 import { monthUrl } from "./monthClose.url";

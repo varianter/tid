@@ -1,6 +1,6 @@
 import type { Country } from "@tid/calendar/publicHolidays";
-import { type Amounts, addAmounts } from "../amount/amount";
-import { capacityMinutes } from "../reports/capacity";
+import { type Amounts, addAmounts } from "../domain/amount/amount";
+import { capacityMinutes } from "../domain/capacity/capacity";
 
 type Office = { legalName: string; country: Country; fullDayMinutes: number };
 

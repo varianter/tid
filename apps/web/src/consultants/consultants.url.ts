@@ -1,7 +1,7 @@
 import { thisMonthInOslo } from "@tid/calendar/osloClock";
 import { z } from "zod";
-import { monthField } from "../query/pageMonth";
-import { idParam, pageUrl } from "../query/pageUrl";
+import { monthField } from "../framework/pageMonth";
+import { idParam, pageUrl } from "../framework/pageUrl";
 
 export const consultantsPath = (organization: string) =>
   `/consultants?${new URLSearchParams({ organization })}`;

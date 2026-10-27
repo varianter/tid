@@ -4,11 +4,14 @@ import { Badge, DataGrid, Page } from "@tid/ui";
 import { and, eq, exists } from "drizzle-orm";
 import type { Context } from "hono";
 import { consultantPath } from "../consultants/consultants.url";
-import { database } from "../database";
-import type { UserEnv } from "../login/user";
-import type { OrganizationOption } from "../organizations/organization";
-import { findOrganizationBySlug, listOrganizations } from "../organizations/organization.data";
-import { Filtered } from "../query/filter";
+import type { OrganizationOption } from "../domain/organizations/organization";
+import {
+  findOrganizationBySlug,
+  listOrganizations,
+} from "../domain/organizations/organization.data";
+import type { UserEnv } from "../domain/users/user";
+import { database } from "../framework/database";
+import { Filtered } from "../framework/filter";
 import { administrationPath } from "./administration.url";
 import { MakeManagerForm } from "./makeManager.form";
 import { OrganizationSwitcher, OtherOrganizationNotice } from "./organizationSwitch";

@@ -1,6 +1,6 @@
 import { clients, projectAssignments, projects } from "@tid/db/schema";
 import { and, eq, gte, inArray, isNull, lte, ne, or } from "drizzle-orm";
-import { database } from "../database";
+import { database } from "../framework/database";
 
 /** Billable projects each of the users is assigned to on `today`, ordered by project name. */
 export async function loadCurrentBillableProjects(userIds: number[], today: string) {

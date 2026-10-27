@@ -4,9 +4,9 @@ import { and, eq, exists } from "drizzle-orm";
 import { type Context, Hono } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { createMiddleware } from "hono/factory";
-import { database } from "../database";
+import type { PublicEnv } from "../domain/users/user";
+import { database } from "../framework/database";
 import { signupPath } from "../login/login.url";
-import type { PublicEnv } from "../login/user";
 import { findUserByEmail } from "../login/userIdentity.data";
 
 // Trusts whoever is named in a cookie, so only startDevelopment.ts turns it on.

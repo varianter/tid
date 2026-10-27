@@ -1,8 +1,8 @@
 import { z } from "zod";
-import { billableField } from "../billable/billableFilter";
-import { organizationField } from "../organizations/organizationFilter";
-import { monthField } from "../query/pageMonth";
-import { pageUrl } from "../query/pageUrl";
+import { organizationField } from "../domain/organizations/organizationFilter";
+import { monthField } from "../framework/pageMonth";
+import { pageUrl } from "../framework/pageUrl";
+import { billableField } from "./billableFilter";
 
 export const tabs = ["projects", "consultants", "tasks"] as const;
 export type Tab = (typeof tabs)[number];

@@ -3,8 +3,8 @@ import { formatTotalHours } from "@tid/elements/hours";
 import { type Action, Actions, DataGrid, EmptyState, Page } from "@tid/ui";
 import { countDistinct, eq, sql } from "drizzle-orm";
 import type { Context } from "hono";
-import { database } from "../database";
-import type { UserEnv } from "../login/user";
+import type { UserEnv } from "../domain/users/user";
+import { database } from "../framework/database";
 import type { Client } from "./client";
 
 export const clientList = async (c: Context<UserEnv>) => {

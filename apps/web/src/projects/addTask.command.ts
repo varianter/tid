@@ -1,7 +1,7 @@
 import { projects, tasks } from "@tid/db/schema";
 import { eq } from "drizzle-orm";
-import { database } from "../database";
-import { formAction } from "../form/formAction";
+import { database } from "../framework/database";
+import { formAction } from "../framework/formAction";
 import { AddTaskFields, addTaskForm, addTaskFrame } from "./addTask.form";
 
 export const addTask = formAction({

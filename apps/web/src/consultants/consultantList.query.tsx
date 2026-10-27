@@ -4,14 +4,14 @@ import { userRoles, users } from "@tid/db/schema";
 import { Badge, DataGrid, EmptyState, Page } from "@tid/ui";
 import { and, eq, exists, inArray } from "drizzle-orm";
 import type { Context } from "hono";
-import { database } from "../database";
-import type { UserEnv } from "../login/user";
 import {
   type OrganizationFilter,
   OrganizationSelect,
   resolveOrganizationFilter,
-} from "../organizations/organizationFilter";
-import { Filtered } from "../query/filter";
+} from "../domain/organizations/organizationFilter";
+import type { UserEnv } from "../domain/users/user";
+import { database } from "../framework/database";
+import { Filtered } from "../framework/filter";
 import { consultantPath } from "./consultants.url";
 import { loadCurrentBillableProjects } from "./currentBillableProjects.data";
 

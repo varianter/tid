@@ -15,21 +15,21 @@ import {
 } from "@tid/ui";
 import { and, between, eq, gte, inArray, isNull, or, sql } from "drizzle-orm";
 import type { Child } from "hono/jsx";
-import { type Amounts, addAmounts, formatAmounts } from "../amount/amount";
-import { BillableSelect, billableCondition } from "../billable/billableFilter";
 import { consultantPath } from "../consultants/consultants.url";
-import { database } from "../database";
+import { type Amounts, addAmounts, formatAmounts } from "../domain/amount/amount";
+import { capacityMinutes } from "../domain/capacity/capacity";
 import {
   completeOrganization,
   type OrganizationFilter,
   OrganizationSelect,
   resolveOrganizationFilter,
-} from "../organizations/organizationFilter";
+} from "../domain/organizations/organizationFilter";
+import { database } from "../framework/database";
+import { Filtered } from "../framework/filter";
+import { type QueryProps, queryPage } from "../framework/queryPage";
 import { projectReportUrl } from "../projects/projects.url";
-import { Filtered } from "../query/filter";
-import { type QueryProps, queryPage } from "../query/queryPage";
 import { formatShare } from "../share/share";
-import { capacityMinutes } from "./capacity";
+import { BillableSelect, billableCondition } from "./billableFilter";
 import { reportUrl, type Tab, tabs } from "./reports.url";
 
 export const monthlyReport = queryPage({

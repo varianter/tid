@@ -13,8 +13,8 @@ import {
 } from "@tid/db/schema";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
-import { database } from "../database";
-import type { UserEnv } from "../login/user";
+import type { UserEnv } from "../domain/users/user";
+import { database } from "../framework/database";
 import { projectConsultants } from "../projectConsultants/projectConsultants.routes";
 import { loadLoggedInUser, type UserRow } from "../testing/loggedInUser";
 import { organizationIdBySlug } from "../testing/rows";

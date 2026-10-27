@@ -2,14 +2,14 @@ import { thisMonthInOslo, timeOfDayInOslo } from "@tid/calendar/osloClock";
 import { Icon, type IconName, Popover } from "@tid/ui";
 import { css, Style } from "hono/css";
 import type { PropsWithChildren } from "hono/jsx";
-import { administrationPath } from "./administration/administration.url";
-import { consultantPath, consultantsPath } from "./consultants/consultants.url";
-import type { User } from "./login/user";
-import { officeSummaryUrl } from "./officeSummary/officeSummary.url";
-import { projectsPath } from "./projects/projects.url";
-import { reportUrl } from "./reports/reports.url";
+import { administrationPath } from "../administration/administration.url";
+import { consultantPath, consultantsPath } from "../consultants/consultants.url";
+import type { User } from "../domain/users/user";
+import { officeSummaryUrl } from "../officeSummary/officeSummary.url";
+import { projectsPath } from "../projects/projects.url";
+import { reportUrl } from "../reports/reports.url";
+import { monthPath } from "../timesheet/timesheet.url";
 import { TidSymbol, tidFaviconHref } from "./tidLogo";
-import { monthPath } from "./timesheet/timesheet.url";
 
 export const vardeStylesheet = "https://varde.variant.dev/v/2.0.1/styles.css";
 

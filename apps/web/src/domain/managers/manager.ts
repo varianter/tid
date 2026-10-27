@@ -1,5 +1,5 @@
 import type { Country } from "@tid/calendar/publicHolidays";
-import type { User } from "../login/user";
+import type { User } from "../users/user";
 
 /** Whether the user is a manager in the organization; managers only manage their own. */
 export function managesOrganization(user: User, orgId: number) {

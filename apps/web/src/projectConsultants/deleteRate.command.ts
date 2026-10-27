@@ -3,7 +3,7 @@ import { todayInOslo } from "@tid/calendar/osloClock";
 import { assignmentRates } from "@tid/db/schema";
 import { and, eq } from "drizzle-orm";
 import type { Context } from "hono";
-import { database } from "../database";
+import { database } from "../framework/database";
 import { idParams, ratesOf } from "./projectConsultant";
 import { projectRatesPath } from "./projectConsultants.url";
 

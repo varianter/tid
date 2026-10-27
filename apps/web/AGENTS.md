@@ -1,7 +1,7 @@
 ## Terms
 
 - **Generic** code knows nothing about this business: `@tid/ui` and `@tid/calendar`. It never imports from a feature.
-- **Domain** code knows the business: its rules, queries and components. It lives in a feature, even when several features use it.
+- **Domain** code knows the business: its rules, queries and components. It lives in the feature it belongs to. A concept of the business that no feature owns, like an organization or an amount, lives in `domain/<concept>/`.
 - A **command** is a use case that changes state: a `POST` that redirects when it succeeds.
 - A **query** is a use case that reads state and renders a page: a `GET`.
 - A **slice** is a command or a query, in one file, from request to database to page.
@@ -9,6 +9,16 @@
 - **Routes** map a feature's URLs to its slices, and do nothing else.
 
 ## Structure
+
+`src/` holds layers, each depending only on those below it:
+
+```
+src/
+  <feature>/        # one folder per feature
+  shell/            # the frame around every page, which links to the features
+  domain/<concept>/ # business concepts no feature owns
+  framework/        # how a page, form, URL or error works; knows nothing of the business
+```
 
 One folder per feature. `projects/` is the reference.
 
@@ -53,7 +63,7 @@ A domain file is named after a domain noun, never `shared`, `utils` or `services
 
 Only routes import a slice. Pages import forms. Only `server.tsx` imports routes. Slices may import domain and data files from any feature. Pure files import only pure files. `src/architecture.test.ts` checks this.
 
-Plumbing that every feature builds on, like `formAction` and the database client, isn't a feature and sits outside these rules.
+`framework/` imports only `framework/`, and `domain/` only `domain/` and `framework/`, because every feature leans on them. Like `shell/`, `framework/` is plumbing rather than a feature, so it may do I/O without a suffix.
 
 Generic code stays generic: `packages/ui/AGENTS.md` says what counts as domain knowledge.
 

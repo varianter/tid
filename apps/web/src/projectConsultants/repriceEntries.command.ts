@@ -1,6 +1,6 @@
 import { isIsoDate } from "@tid/calendar/isoDate";
 import { z } from "zod";
-import { formAction } from "../form/formAction";
+import { formAction } from "../framework/formAction";
 import { idParams } from "./projectConsultant";
 import { loadConsultant } from "./projectConsultant.data";
 import { projectRatesPath } from "./projectConsultants.url";

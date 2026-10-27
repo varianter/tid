@@ -4,8 +4,8 @@ import { assignmentRates, projectAssignments, projects, users } from "@tid/db/sc
 import { Badge, DataGrid, Page, Section } from "@tid/ui";
 import { and, eq, sql } from "drizzle-orm";
 import type { Context } from "hono";
-import { formatAmount } from "../amount/amount";
-import { database } from "../database";
+import { formatAmount } from "../domain/amount/amount";
+import { database } from "../framework/database";
 import { DeleteRateForm } from "./deleteRate.form";
 import { ratesPath } from "./projectConsultants.url";
 import { ratePeriods } from "./ratePeriods";

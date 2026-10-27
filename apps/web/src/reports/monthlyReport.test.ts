@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { formatAmounts } from "../amount/amount";
+import { formatAmounts } from "../domain/amount/amount";
 import { mergeCurrencies } from "./monthlyReport.query";
 
 const row = (name: string, currency: string, amount: number) => ({

@@ -1,7 +1,7 @@
 import { organizations, userIdentities, userRoles, users } from "@tid/db/schema";
 import { and, eq, exists, getTableColumns, sql } from "drizzle-orm";
-import { database } from "../database";
-import type { User } from "./user";
+import type { User } from "../domain/users/user";
+import { database } from "../framework/database";
 
 export const identityProvider = "entra";
 

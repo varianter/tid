@@ -1,8 +1,8 @@
 import { organizations, userIdentities, userRoles, users } from "@tid/db/schema";
 import { eq } from "drizzle-orm";
 import type { Context } from "hono";
-import { database } from "../database";
-import { formAction } from "../form/formAction";
+import { database } from "../framework/database";
+import { formAction } from "../framework/formAction";
 import { employeeCountry } from "./employeeEmail";
 import { NotAnEmployeePage } from "./notAnEmployeePage";
 import { readProxyIdentity } from "./proxyLogin.middleware";

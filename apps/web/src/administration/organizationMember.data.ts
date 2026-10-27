@@ -1,7 +1,7 @@
 import { users } from "@tid/db/schema";
 import { and, eq } from "drizzle-orm";
-import { database } from "../database";
-import { findOrganizationBySlug } from "../organizations/organization.data";
+import { findOrganizationBySlug } from "../domain/organizations/organization.data";
+import { database } from "../framework/database";
 
 /** The user, as long as they belong to the organization. */
 export async function findOrganizationMember(slug: string, userIdParam: string) {

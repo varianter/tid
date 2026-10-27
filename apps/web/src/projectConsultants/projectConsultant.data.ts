@@ -1,6 +1,6 @@
 import { projectAssignments, projects, users } from "@tid/db/schema";
 import { and, eq, sql } from "drizzle-orm";
-import { database } from "../database";
+import { database } from "../framework/database";
 import { assignment, type Consultant, type ProjectConsultantIds } from "./projectConsultant";
 
 /** Only consultants on hourly projects have rates, so other projects' are left out. */

@@ -8,7 +8,7 @@ import {
   tasks,
   users,
 } from "@tid/db/schema";
-import { database } from "../database";
+import { database } from "../framework/database";
 import { onlyRow, organizationIdBySlug } from "../testing/rows";
 import { onBillableAssignment, userTasks } from "./loggableTasks";
 

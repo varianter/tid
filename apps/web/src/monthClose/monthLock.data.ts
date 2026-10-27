@@ -1,7 +1,7 @@
 import { firstDayOfMonth } from "@tid/calendar/isoDate";
 import { monthLocks, users } from "@tid/db/schema";
 import { and, eq, isNull, sql } from "drizzle-orm";
-import { database } from "../database";
+import { database } from "../framework/database";
 
 // Months are YYYY-MM in the app and their first day in the database.
 const isActiveLock = (orgId: number, month: string) =>

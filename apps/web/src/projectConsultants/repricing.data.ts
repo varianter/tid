@@ -1,6 +1,6 @@
 import { assignmentRates, tasks, timeEntries, users } from "@tid/db/schema";
 import { and, asc, eq, gt, gte, inArray, isNull, lt, ne, or, sql } from "drizzle-orm";
-import { database } from "../database";
+import { database } from "../framework/database";
 import type { NewRate, ProjectConsultantIds } from "./projectConsultant";
 
 // A rate prices the entries from its start until the next rate takes over. Entries outside that

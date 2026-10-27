@@ -13,7 +13,7 @@ import {
   users,
 } from "@tid/db/schema";
 import { asc, eq } from "drizzle-orm";
-import { database } from "../database";
+import { database } from "../framework/database";
 import { onlyRow } from "../testing/rows";
 import { addRateAndReprice, entriesToReprice } from "./repricing.data";
 

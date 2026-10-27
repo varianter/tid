@@ -51,9 +51,10 @@ test("only routers import commands", () => {
 
 const doesIO = (file: string) => /\.(routes|command|query|middleware|data)\.tsx?$/.test(file);
 
-// Plumbing does I/O by nature: the top level and the folders every feature builds on.
+// Plumbing does I/O by nature: the entry points, the framework every feature builds on, the shell
+// that frames every page, and test setup.
 const isPlumbing = (file: string) =>
-  !file.includes("/") || /^(form|query|errors|testing)\//.test(file);
+  !file.includes("/") || /^(framework|shell|testing)\//.test(file);
 
 // Rendering and building SQL are pure; the rest of Hono and the database client aren't.
 const isIOPackage = (path: string) =>
@@ -76,13 +77,13 @@ const impureImports = allImports.filter(
   ({ file, from }) =>
     !doesIO(file) &&
     !isPlumbing(file) &&
-    (from === "database.ts" || doesIO(from) || isIOPackage(from)),
+    (from === "framework/database.ts" || doesIO(from) || isIOPackage(from)),
 );
 
 // ponytail: splitting these would only appease the rule. loggableTasks builds SQL, which is pure,
 // but with the database client. organizationFilter reads the request for the queries that call it, a
 // role no suffix names yet.
-const impureFiles = ["organizations/organizationFilter.tsx", "timesheet/loggableTasks.ts"];
+const impureFiles = ["domain/organizations/organizationFilter.tsx", "timesheet/loggableTasks.ts"];
 
 test("files without an I/O suffix are pure", () => {
   const stray = impureImports.filter(({ file }) => !impureFiles.includes(file));
@@ -92,6 +93,23 @@ test("files without an I/O suffix are pure", () => {
 test("the list of impure files only shrinks", () => {
   const nowPure = impureFiles.filter((file) => !impureImports.some((i) => i.file === file));
   expect(nowPure).toEqual([]);
+});
+
+const appImports = allImports.filter(({ from }) => sourceFiles.includes(from));
+
+const importsOutside = (layer: string, allowed: string[]) =>
+  appImports
+    .filter(({ file }) => file.startsWith(`${layer}/`))
+    .filter(({ from }) => !allowed.some((folder) => from.startsWith(`${folder}/`)))
+    .map(({ file, from }) => `${file} imports ${from}`);
+
+// Every feature leans on these layers, so they mustn't lean back on a feature.
+test("framework imports only framework", () => {
+  expect(importsOutside("framework", ["framework"])).toEqual([]);
+});
+
+test("domain imports only domain and framework", () => {
+  expect(importsOutside("domain", ["domain", "framework"])).toEqual([]);
 });
 
 const filesContaining = (pattern: RegExp) =>
@@ -104,7 +122,7 @@ test("a feature's URLs live in <feature>.url.ts", () => {
   const isFeatureUrlFile = (file: string) => file === `${dirname(file)}/${dirname(file)}.url.ts`;
   const urlFiles = sourceFiles.filter((file) => file.endsWith(".url.ts"));
   const strayUrls = filesContaining(/export const \w*(Path|Url)\b|\bpageUrl\(/).filter(
-    (file) => !file.endsWith(".url.ts") && file !== "query/pageUrl.ts" && !isDevTooling(file),
+    (file) => !file.endsWith(".url.ts") && file !== "framework/pageUrl.ts" && !isDevTooling(file),
   );
   expect([...urlFiles.filter((file) => !isFeatureUrlFile(file)), ...strayUrls]).toEqual([]);
 });
@@ -117,7 +135,7 @@ test("forms leave their page to formAction", () => {
 
 test("only formAction renders a form page", () => {
   const stray = filesContaining(/import\s*\{[^}]*\bFormPage\b[^}]*\}\s*from\s*"@tid\/ui"/).filter(
-    (file) => file !== "form/formAction.tsx",
+    (file) => file !== "framework/formAction.tsx",
   );
   expect(stray).toEqual([]);
 });
@@ -133,7 +151,7 @@ test("only forms post", () => {
 });
 
 // Adding a timesheet row keeps every `add` already in the query, which a filter would replace.
-const queryFormFiles = ["query/filter.tsx", "timesheet/timesheetGrid.tsx"];
+const queryFormFiles = ["framework/filter.tsx", "timesheet/timesheetGrid.tsx"];
 
 test("every GET form is a FilterForm", () => {
   const stray = filesContaining(/method="get"/).filter((file) => !queryFormFiles.includes(file));

@@ -1,6 +1,6 @@
 import { Hono } from "hono";
-import type { UserEnv } from "../login/user";
-import { managersOnly } from "../managers/manager.middleware";
+import { managersOnly } from "../domain/managers/manager.middleware";
+import type { UserEnv } from "../domain/users/user";
 import { makeManager } from "./makeManager.command";
 import { managerList } from "./managerList.query";
 import { chooseOpenProjects } from "./openProjects.command";

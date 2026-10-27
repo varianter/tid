@@ -2,7 +2,7 @@ import { beforeAll, expect, test } from "bun:test";
 import { rebuildDatabase } from "@tid/db/client";
 import { clients, projectOrganizations, projects, users } from "@tid/db/schema";
 import { and, eq } from "drizzle-orm";
-import { database } from "../database";
+import { database } from "../framework/database";
 import { onlyRow, organizationIdBySlug } from "../testing/rows";
 import { assignToProject } from "./assignConsultants.command";
 import { unassignFromProject } from "./endAssignment.command";

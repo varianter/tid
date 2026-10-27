@@ -2,15 +2,15 @@ import { addMonths } from "@tid/calendar/isoDate";
 import { formatTotalHours } from "@tid/elements/hours";
 import { Button, Detail, Page, PeriodNavigation } from "@tid/ui";
 import type { Context } from "hono";
-import type { UserEnv } from "../login/user";
 import {
   completeOrganization,
   type OrganizationFilter,
   OrganizationSelect,
   resolveOrganizationFilter,
-} from "../organizations/organizationFilter";
-import { Filtered } from "../query/filter";
-import { type QueryProps, queryPage } from "../query/queryPage";
+} from "../domain/organizations/organizationFilter";
+import type { UserEnv } from "../domain/users/user";
+import { Filtered } from "../framework/filter";
+import { type QueryProps, queryPage } from "../framework/queryPage";
 import { MonthEntries, type MonthEntry } from "../timeEntries/monthEntries";
 import { billingLabels } from "./billing";
 import type { ProjectReport } from "./projectReport";

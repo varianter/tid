@@ -1,10 +1,10 @@
 import { todayInOslo } from "@tid/calendar/osloClock";
 import { organizations, projectAssignments, projects, users } from "@tid/db/schema";
 import { and, eq, gte, isNull, lt, or } from "drizzle-orm";
-import { database } from "../database";
-import { formAction } from "../form/formAction";
-import type { User } from "../login/user";
-import { managesProject } from "../managers/manager.data";
+import { managesProject } from "../domain/managers/manager.data";
+import type { User } from "../domain/users/user";
+import { database } from "../framework/database";
+import { formAction } from "../framework/formAction";
 import { ensureParticipation } from "../projects/projectParticipation.data";
 import {
   AssignConsultantsFields,

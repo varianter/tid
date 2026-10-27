@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import type { UserEnv } from "../login/user";
+import type { UserEnv } from "../domain/users/user";
 import { logHours, logHoursInPlace } from "./logHours.command";
 import { timesheetMonth, timesheetMonthRedirect } from "./timesheetMonth.query";
 

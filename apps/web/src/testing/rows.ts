@@ -1,6 +1,6 @@
 import { organizations } from "@tid/db/schema";
 import { eq } from "drizzle-orm";
-import { database } from "../database";
+import { database } from "../framework/database";
 
 export function onlyRow<Row>(rows: Row[]) {
   const [row] = rows;

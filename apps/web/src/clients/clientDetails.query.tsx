@@ -3,7 +3,7 @@ import { formatTotalHours } from "@tid/elements/hours";
 import { Detail, Page, Section } from "@tid/ui";
 import { eq } from "drizzle-orm";
 import type { Context } from "hono";
-import type { UserEnv } from "../login/user";
+import type { UserEnv } from "../domain/users/user";
 import { type ProjectSummary, ProjectTable } from "../projects/projectSummary";
 import { listProjects } from "../projects/projectSummary.data";
 import type { Client } from "./client";

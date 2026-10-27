@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import type { User } from "../login/user";
+import type { User } from "../users/user";
 import { managesOrganization } from "./manager";
 
 test("no one manages an organization they don't belong to", () => {

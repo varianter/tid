@@ -1,6 +1,6 @@
 import { thisMonthInOslo } from "@tid/calendar/osloClock";
 import { z } from "zod";
-import { pageUrl } from "../query/pageUrl";
+import { pageUrl } from "../framework/pageUrl";
 import { isPeriod } from "./officeSummaryPeriod";
 
 export const officeSummaryUrl = pageUrl(

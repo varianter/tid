@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import type { OrganizationOption } from "../organizations/organizationFilter";
+import type { OrganizationOption } from "../domain/organizations/organizationFilter";
 import { buildProjectReport } from "./projectReport";
 
 const selected = { country: "NO" } as OrganizationOption;

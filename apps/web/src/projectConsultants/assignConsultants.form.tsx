@@ -1,7 +1,7 @@
 import { formatDate } from "@tid/calendar/dateDisplay";
 import { Checkbox, DataGrid, FormError } from "@tid/ui";
 import { z } from "zod";
-import type { FormProps } from "../form/formAction";
+import type { FormProps } from "../framework/formAction";
 
 // One ticked box comes as a string, several as an array, none as nothing.
 export const assignConsultantsForm = z.object({

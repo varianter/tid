@@ -1,6 +1,6 @@
 import { FormField } from "@tid/ui";
 import { z } from "zod";
-import type { FormProps } from "../form/formAction";
+import type { FormProps } from "../framework/formAction";
 import type { Client } from "./client";
 
 export const clientFields = z.object({ name: z.string().trim().min(1, "Enter a name") });

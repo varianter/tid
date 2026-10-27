@@ -1,8 +1,8 @@
 import { firstDayOfMonth, lastDayOfMonth } from "@tid/calendar/isoDate";
 import { timeEntries } from "@tid/db/schema";
 import { and, between, eq } from "drizzle-orm";
-import { database } from "../database";
-import type { User } from "../login/user";
+import type { User } from "../domain/users/user";
+import { database } from "../framework/database";
 import { isLockedOn } from "../monthClose/monthLock.data";
 import { offeredTo, onBillableAssignment, userTasks } from "./loggableTasks";
 

@@ -1,10 +1,10 @@
 import { formatHours, formatTotalHours } from "@tid/elements/hours";
 import type { Context } from "hono";
 import { css } from "hono/css";
-import type { UserEnv } from "../login/user";
-import { resolveOrganizationFilter } from "../organizations/organizationFilter";
-import { renderForPrint } from "../printLayout";
-import { VariantSymbol, VariantWordmark } from "../variantLogo";
+import { resolveOrganizationFilter } from "../domain/organizations/organizationFilter";
+import type { UserEnv } from "../domain/users/user";
+import { renderForPrint } from "../shell/printLayout";
+import { VariantSymbol, VariantWordmark } from "../shell/variantLogo";
 import type { ProjectReport } from "./projectReport";
 import { loadProjectReport } from "./projectReport.data";
 import { projectReportPrintUrl, projectReportUrl } from "./projects.url";

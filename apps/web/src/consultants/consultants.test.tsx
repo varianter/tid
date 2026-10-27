@@ -9,8 +9,8 @@ import {
   users as usersTable,
 } from "@tid/db/schema";
 import { Hono } from "hono";
-import { database } from "../database";
-import type { UserEnv } from "../login/user";
+import type { UserEnv } from "../domain/users/user";
+import { database } from "../framework/database";
 import { loadLoggedInUser, type UserRow } from "../testing/loggedInUser";
 import { onlyRow, organizationIdBySlug } from "../testing/rows";
 import { consultants } from "./consultants.routes";

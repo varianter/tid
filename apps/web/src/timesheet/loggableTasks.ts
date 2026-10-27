@@ -7,7 +7,7 @@ import {
   users,
 } from "@tid/db/schema";
 import { and, between, eq, exists, gte, isNull, ne, or } from "drizzle-orm";
-import { database } from "../database";
+import { database } from "../framework/database";
 
 export type Task = { id: number; name: string; projectId: number; projectName: string };
 

@@ -1,6 +1,6 @@
 import { organizations } from "@tid/db/schema";
 import { eq } from "drizzle-orm";
-import { database } from "../database";
+import { database } from "../../framework/database";
 import type { OrganizationOption } from "./organization";
 
 export async function findOrganizationBySlug(slug: string) {

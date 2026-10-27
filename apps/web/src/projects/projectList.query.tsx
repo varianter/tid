@@ -2,14 +2,14 @@ import { projectOrganizations, projects } from "@tid/db/schema";
 import { type Action, Actions, EmptyState, Page } from "@tid/ui";
 import { and, eq, exists, inArray } from "drizzle-orm";
 import type { Context } from "hono";
-import { database } from "../database";
-import type { UserEnv } from "../login/user";
 import {
   type OrganizationFilter,
   OrganizationSelect,
   resolveOrganizationFilter,
-} from "../organizations/organizationFilter";
-import { Filtered } from "../query/filter";
+} from "../domain/organizations/organizationFilter";
+import type { UserEnv } from "../domain/users/user";
+import { database } from "../framework/database";
+import { Filtered } from "../framework/filter";
 import { type ProjectSummary, ProjectTable } from "./projectSummary";
 import { listProjects } from "./projectSummary.data";
 

@@ -1,10 +1,13 @@
 import { formatTotalHours } from "@tid/elements/hours";
 import { ActionList, ActionListItem, Button, Detail, Page } from "@tid/ui";
 import type { Context } from "hono";
-import type { UserEnv } from "../login/user";
-import type { OrganizationOption } from "../organizations/organization";
-import { findOrganizationBySlug, listOrganizations } from "../organizations/organization.data";
-import { Filtered } from "../query/filter";
+import type { OrganizationOption } from "../domain/organizations/organization";
+import {
+  findOrganizationBySlug,
+  listOrganizations,
+} from "../domain/organizations/organization.data";
+import type { UserEnv } from "../domain/users/user";
+import { Filtered } from "../framework/filter";
 import { administrationPath, managersPath, openProjectsPath } from "./administration.url";
 import { OrganizationSwitcher, OtherOrganizationNotice } from "./organizationSwitch";
 

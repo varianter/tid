@@ -2,8 +2,8 @@ import { formatDate } from "@tid/calendar/dateDisplay";
 import { formatHours } from "@tid/elements/hours";
 import { Badge, DataGrid } from "@tid/ui";
 import { z } from "zod";
-import { formatAmount } from "../amount/amount";
-import type { FormProps } from "../form/formAction";
+import { formatAmount } from "../domain/amount/amount";
+import type { FormProps } from "../framework/formAction";
 import type { Consultant, NewRate } from "./projectConsultant";
 import { projectRatesPath } from "./projectConsultants.url";
 

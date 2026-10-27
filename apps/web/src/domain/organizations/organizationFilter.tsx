@@ -3,10 +3,10 @@ import { organizations } from "@tid/db/schema";
 import { Label, Select } from "@tid/ui";
 import type { Context } from "hono";
 import { z } from "zod";
-import { database } from "../database";
-import type { User, UserEnv } from "../login/user";
+import { database } from "../../framework/database";
+import { FilterForm } from "../../framework/filter";
 import { countryVisibility } from "../managers/manager";
-import { FilterForm } from "../query/filter";
+import type { User, UserEnv } from "../users/user";
 
 type Organization = typeof organizations.$inferSelect;
 

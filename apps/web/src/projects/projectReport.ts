@@ -1,8 +1,8 @@
 import { type Calendar, calendarFor } from "@tid/calendar";
 import { formatDate } from "@tid/calendar/dateDisplay";
 import { daysOfMonth } from "@tid/calendar/isoDate";
-import { formatAmount } from "../amount/amount";
-import type { OrganizationOption } from "../organizations/organizationFilter";
+import { formatAmount } from "../domain/amount/amount";
+import type { OrganizationOption } from "../domain/organizations/organizationFilter";
 import type { Billing } from "./billing";
 
 type Consultant = { name: string; hoursByDay: Map<string, number>; hours: number };

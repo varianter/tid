@@ -1,7 +1,7 @@
 import { isIsoDate } from "@tid/calendar/isoDate";
 import { FormField } from "@tid/ui";
 import { z } from "zod";
-import type { FormProps } from "../form/formAction";
+import type { FormProps } from "../framework/formAction";
 import type { Consultant } from "./projectConsultant";
 import { projectRatesPath } from "./projectConsultants.url";
 

@@ -3,11 +3,11 @@ import { rebuildDatabase } from "@tid/db/client";
 import { userRoles, users } from "@tid/db/schema";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
-import { database } from "../database";
+import type { PublicEnv } from "../domain/users/user";
+import { database } from "../framework/database";
 import { organizationIdBySlug } from "../testing/rows";
 import { signupRouter } from "./login.routes";
 import { requireProxyUser } from "./proxyLogin.middleware";
-import type { PublicEnv } from "./user";
 
 const app = new Hono<PublicEnv>()
   .route("/signup", signupRouter("tenant"))

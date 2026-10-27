@@ -1,7 +1,7 @@
 import { isIsoMonth } from "@tid/calendar/isoDate";
 import { thisMonthInOslo } from "@tid/calendar/osloClock";
 import type { Context } from "hono";
-import type { UserEnv } from "../login/user";
+import type { UserEnv } from "../domain/users/user";
 import { MonthPage } from "./monthPage";
 import { loadTimesheet } from "./timesheet.data";
 import { monthPath } from "./timesheet.url";

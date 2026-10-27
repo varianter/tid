@@ -9,7 +9,7 @@ import {
   users,
 } from "@tid/db/schema";
 import { and, eq } from "drizzle-orm";
-import { database } from "../database";
+import { database } from "../framework/database";
 import { onlyRow } from "../testing/rows";
 import { ensureParticipation, removeUnneededParticipation } from "./projectParticipation.data";
 

@@ -1,7 +1,7 @@
 import { clients } from "@tid/db/schema";
 import { and, eq, ne } from "drizzle-orm";
-import { database } from "../database";
-import { formAction } from "../form/formAction";
+import { database } from "../framework/database";
+import { formAction } from "../framework/formAction";
 import { findClient } from "./client.data";
 import { alreadyExists, ClientFields, clientFields, clientFrame } from "./client.form";
 

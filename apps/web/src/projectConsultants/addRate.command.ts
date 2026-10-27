@@ -1,5 +1,5 @@
 import { todayInOslo } from "@tid/calendar/osloClock";
-import { formAction } from "../form/formAction";
+import { formAction } from "../framework/formAction";
 import { AddRateFields, addRateForm, addRateFrame } from "./addRate.form";
 import { idParams } from "./projectConsultant";
 import { loadConsultant } from "./projectConsultant.data";

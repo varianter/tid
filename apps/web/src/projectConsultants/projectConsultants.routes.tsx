@@ -1,6 +1,6 @@
 import { Hono } from "hono";
-import type { UserEnv } from "../login/user";
-import { managersOnly, projectManagersOnly } from "../managers/manager.middleware";
+import { managersOnly, projectManagersOnly } from "../domain/managers/manager.middleware";
+import type { UserEnv } from "../domain/users/user";
 import { addRate } from "./addRate.command";
 import { assignConsultants } from "./assignConsultants.command";
 import { deleteRate } from "./deleteRate.command";

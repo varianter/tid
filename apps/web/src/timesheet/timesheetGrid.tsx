@@ -7,7 +7,7 @@ import { formatHours } from "@tid/elements/hours";
 import { Button, ColorMode, EmptyState, Select } from "@tid/ui";
 import { cx } from "hono/css";
 import type { PropsWithChildren } from "hono/jsx";
-import { usePageSearch } from "../query/filter";
+import { usePageSearch } from "../framework/filter";
 import type { Task } from "./loggableTasks";
 import { ProjectTotals } from "./projectTotals";
 import { dayLabelLayout, sheetLayout } from "./sheetLayout";

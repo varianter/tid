@@ -15,10 +15,10 @@ import {
   Tabs,
 } from "@tid/ui";
 import { between, eq, sql } from "drizzle-orm";
-import { formatAmounts } from "../amount/amount";
-import { database } from "../database";
-import { Filtered } from "../query/filter";
-import { type QueryProps, queryPage } from "../query/queryPage";
+import { formatAmounts } from "../domain/amount/amount";
+import { database } from "../framework/database";
+import { Filtered } from "../framework/filter";
+import { type QueryProps, queryPage } from "../framework/queryPage";
 import { formatShare } from "../share/share";
 import {
   amountPerConsultant,

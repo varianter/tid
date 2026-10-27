@@ -16,13 +16,13 @@ import {
 } from "@tid/ui";
 import { and, between, desc, eq, sql } from "drizzle-orm";
 import type { Context } from "hono";
-import { database } from "../database";
-import type { UserEnv } from "../login/user";
+import { capacityMinutes } from "../domain/capacity/capacity";
+import type { UserEnv } from "../domain/users/user";
+import { database } from "../framework/database";
+import { Filtered } from "../framework/filter";
+import { type QueryProps, queryPage } from "../framework/queryPage";
 import { type Billing, billingLabels } from "../projects/billing";
 import { projectReportUrl } from "../projects/projects.url";
-import { Filtered } from "../query/filter";
-import { type QueryProps, queryPage } from "../query/queryPage";
-import { capacityMinutes } from "../reports/capacity";
 import { formatShare } from "../share/share";
 import { MonthEntries, type MonthEntry } from "../timeEntries/monthEntries";
 import { consultantsPath, consultantUrl } from "./consultants.url";

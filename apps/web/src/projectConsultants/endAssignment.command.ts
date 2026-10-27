@@ -1,8 +1,8 @@
 import { todayInOslo } from "@tid/calendar/osloClock";
 import { assignmentRates, projectAssignments, tasks, timeEntries, users } from "@tid/db/schema";
 import { and, eq } from "drizzle-orm";
-import { database } from "../database";
-import { formAction } from "../form/formAction";
+import { database } from "../framework/database";
+import { formAction } from "../framework/formAction";
 import { removeUnneededParticipation } from "../projects/projectParticipation.data";
 import { EndAssignmentFields, endAssignmentForm, endAssignmentFrame } from "./endAssignment.form";
 import { assignment, idParams, type ProjectConsultantIds, ratesOf } from "./projectConsultant";

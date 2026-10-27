@@ -1,8 +1,8 @@
 import { firstDayOfMonth, lastDayOfMonth } from "@tid/calendar/isoDate";
 import { clients, projects, tasks, timeEntries, timeEntriesExport, users } from "@tid/db/schema";
 import { and, between, desc, eq, inArray, sql } from "drizzle-orm";
-import { database } from "../database";
-import type { OrganizationOption } from "../organizations/organizationFilter";
+import type { OrganizationOption } from "../domain/organizations/organizationFilter";
+import { database } from "../framework/database";
 import type { MonthEntry } from "../timeEntries/monthEntries";
 import { buildProjectReport, type ProjectReport } from "./projectReport";
 

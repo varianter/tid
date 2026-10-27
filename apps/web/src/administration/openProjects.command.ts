@@ -1,9 +1,12 @@
 import { clients, projectOrganizations, projects } from "@tid/db/schema";
 import { eq } from "drizzle-orm";
-import { database } from "../database";
-import { formAction } from "../form/formAction";
-import type { User } from "../login/user";
-import { findOrganizationBySlug, listOrganizations } from "../organizations/organization.data";
+import {
+  findOrganizationBySlug,
+  listOrganizations,
+} from "../domain/organizations/organization.data";
+import type { User } from "../domain/users/user";
+import { database } from "../framework/database";
+import { formAction } from "../framework/formAction";
 import {
   ensureParticipation,
   participation,

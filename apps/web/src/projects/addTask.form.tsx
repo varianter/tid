@@ -1,6 +1,6 @@
 import { FormField } from "@tid/ui";
 import { z } from "zod";
-import type { FormProps } from "../form/formAction";
+import type { FormProps } from "../framework/formAction";
 
 export const addTaskForm = z.object({ name: z.string().trim().min(1, "Enter a name") });
 

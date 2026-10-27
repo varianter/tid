@@ -1,5 +1,5 @@
 import type { users } from "@tid/db/schema";
-import type { User } from "../login/user";
+import type { User } from "../domain/users/user";
 import { findUserByEmail } from "../login/userIdentity.data";
 
 export type UserRow = typeof users.$inferSelect;

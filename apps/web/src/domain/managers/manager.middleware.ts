@@ -1,5 +1,5 @@
 import { createMiddleware } from "hono/factory";
-import type { UserEnv } from "../login/user";
+import type { UserEnv } from "../users/user";
 import { managesProject } from "./manager.data";
 
 // For pages under a project in the URL, as `:id` or, for nested routes, `:projectId`.

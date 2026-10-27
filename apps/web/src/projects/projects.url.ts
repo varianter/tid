@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { organizationField } from "../organizations/organizationFilter";
-import { monthField } from "../query/pageMonth";
-import { idParam, pageUrl } from "../query/pageUrl";
+import { organizationField } from "../domain/organizations/organizationFilter";
+import { monthField } from "../framework/pageMonth";
+import { idParam, pageUrl } from "../framework/pageUrl";
 
 export const projectsPath = (organization: string) =>
   `/projects?${new URLSearchParams({ organization })}`;
