@@ -1,19 +1,17 @@
-import { formatTotalHours } from "@tid/elements/hours";
 import type { PropsWithChildren } from "hono/jsx";
 
 /** The keys the timesheet conductor's cells answer to, as a footer under the timesheet. */
-export function CellShortcuts({ fullDayMinutes }: { fullDayMinutes: number }) {
+export function CellShortcuts() {
   const shortcuts: [string[], string][] = [
-    [["↑", "↓", "←", "→"], "Move to the next cell. ← and → move once the caret is at the edge."],
-    [["T"], "Go to today on the same task"],
-    [["F"], `Fill in what's left of the day (${formatTotalHours(fullDayMinutes)} in all)`],
+    [["↑", "↓", "←", "→"], "Move between cells"],
+    [["T"], "Go to today"],
+    [["F"], `Fill in the remaining time for today`],
     [["A"], "Add a task"],
     [["Shift", "↑"], "Add half an hour"],
     [["Shift", "↓"], "Remove half an hour"],
-    [["Enter"], "Save. Leaving the cell saves too."],
   ];
   return (
-    <footer class="stack-h wrap gap-m fs-s ink-subtle">
+    <footer class="stack-h wrap gap-m gap-row-xs fs-s ink-subtle justify-center">
       {shortcuts.map(([keys, description]) => (
         <span class="stack-h nowrap items-center gap-2xs">
           <Keys keys={keys} />
@@ -35,5 +33,7 @@ function Keys({ keys }: { keys: string[] }) {
 }
 
 function Key({ children }: PropsWithChildren) {
-  return <kbd class="b-all bc-subtle br-s px-3xs fs-xs">{children}</kbd>;
+  return (
+    <kbd class="b-all bc-subtle surface-tinted ink-prominent br-s px-3xs fs-xs">{children}</kbd>
+  );
 }

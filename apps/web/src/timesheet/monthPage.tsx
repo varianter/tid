@@ -91,7 +91,7 @@ export function MonthPage({
               locked={locked}
             />
           </timesheet-conductor>
-          {!locked && <CellShortcuts fullDayMinutes={fullDayMinutes} />}
+          {!locked && <CellShortcuts />}
         </Filtered>
       </Page>
     </PageSearch.Provider>
