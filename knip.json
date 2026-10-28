@@ -5,6 +5,7 @@
       "entry": ["src/server.tsx", "e2e/*.e2e.ts"]
     },
     "packages/via": {
+      "entry": ["e2e/*.e2e.ts"],
       "ignoreDependencies": ["@types/dom-navigation"]
     }
   }

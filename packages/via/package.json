@@ -3,12 +3,15 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "typecheck": "bun check --no-pretty"
+    "typecheck": "bun check --no-pretty",
+    "test": "bun test",
+    "e2e": "bun test ./e2e/*.e2e.ts"
   },
   "devDependencies": {
     "@types/dom-navigation": "1.0.7"
   },
   "exports": {
-    "./browser": "./src/index.ts"
+    "./browser": "./src/index.ts",
+    "./attributes": "./src/attributes.ts"
   }
 }

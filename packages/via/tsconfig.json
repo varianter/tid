@@ -4,6 +4,6 @@
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "types": ["bun", "dom-navigation"]
   },
-  "include": ["src"],
+  "include": ["src", "e2e"],
   "exclude": []
 }

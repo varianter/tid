@@ -1,2 +1,4 @@
 [test]
 preload = ["./packages/db/test/preload.ts"]
+# via has no database, so it runs from its own folder, without the preload.
+pathIgnorePatterns = ["packages/via/**"]

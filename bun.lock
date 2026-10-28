@@ -48,6 +48,7 @@
     "packages/ui": {
       "name": "@tid/ui",
       "dependencies": {
+        "@tid/via": "workspace:*",
         "hono": "4.13.9",
       },
     },

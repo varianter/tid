@@ -9,6 +9,7 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
+    "@tid/via": "workspace:*",
     "hono": "4.13.9"
   }
 }
