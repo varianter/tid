@@ -64,7 +64,7 @@ export class CellKeys {
           if (!fullDay) return false;
           const remaining = remainingMinutes(fullDay, this.#otherMinutesOnDay(form));
           // A full day is left alone rather than wiped. Still handled, so no "f" gets typed.
-          if (remaining > 0) input.value = formatHours(remaining);
+          if (remaining > 0) typeHours(input, remaining);
           return true;
         }
         case "t":
@@ -165,8 +165,14 @@ function lies(direction: Direction, from: Point, to: Point) {
 function stepHours(input: HTMLInputElement, direction: 1 | -1) {
   const minutes = parseHours(input.value);
   if (minutes === undefined) return false;
-  input.value = formatHours(stepHalfHour(minutes, direction));
+  typeHours(input, stepHalfHour(minutes, direction));
   return true;
+}
+
+/** Fires `input`, so listeners see the change as they would typed text. */
+function typeHours(input: HTMLInputElement, minutes: number) {
+  input.value = formatHours(minutes);
+  input.dispatchEvent(new Event("input", { bubbles: true }));
 }
 
 // A cell's whole text selected counts as being at either edge, so arrows keep moving after landing.

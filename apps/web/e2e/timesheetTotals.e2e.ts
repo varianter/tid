@@ -40,3 +40,38 @@ test("saving a cell updates the totals without reloading the page", async () => 
   const sameDocument = await view.evaluate("window.sameDocument");
   expect(sameDocument).toBe(true);
 }, 30_000);
+
+test("typing in a cell updates the totals before it's saved", async () => {
+  await logInAs(view, employeeEmail);
+  const { input } = await findEmptyCell(view);
+  const minutesBefore = await minutesIn("form[data-minutes]");
+
+  await view.scrollTo(input, { block: "center" });
+  await view.click(input);
+  await view.type("4");
+  expect(await textOf("[data-grand-total]")).toBe(formatHours(minutesBefore + 240));
+
+  // Not hours yet, so the cell counts what's stored.
+  await view.type(",");
+  expect(await textOf("[data-grand-total]")).toBe(formatHours(minutesBefore));
+
+  // Back to what's stored, so leaving the page saves nothing into later tests.
+  await view.press("Backspace");
+  await view.press("Backspace");
+}, 30_000);
+
+test("stepping a cell's hours updates the totals before it's saved", async () => {
+  await logInAs(view, employeeEmail);
+  const { day, input } = await findEmptyCell(view);
+  const dayTotal = `[data-day-total="${day}"]`;
+  const dayMinutesBefore = await minutesIn(`form[data-day="${day}"]`);
+
+  await view.scrollTo(input, { block: "center" });
+  await view.click(input);
+  await view.press("ArrowUp", { modifiers: ["Shift"] });
+  expect(await textOf(dayTotal)).toBe(formatHours(dayMinutesBefore + 30));
+
+  // Back to blank, so leaving the page saves nothing into later tests.
+  await view.press("ArrowDown", { modifiers: ["Shift"] });
+  expect(await textOf(dayTotal)).toBe(formatHours(dayMinutesBefore));
+}, 30_000);
