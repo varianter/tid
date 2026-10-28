@@ -3,7 +3,7 @@ import { easterSunday } from "./easter";
 import { PublicHolidayId } from "./holidayIds";
 import type { SpecialDay } from "./publicHolidays";
 
-export const NorwegianHolidayId = {
+const NorwegianHolidayId = {
   PalmSunday: "palm-sunday",
   ConstitutionDay: "constitution-day",
   WhitMonday: "whit-monday",

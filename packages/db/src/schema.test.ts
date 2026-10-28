@@ -473,7 +473,12 @@ test("a locked month rejects changes to its entries until it's unlocked", async 
     .set({ unlockedBy: user.id, unlockedAt: new Date() })
     .where(eq(monthLocks.id, lock.id));
 
-  await database.update(timeEntries).set({ minutes: 90 }).where(eq(timeEntries.id, october.id));
+  const reopened = await database
+    .update(timeEntries)
+    .set({ minutes: 90 })
+    .where(eq(timeEntries.id, october.id))
+    .returning({ minutes: timeEntries.minutes });
+  expect(reopened).toEqual([{ minutes: 90 }]);
 });
 
 test("a locked month still lets an entry's rate be corrected, but nothing else with it", async () => {
@@ -575,7 +580,11 @@ test("a lock covers only its organization's entries", async () => {
     .insert(monthLocks)
     .values({ orgId: other.id, month: "2026-10-01", lockedBy: manager?.id ?? 0 });
 
-  await database
-    .insert(timeEntries)
-    .values({ userId: user.id, taskId: task.id, spentOn: "2026-10-01", minutes: 60 });
+  expect(
+    await rejection(
+      database
+        .insert(timeEntries)
+        .values({ userId: user.id, taskId: task.id, spentOn: "2026-10-01", minutes: 60 }),
+    ),
+  ).toBeUndefined();
 });
