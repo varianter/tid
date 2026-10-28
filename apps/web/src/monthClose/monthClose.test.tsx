@@ -3,10 +3,10 @@ import { addMonths } from "@tid/calendar/isoDate";
 import { thisMonthInOslo } from "@tid/calendar/osloClock";
 import { rebuildDatabase } from "@tid/db/client";
 import { userRoles, users } from "@tid/db/schema";
-import { Hono } from "hono";
+import type { Hono } from "hono";
 import type { UserEnv } from "../domain/users/user";
 import { database } from "../framework/database";
-import { loadLoggedInUser, type UserRow } from "../testing/loggedInUser";
+import { requestAsUser, type UserRow } from "../testing/loggedInUser";
 import { organizationIdBySlug } from "../testing/rows";
 import { monthClose } from "./monthClose.routes";
 import { findActiveLock } from "./monthLock.data";
@@ -16,14 +16,10 @@ let member: UserRow;
 let osloManager: UserRow;
 let trondheimId: number;
 
+const mount = (app: Hono<UserEnv>) => app.route("/month-close", monthClose);
+
 function requestAs(user: UserRow, path: string, method = "GET") {
-  const app = new Hono<UserEnv>()
-    .use(async (c, next) => {
-      c.set("user", await loadLoggedInUser(user));
-      await next();
-    })
-    .route("/month-close", monthClose);
-  return app.request(path, { method });
+  return requestAsUser(user, mount, path, { method });
 }
 
 const lastMonth = addMonths(thisMonthInOslo(), -1);

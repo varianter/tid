@@ -7,13 +7,7 @@ import {
 import type { User } from "../domain/users/user";
 import { database } from "../framework/database";
 import { formAction } from "../framework/formAction";
-import {
-  editProjectForm,
-  ProjectFields,
-  parseBilling,
-  projectColumns,
-  projectFrame,
-} from "./project.form";
+import { editProjectForm, ProjectFormPage, parseBilling, projectColumns } from "./project.form";
 import { listProjectCurrencies } from "./projectCurrency.data";
 import {
   ensureParticipation,
@@ -144,6 +138,5 @@ export const editProject = formAction({
     }
     return { redirect: `/projects/${project.id}` };
   },
-  frame: projectFrame,
-  view: ProjectFields,
+  view: ProjectFormPage,
 });

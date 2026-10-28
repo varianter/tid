@@ -4,7 +4,7 @@ import { formAction } from "../framework/formAction";
 import { idParams } from "./projectConsultant";
 import { loadConsultant } from "./projectConsultant.data";
 import { projectRatesPath } from "./projectConsultants.url";
-import { RepriceFields, repriceEntriesForm, repriceFrame } from "./repriceEntries.form";
+import { RepriceEntriesFormPage, repriceEntriesForm } from "./repriceEntries.form";
 import { addRateAndReprice, entriesToReprice } from "./repricing.data";
 
 // The rate in minor units, as the rates form passes it on.
@@ -28,6 +28,5 @@ export const repriceEntries = formAction({
     await addRateAndReprice(consultant, newRate);
     return { redirect: projectRatesPath(consultant.projectId) };
   },
-  frame: repriceFrame,
-  view: RepriceFields,
+  view: RepriceEntriesFormPage,
 });

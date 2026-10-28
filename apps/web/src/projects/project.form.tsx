@@ -2,17 +2,20 @@ import type { clients } from "@tid/db/schema";
 import {
   Checkbox,
   Field,
+  Fieldset,
   FormError,
   FormField,
+  FormPage,
   fieldErrorAttributes,
   Input,
   Label,
   Radio,
   Select,
 } from "@tid/ui";
+import { attributes } from "@tid/via/attributes";
 import { z } from "zod";
 import type { OrganizationOption } from "../domain/organizations/organization";
-import type { FormProps } from "../framework/formAction";
+import type { FormState } from "../framework/formAction";
 import { type Billing, billingLabels, billings } from "./billing";
 
 const checkbox = z
@@ -110,18 +113,10 @@ type ProjectFormProps = {
   currency: string;
   /** The organization that invoices the client, selected until the user picks another. */
   contractOwnerId: number | null;
+  form: FormState<typeof startProjectForm | typeof editProjectForm>;
 };
 
-export const projectFrame = ({ billing, project }: ProjectFormProps) =>
-  project
-    ? { title: `Edit ${project.name}`, cancel: `/projects/${project.id}`, submit: "Save changes" }
-    : {
-        title: `New ${billingLabels[billing].toLowerCase()} project`,
-        cancel: "/projects/new",
-        submit: "Create project",
-      };
-
-export function ProjectFields({
+export function ProjectFormPage({
   billing,
   project,
   clients = [],
@@ -130,9 +125,9 @@ export function ProjectFields({
   currencies,
   currency,
   contractOwnerId,
-  values,
-  fieldErrors,
-}: ProjectFormProps & FormProps) {
+  form,
+}: ProjectFormProps) {
+  const { values, fieldErrors } = form;
   const isBillable = billing !== "non_billable";
   const selectedClientId = values?.clientId ?? suggestedClientId;
   // ponytail: follows the client selected on load only; updating on change needs client-side JS.
@@ -146,27 +141,49 @@ export function ProjectFields({
   const selectedContractOwnerId = values?.contractOwnerId ?? String(contractOwnerId ?? "");
   const otherBillings = billings.filter((other) => other !== billing);
   return (
-    <>
+    <FormPage
+      form={form}
+      layer="drawer"
+      {...(project
+        ? {
+            title: `Edit ${project.name}`,
+            cancel: `/projects/${project.id}`,
+            submit: "Save changes",
+          }
+        : {
+            title: `New ${billingLabels[billing].toLowerCase()} project`,
+            cancel: "/projects/new",
+            submit: "Create project",
+            // It ends on the new project's page, not back on the page it was started from.
+            leavesLayer: true,
+          })}
+    >
       <input type="hidden" name="billing" value={billing} />
-      <fieldset class="stack-v gap-m">
-        <legend class="fs-l fw-bold mb-s">Contract</legend>
+      <Fieldset legend="Contract">
         {project ? (
           <div class="stack-v gap-3xs">
             <span class="fs-s ink-subtle">Client</span>
             <span>{project.client}</span>
           </div>
         ) : (
-          <Field name="clientId" label="Client" errors={fieldErrors?.clientId}>
+          <Field name="clientId" label="Client" errors={fieldErrors.clientId}>
             <Select
               id="clientId"
               name="clientId"
               required
               selected={selectedClientId}
               options={clients.map((client) => ({ value: client.id, label: client.name }))}
-              {...fieldErrorAttributes("clientId", fieldErrors?.clientId)}
+              {...fieldErrorAttributes("clientId", fieldErrors.clientId)}
             >
               <option value="">Choose a client</option>
             </Select>
+            <a
+              class="v-link fs-s ml-auto"
+              href={`/clients/new?${new URLSearchParams({ returnTo: `/projects/new/${billing}` })}`}
+              {...{ [attributes.layer]: true }}
+            >
+              New client
+            </a>
           </Field>
         )}
         {project && (
@@ -192,7 +209,7 @@ export function ProjectFields({
             )}
           </div>
         )}
-        <Field name="contractOwnerId" label="Contract owner" errors={fieldErrors?.contractOwnerId}>
+        <Field name="contractOwnerId" label="Contract owner" errors={fieldErrors.contractOwnerId}>
           <Select
             id="contractOwnerId"
             name="contractOwnerId"
@@ -202,10 +219,10 @@ export function ProjectFields({
               value: organization.id,
               label: organization.name,
             }))}
-            {...fieldErrorAttributes("contractOwnerId", fieldErrors?.contractOwnerId)}
+            {...fieldErrorAttributes("contractOwnerId", fieldErrors.contractOwnerId)}
           >
             <option value="" selected={selectedContractOwnerId === ""}>
-              {isBillable ? "Choose an organization" : "None"}
+              {isBillable ? "Choose an organization" : "Not applicable"}
             </option>
           </Select>
         </Field>
@@ -217,8 +234,8 @@ export function ProjectFields({
               <input type="hidden" name="currency" value={currency} />
             </div>
           ) : (
-            <fieldset class="stack-v gap-2xs">
-              <legend class="v-form-label mb-xs">Currency</legend>
+            <Fieldset class="gap-2xs">
+              <Fieldset.Legend class="v-form-label">Currency</Fieldset.Legend>
               <div class="stack-h gap-m">
                 {currencies.map((option) => (
                   <Label class="stack-h items-center gap-2xs">
@@ -227,35 +244,34 @@ export function ProjectFields({
                       value={option}
                       checked={option === selectedCurrency}
                       required
-                      {...fieldErrorAttributes("currency", fieldErrors?.currency)}
+                      {...fieldErrorAttributes("currency", fieldErrors.currency)}
                     />
                     {option}
                   </Label>
                 ))}
               </div>
-              {fieldErrors?.currency && (
+              {fieldErrors.currency && (
                 <FormError id="currency-error" errors={fieldErrors.currency} />
               )}
-            </fieldset>
+            </Fieldset>
           ))}
-      </fieldset>
-      <fieldset class="stack-v gap-m">
-        <legend class="fs-l fw-bold mb-s">Project</legend>
+      </Fieldset>
+      <Fieldset legend="Project">
         <FormField
           name="name"
           label="Name"
           value={values?.name ?? project?.name}
-          errors={fieldErrors?.name}
+          errors={fieldErrors.name}
           required
         />
-        <Field name="code" label="Code" errors={fieldErrors?.code}>
+        <Field name="code" label="Code" errors={fieldErrors.code}>
           <Input
             id="code"
             name="code"
             value={values?.code ?? project?.code}
             maxlength={16}
             required
-            {...fieldErrorAttributes("code", fieldErrors?.code)}
+            {...fieldErrorAttributes("code", fieldErrors.code)}
           />
           {codeSuggestion && <p class="fs-s ink-subtle mt-3xs">Suggestion: {codeSuggestion}</p>}
         </Field>
@@ -265,27 +281,26 @@ export function ProjectFields({
               <Checkbox name="countsTowardBillableBase" checked={countsTowardBillableBase} />
               Counts toward billable base
             </Label>
-            <p class="fs-s ink-subtle mt-3xs">
+            <p class="fs-s ink-subtle mt-3xs pl-l w-max-5">
               Untick for absence, like holidays, so it doesn't lower the billable share.
             </p>
           </div>
         )}
-      </fieldset>
+      </Fieldset>
       {!project && (
-        <fieldset class="stack-v gap-m">
-          <legend class="fs-l fw-bold mb-s">First task</legend>
-          <Field name="firstTask" label="Task name" errors={fieldErrors?.firstTask}>
+        <Fieldset legend="First task">
+          <Field name="firstTask" label="Task name" errors={fieldErrors.firstTask}>
             <Input
               id="firstTask"
               name="firstTask"
               value={values?.firstTask ?? "Consulting"}
               required
-              {...fieldErrorAttributes("firstTask", fieldErrors?.firstTask)}
+              {...fieldErrorAttributes("firstTask", fieldErrors.firstTask)}
             />
             <p class="fs-s ink-subtle mt-3xs">You can add more tasks on the project page.</p>
           </Field>
-        </fieldset>
+        </Fieldset>
       )}
-    </>
+    </FormPage>
   );
 }

@@ -1,5 +1,6 @@
 import { formatTotalHours } from "@tid/elements/hours";
 import { ActionList, ActionListItem, Button, Detail, Page } from "@tid/ui";
+import { attributes } from "@tid/via/attributes";
 import type { Context } from "hono";
 import type { OrganizationOption } from "../domain/organizations/organization";
 import {
@@ -76,7 +77,13 @@ function OrganizationOverviewPage({
 
 function ManageLink({ href }: { href: string }) {
   return (
-    <Button as="a" href={href} data-size="small" data-variant="plain">
+    <Button
+      as="a"
+      href={href}
+      data-size="small"
+      data-variant="plain"
+      {...{ [attributes.layer]: true }}
+    >
       Manage
     </Button>
   );

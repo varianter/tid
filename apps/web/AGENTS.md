@@ -43,7 +43,7 @@ Everything a use case needs that no other slice uses stays in its slice: the dat
 
 A command is split from its form, because the screen and the business change for different reasons. The command loads what it needs, applies the rules, writes and redirects. The form is everything the user sees and sends. A form shared by several commands is named after its noun: `<noun>.form.tsx`.
 
-A command with a page of its own uses `formAction`, passing it the form's schema, its fields and the frame around them; `formAction` renders the page. A command shown on another page, like a button or an inline form, has its form imported by that page.
+A command with a page of its own uses `formAction`, passing it the form's schema and the form's page. The page renders a `FormPage` with everything around the fields, including how it looks in a layer, so one file shows the whole page. `formAction` hands it the `form` state, which `FormPage` requires, so a failed submission's errors always reach the page. A command shown on another page, like a button or an inline form, has its form imported by that page.
 
 A slice exports one handler per way its use case is answered. A `GET` that only redirects to a query's page, such as to the current month, belongs to that query as `<query>Redirect`. A command that answers a plain form post and a script's request differently exports a handler for each.
 
@@ -51,7 +51,7 @@ A slice exports one handler per way its use case is answered. A `GET` that only 
 
 Name a command after what the user is doing, as a verb and a noun, in words the user would use: `logHours`, not `createTimeEntry`. To test a name, ask the user "what did you just do?". A CRUD verb is fine when it's the honest answer. A form that edits many unrelated fields is `edit<Noun>`. Don't hide that behind a business-sounding name.
 
-The name carries through to everything that belongs to the command: its form file, its schema (`<verb><Noun>Form`) and its inline form component (`<Verb><Noun>Form`).
+The name carries through to everything that belongs to the command: its form file, its schema (`<verb><Noun>Form`), its inline form component (`<Verb><Noun>Form`) and its page (`<Verb><Noun>FormPage`). A shared form's page is `<Noun>FormPage`.
 
 Name a query after what the page shows: `<noun>List`, `<noun>Details`.
 

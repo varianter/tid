@@ -4,7 +4,7 @@ import { and, eq } from "drizzle-orm";
 import { database } from "../framework/database";
 import { formAction } from "../framework/formAction";
 import { removeUnneededParticipation } from "../projects/projectParticipation.data";
-import { EndAssignmentFields, endAssignmentForm, endAssignmentFrame } from "./endAssignment.form";
+import { EndAssignmentFormPage, endAssignmentForm } from "./endAssignment.form";
 import { assignment, idParams, type ProjectConsultantIds, ratesOf } from "./projectConsultant";
 
 // Without logged time there's nothing to keep, so ending removes the consultant instead.
@@ -32,8 +32,7 @@ export const endAssignment = formAction({
     }
     return { redirect: `/projects/${ids.projectId}` };
   },
-  frame: endAssignmentFrame,
-  view: EndAssignmentFields,
+  view: EndAssignmentFormPage,
 });
 
 async function hasLoggedTime({ projectId, userId }: ProjectConsultantIds) {

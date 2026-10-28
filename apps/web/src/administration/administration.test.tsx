@@ -1,10 +1,10 @@
 import { beforeAll, expect, test } from "bun:test";
 import { rebuildDatabase } from "@tid/db/client";
 import { userRoles, users } from "@tid/db/schema";
-import { Hono } from "hono";
+import type { Hono } from "hono";
 import type { UserEnv } from "../domain/users/user";
 import { database } from "../framework/database";
-import { loadLoggedInUser, type UserRow } from "../testing/loggedInUser";
+import { requestAsUser, type UserRow } from "../testing/loggedInUser";
 import { organizationIdBySlug } from "../testing/rows";
 import { administration } from "./administration.routes";
 
@@ -12,14 +12,10 @@ let manager: UserRow;
 let member: UserRow;
 let osloManager: UserRow;
 
+const mount = (app: Hono<UserEnv>) => app.route("/administration", administration);
+
 function requestAs(user: UserRow, path: string, method = "GET") {
-  const app = new Hono<UserEnv>()
-    .use(async (c, next) => {
-      c.set("user", await loadLoggedInUser(user));
-      await next();
-    })
-    .route("/administration", administration);
-  return app.request(path, { method });
+  return requestAsUser(user, mount, path, { method });
 }
 
 const managerIds = async () =>

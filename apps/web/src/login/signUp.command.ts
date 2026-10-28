@@ -1,12 +1,13 @@
 import { organizations, userIdentities, userRoles, users } from "@tid/db/schema";
 import { eq } from "drizzle-orm";
 import type { Context } from "hono";
+import { HTTPException } from "hono/http-exception";
 import { database } from "../framework/database";
 import { formAction } from "../framework/formAction";
 import { employeeCountry } from "./employeeEmail";
 import { NotAnEmployeePage } from "./notAnEmployeePage";
 import { readProxyIdentity } from "./proxyLogin.middleware";
-import { SignUpFields, type SignUpProps, signUpForm, signUpFrame } from "./signUp.form";
+import { SignUpFormPage, type SignUpProps, signUpForm } from "./signUp.form";
 import { findUserByEmail, findUserByIdentity, identityProvider } from "./userIdentity.data";
 
 type Identity = { subject: string; email: string; name?: string };
@@ -27,7 +28,7 @@ export const signUp = (
     schema: signUpForm,
     loader: async (c) => {
       const identity = readIdentity(c);
-      if (!identity) return c.text("Not logged in", 401);
+      if (!identity) throw new HTTPException(401, { message: "Not logged in" });
       const existingUser =
         (await findUserByIdentity(tenantId, identity.subject)) ??
         (await findUserByEmail(identity.email));
@@ -70,6 +71,5 @@ export const signUp = (
       });
       return { redirect: "/" };
     },
-    frame: signUpFrame,
-    view: SignUpFields,
+    view: SignUpFormPage,
   });

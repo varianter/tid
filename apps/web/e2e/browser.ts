@@ -1,3 +1,8 @@
+import { setDefaultTimeout } from "bun:test";
+
+// Longer than a wait, so a stuck wait reports what it waited for.
+setDefaultTimeout(15_000);
+
 /**
  * Chrome rather than macOS's WebKit, so a Mac and Linux behave the same. Wide enough for the
  * month to fit: otherwise the sticky total column can cover a cell, and a click waits for an

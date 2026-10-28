@@ -1,5 +1,6 @@
 import { thisMonthInOslo, timeOfDayInOslo } from "@tid/calendar/osloClock";
 import { Button, Icon, type IconName, Popover } from "@tid/ui";
+import { attributes, layerTemplateId } from "@tid/via/attributes";
 import { css, Style } from "hono/css";
 import { raw } from "hono/html";
 import type { PropsWithChildren } from "hono/jsx";
@@ -106,7 +107,7 @@ function isActive(section: string, currentPath: string) {
 
 export function Layout({ currentPath, user, logoutUrl, scriptSrcs, children }: LayoutProps) {
   return (
-    <html lang="en">
+    <html lang="en" class="surface-tinted">
       <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -122,10 +123,7 @@ export function Layout({ currentPath, user, logoutUrl, scriptSrcs, children }: L
           {css`
             /* Varde's display utilities would otherwise show an element marked hidden. */
             [hidden] { display: none !important; }
-            /* The nav's margin is set here, next to the height calc that
-               subtracts it, so the two can't drift apart. */
-            #nav-popover nav {
-              margin: var(--spacing-2xs);
+            html{
               --fade-color: var(--surface-tinted);
               background: linear-gradient(100deg in oklch, var(--fade-color), oklch(from var(--fade-color) l c h / 0.9) 20%, oklch(from var(--fade-color) l c h / 0.65) 40%, oklch(from var(--fade-color) l c h / 0.35) 60%, oklch(from var(--fade-color) l c h / 0.05) 80%, oklch(from var(--fade-color) l c h / 0));
             }
@@ -204,10 +202,17 @@ export function Layout({ currentPath, user, logoutUrl, scriptSrcs, children }: L
         </Style>
       </head>
       <body class="stack-h nowrap items-stretch">
-        <Popover id="nav-popover" data-type="drawer" data-side="left">
+        {/* The surface is the drawer's. On wide screens it's `display: contents`, so the nav sits
+            on the page's tint. */}
+        <Popover
+          id="nav-popover"
+          class="surface-tinted b-all br-xl bc-subtle p-2xs"
+          data-type="drawer"
+          data-side="left"
+        >
           <nav
-            class="stack-v gap-4xs b-all br-xl bc-subtle p-2xs w-max-content w-full surface-tinted"
-            style="min-width: 200px;"
+            class="stack-v gap-4xs w-max-content w-full pl-xs-s pr-xs-s pt-m"
+            style="min-width: 240px;"
             aria-label="Main"
           >
             <span class="stack-h nowrap items-center gap-2xs fs-l fw-bold px-xs py-2xs mb-xs">
@@ -257,7 +262,7 @@ export function Layout({ currentPath, user, logoutUrl, scriptSrcs, children }: L
             )}
           </nav>
         </Popover>
-        <div class="flex-1 w-min-0">
+        <div class="b-l b-t bc-subtle br-bl-none br-br-none br-l br-tr-none flex-1 mt-2xs py-0 surface-base w-min-0">
           <button
             type="button"
             data-size="small"
@@ -270,12 +275,13 @@ export function Layout({ currentPath, user, logoutUrl, scriptSrcs, children }: L
           {children}
         </div>
         {/* What @tid/via clones for each `a[via-layer]` it opens. */}
-        <template id="via-layer">
-          <Popover role="dialog" tabindex={-1} class="p-m">
+        <template id={layerTemplateId}>
+          {/* Only the surface: the page inside sets its own width and padding. */}
+          <Popover role="dialog" tabindex={-1} class="" data-backdrop>
             <div
-              via-layer-content
-              class="surface-base p-m b-all bc-subtle shadow-mid br-l"
-              style="height: 100%; overflow-y: scroll;"
+              class="m-2xs surface-base b-all bc-subtle shadow-mid br-l"
+              style="height: calc(100% - ( var(--spacing-2xs) * 2 )); overflow-y: auto;"
+              {...{ [attributes.layerContent]: true }}
             />
           </Popover>
         </template>

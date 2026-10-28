@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { formatAmount } from "../domain/amount/amount";
 import type { OrganizationOption } from "../domain/organizations/organizationFilter";
 import { buildProjectReport } from "./projectReport";
 
@@ -25,7 +26,8 @@ test("a consultant's days add up to one row, and only hourly projects get an amo
     { name: "B", hours: 1 },
   ]);
   expect(report.hours).toBe(10.5);
-  expect(report.amount).toBeDefined();
+  // The three entries' amounts add up to 10500.
+  expect(report.amount).toBe(formatAmount(10500, "NOK", 2));
 
   const fixed = buildProjectReport(
     { ...project, billing: "fixed_fee" },

@@ -127,15 +127,15 @@ test("a feature's URLs live in <feature>.url.ts", () => {
   expect([...urlFiles.filter((file) => !isFeatureUrlFile(file)), ...strayUrls]).toEqual([]);
 });
 
-// A form page is what an action opens, so `formAction` frames it: a page of its own couldn't
-// tell the browser, or an overlay later, that it's a form.
-test("forms leave their page to formAction", () => {
+// A form page is what an action opens, so it's a `FormPage`: a `Page` couldn't tell the browser,
+// or a layer, that it's a form.
+test("forms render a FormPage, not a Page", () => {
   expect(filesContaining(/<Page\b/).filter((file) => file.endsWith(".form.tsx"))).toEqual([]);
 });
 
-test("only formAction renders a form page", () => {
+test("only forms render a form page", () => {
   const stray = filesContaining(/import\s*\{[^}]*\bFormPage\b[^}]*\}\s*from\s*"@tid\/ui"/).filter(
-    (file) => file !== "framework/formAction.tsx",
+    (file) => !file.endsWith(".form.tsx"),
   );
   expect(stray).toEqual([]);
 });

@@ -3,6 +3,7 @@ import { todayInOslo } from "@tid/calendar/osloClock";
 import { assignmentRates } from "@tid/db/schema";
 import { and, eq } from "drizzle-orm";
 import type { Context } from "hono";
+import { HTTPException } from "hono/http-exception";
 import { database } from "../framework/database";
 import { idParams, ratesOf } from "./projectConsultant";
 import { projectRatesPath } from "./projectConsultants.url";
@@ -13,7 +14,8 @@ export const deleteRate = async (c: Context) => {
   const ids = idParams(c.req.param());
   const validFrom = c.req.param("validFrom") ?? "";
   if (!ids || !isIsoDate(validFrom)) return c.notFound();
-  if (validFrom <= todayInOslo()) return c.text("A rate that has started can't be deleted", 403);
+  if (validFrom <= todayInOslo())
+    throw new HTTPException(403, { message: "A rate that has started can't be deleted" });
   await database
     .delete(assignmentRates)
     .where(and(ratesOf(ids), eq(assignmentRates.validFrom, validFrom)));

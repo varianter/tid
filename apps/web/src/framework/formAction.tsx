@@ -1,41 +1,36 @@
-import { FormPage, type PopoverType } from "@tid/ui";
 import type { Context } from "hono";
-import type { Child, FC } from "hono/jsx";
+import type { FC } from "hono/jsx";
 import { z } from "zod";
 
 type Ctx = Context;
 
+// Distributes over a union schema, so every variant's fields can be named.
+type FieldName<S extends z.ZodType> =
+  z.input<S> extends infer Input ? (Input extends object ? keyof Input & string : never) : never;
+
 // The shape zod gives per field, so `onSubmit` can put errors on fields too.
-export type FieldErrors<S extends z.ZodType> = {
-  [K in keyof z.infer<S>]?: string[];
-};
+export type FieldErrors<S extends z.ZodType> = { [K in FieldName<S>]?: string[] };
 
-export type FormProps = {
-  values?: Record<string, string>;
-  fieldErrors?: Partial<Record<string, string[]>>;
-};
-
-/** What frames a form's fields as a page of its own. */
-type FormFrame = {
-  title: string;
-  description?: Child;
-  /** The page the form was opened from. */
-  cancel?: string;
-  /** The submit button's label. Leave it out when there's nothing to submit. */
-  submit?: string;
-  /** How the form is shown when it's opened in a layer. */
-  layer?: PopoverType;
+/** What a form page shows of the last submission, so a failed one keeps what was typed. */
+export type FormState<S extends z.ZodType> = {
+  /** What was sent. Only set after a failed POST, so a GET shows the defaults. */
+  values?: { [K in FieldName<S>]?: string };
+  fieldErrors: FieldErrors<S>;
+  /** What's wrong with the form as a whole, rather than with one field. */
+  formError?: string;
+  /** The last submission went through, and redirected back here with `?saved`. */
+  saved?: boolean;
 };
 
 /**
  * One form on one URL: GET renders it, POST validates and submits, then
- * redirects (303) or re-renders the form with errors (422). It renders the page around the form,
- * so every form page has the same frame and nothing else.
+ * redirects (303) or re-renders the form with errors (422). The view renders the whole page, as a
+ * `FormPage` given the `form` state.
  */
 export function formAction<S extends z.ZodType, P extends object>(opts: {
   /** Validates the POST body. Failures re-render with field errors. */
   schema: S;
-  /** Runs first on GET and POST. Returns the view's props, or a Response (404, 403) to stop. */
+  /** Runs first on GET and POST. Returns the view's props, or a Response, like a 404, to stop. A refusal throws an `HTTPException`. */
   loader: (c: Ctx) => Promise<P | Response>;
   /**
    * Runs on valid input with the loader's props. Returns where to redirect,
@@ -46,31 +41,25 @@ export function formAction<S extends z.ZodType, P extends object>(opts: {
     data: z.infer<S>,
     props: P,
   ) => Promise<{ redirect: string } | { fieldErrors: FieldErrors<S> } | { formError: string }>;
-  /** The page around the form, from the loader's props. */
-  frame: (props: P) => FormFrame;
-  /** Renders the form's fields. Gets the loader's props, plus `values` and `fieldErrors` after a failed POST. */
-  view: FC<P & FormProps>;
+  /** Renders the form's page from the loader's props and the form's state. */
+  view: FC<P & { form: FormState<S> }>;
 }) {
   const View = opts.view;
-  const render = (c: Ctx, props: P, failure: FormProps & { formError?: string } = {}) => {
-    const { formError, ...form } = failure;
-    return c.render(
-      <FormPage {...opts.frame(props)} formError={formError}>
-        <View {...props} {...form} />
-      </FormPage>,
-    );
-  };
+  const render = (c: Ctx, props: P, failure: Partial<FormState<S>> = {}) =>
+    c.render(<View {...props} form={{ fieldErrors: {}, ...failure }} />);
   return async (c: Ctx) => {
     const props = await opts.loader(c);
     if (props instanceof Response) return props;
-    if (c.req.method === "GET") return render(c, props);
+    if (c.req.method === "GET")
+      return render(c, props, { saved: c.req.query("saved") !== undefined });
 
     // `all` keeps repeated fields (checkboxes) as arrays for the schema.
     // `values` drops them, so a multi-select isn't re-checked on a 422.
     const body = await c.req.parseBody({ all: true });
-    const values = Object.fromEntries(
+    // Unvalidated, so it may lack fields or hold others. It's only shown back, never trusted.
+    const values: FormState<S>["values"] = Object.fromEntries(
       Object.entries(body).filter((e): e is [string, string] => typeof e[1] === "string"),
-    );
+    ) as FormState<S>["values"];
     const form = opts.schema.safeParse(body);
     if (!form.success) {
       c.status(422);

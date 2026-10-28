@@ -1,6 +1,7 @@
 import { isIsoMonth } from "@tid/calendar/isoDate";
 import type { organizations } from "@tid/db/schema";
 import { createMiddleware } from "hono/factory";
+import { HTTPException } from "hono/http-exception";
 import { managesOrganization } from "../domain/managers/manager";
 import { findVisibleOrganization } from "../domain/managers/manager.data";
 import type { UserEnv } from "../domain/users/user";
@@ -18,7 +19,7 @@ export const lockChangeManagersOnly = createMiddleware<LockChangeEnv>(async (c, 
   );
   if (!organization || !isIsoMonth(month)) return c.notFound();
   if (!managesOrganization(c.get("user"), organization.id)) {
-    return c.text("Only the organization's managers can do this", 403);
+    throw new HTTPException(403, { message: "Only the organization's managers can do this" });
   }
   c.set("organization", organization);
   c.set("month", month);

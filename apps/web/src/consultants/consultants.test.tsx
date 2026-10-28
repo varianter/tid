@@ -8,10 +8,10 @@ import {
   userRoles,
   users as usersTable,
 } from "@tid/db/schema";
-import { Hono } from "hono";
+import type { Hono } from "hono";
 import type { UserEnv } from "../domain/users/user";
 import { database } from "../framework/database";
-import { loadLoggedInUser, type UserRow } from "../testing/loggedInUser";
+import { requestAsUser, type UserRow } from "../testing/loggedInUser";
 import { onlyRow, organizationIdBySlug } from "../testing/rows";
 import { consultants } from "./consultants.routes";
 import { consultantPath } from "./consultants.url";
@@ -19,14 +19,10 @@ import { consultantPath } from "./consultants.url";
 let manager: UserRow;
 let member: UserRow;
 
-function requestAs(user: UserRow, path: string, method = "GET") {
-  const app = new Hono<UserEnv>()
-    .use(async (c, next) => {
-      c.set("user", await loadLoggedInUser(user));
-      await next();
-    })
-    .route("/consultants", consultants);
-  return app.request(path, { method });
+const mount = (app: Hono<UserEnv>) => app.route("/consultants", consultants);
+
+function requestAs(user: UserRow, path: string) {
+  return requestAsUser(user, mount, path);
 }
 
 beforeAll(async () => {

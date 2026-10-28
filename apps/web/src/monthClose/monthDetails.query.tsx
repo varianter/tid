@@ -33,6 +33,7 @@ import {
 import type { UserEnv } from "../domain/users/user";
 import { database } from "../framework/database";
 import { Filtered } from "../framework/filter";
+import { yearsAround } from "../framework/periodNavigation";
 import { type QueryProps, queryPage } from "../framework/queryPage";
 import { formatShare } from "../share/share";
 import { LockMonthForm } from "./lockMonth.form";
@@ -182,6 +183,7 @@ function MonthDetailsPage({
               nextHref={href({ month: addMonths(month, 1) })}
               previousLabel="Previous month"
               nextLabel="Next month"
+              years={yearsAround(month, href)}
             >
               {formatDate(month, "month")}
             </PeriodNavigation>
@@ -223,7 +225,7 @@ function MonthDetailsPage({
             )
           }
         >
-          <div class="stack-v gap-s">
+          <div class="stack-v nowrap gap-s">
             <ColorMode
               palette={missingCount === 0 ? "green" : "yellow"}
               class="stack-h items-center gap-m b-all bc-default br-l py-xs px-m ink-default surface-tinted"

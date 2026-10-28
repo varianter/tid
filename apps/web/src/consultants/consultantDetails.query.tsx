@@ -16,10 +16,12 @@ import {
 } from "@tid/ui";
 import { and, between, desc, eq, sql } from "drizzle-orm";
 import type { Context } from "hono";
+import { HTTPException } from "hono/http-exception";
 import { capacityMinutes } from "../domain/capacity/capacity";
 import type { UserEnv } from "../domain/users/user";
 import { database } from "../framework/database";
 import { Filtered } from "../framework/filter";
+import { yearsAround } from "../framework/periodNavigation";
 import { type QueryProps, queryPage } from "../framework/queryPage";
 import { type Billing, billingLabels } from "../projects/billing";
 import { projectReportUrl } from "../projects/projects.url";
@@ -33,7 +35,7 @@ export const consultantDetails = queryPage({
   loader: async (c: Context<UserEnv>, { userId, month }) => {
     const viewer = c.get("user");
     if (viewer.id !== userId && !viewer.isManager) {
-      return c.text("Only managers can see other users", 403);
+      throw new HTTPException(403, { message: "Only managers can see other users" });
     }
     const [user] = await database
       .select({
@@ -139,6 +141,7 @@ function ConsultantDetailsPage({
             nextHref={href({ month: addMonths(month, 1) })}
             previousLabel="Previous month"
             nextLabel="Next month"
+            years={yearsAround(month, href)}
           >
             {formatDate(month, "month")}
           </PeriodNavigation>

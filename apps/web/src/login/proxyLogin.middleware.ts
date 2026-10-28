@@ -1,5 +1,6 @@
 import type { Context } from "hono";
 import { createMiddleware } from "hono/factory";
+import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 import type { PublicEnv } from "../domain/users/user";
 import { signupPath } from "./login.url";
@@ -40,7 +41,7 @@ function readDisplayName(c: Context) {
 export const requireProxyUser = (tenantId: string) =>
   createMiddleware<PublicEnv>(async (c, next) => {
     const identity = readProxyIdentity(c);
-    if (!identity) return c.text("Not logged in", 401);
+    if (!identity) throw new HTTPException(401, { message: "Not logged in" });
     const { subject, email } = identity;
 
     let user = await findUserByIdentity(tenantId, subject);
@@ -51,10 +52,9 @@ export const requireProxyUser = (tenantId: string) =>
       user = await linkIdentity(tenantId, subject, userWithEmail);
     }
     if (!user)
-      return c.text(
-        `${email} is already linked to a different sign-in. Ask the developers for help.`,
-        403,
-      );
+      throw new HTTPException(403, {
+        message: `${email} is already linked to a different sign-in. Ask the developers for help.`,
+      });
 
     c.set("user", user);
     await next();

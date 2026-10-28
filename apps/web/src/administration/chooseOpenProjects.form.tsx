@@ -1,12 +1,12 @@
-import { Checkbox, DataGrid, EmptyState } from "@tid/ui";
+import { Checkbox, DataGrid, EmptyState, FormPage } from "@tid/ui";
 import { z } from "zod";
 import type { OrganizationOption } from "../domain/organizations/organization";
-import type { FormProps } from "../framework/formAction";
+import type { FormState } from "../framework/formAction";
 import { administrationPath } from "./administration.url";
 import { OtherOrganizationNotice } from "./organizationSwitch";
 
 // One ticked box comes as a string, several as an array, none as nothing.
-export const openProjectsForm = z.object({
+export const chooseOpenProjectsForm = z.object({
   projectId: z.preprocess(
     (value) => (value === undefined ? [] : [value].flat()),
     z.array(z.coerce.number().int()),
@@ -21,28 +21,30 @@ export type OpenableProject = {
   open: boolean;
 };
 
-type OpenProjectsProps = {
+type ChooseOpenProjectsFormPageProps = {
   organization: { slug: string; name: string };
   projects: OpenableProject[];
   organizations: OrganizationOption[];
   ownOrgId: number;
+  form: FormState<typeof chooseOpenProjectsForm>;
 };
 
-export const openProjectsFrame = ({ organization, projects }: OpenProjectsProps) => ({
-  title: `Projects open to everyone in ${organization.name}`,
-  cancel: administrationPath(organization.slug),
-  submit: projects.length === 0 ? undefined : "Save",
-});
-
-export function OpenProjectsFields({
+export function ChooseOpenProjectsFormPage({
   organization,
   projects,
   organizations,
   ownOrgId,
-}: OpenProjectsProps & FormProps) {
+  form,
+}: ChooseOpenProjectsFormPageProps) {
   const clients = Map.groupBy(projects, (project) => project.client);
   return (
-    <>
+    <FormPage
+      title={`Projects open to everyone in ${organization.name}`}
+      cancel={administrationPath(organization.slug)}
+      submit={projects.length === 0 ? undefined : "Save"}
+      form={form}
+      layer="drawer"
+    >
       <OtherOrganizationNotice
         organizations={organizations}
         current={organization}
@@ -72,6 +74,6 @@ export function OpenProjectsFields({
           ))}
         </DataGrid>
       )}
-    </>
+    </FormPage>
   );
 }

@@ -4,6 +4,7 @@ import { and, eq, exists } from "drizzle-orm";
 import { type Context, Hono } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { createMiddleware } from "hono/factory";
+import { HTTPException } from "hono/http-exception";
 import type { PublicEnv } from "../domain/users/user";
 import { database } from "../framework/database";
 import { signupPath } from "../login/login.url";
@@ -102,7 +103,7 @@ function LoginRow({ email, title, details }: { email: string; title: string; det
 
 dev.post("/login", async (c) => {
   const { email } = await c.req.parseBody();
-  if (typeof email !== "string") return c.text("Missing email", 400);
+  if (typeof email !== "string") throw new HTTPException(400, { message: "Missing email" });
   setCookie(c, cookieName, email, { path: "/", httpOnly: true, sameSite: "Lax" });
   return c.redirect("/", 303);
 });

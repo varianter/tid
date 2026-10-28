@@ -69,6 +69,7 @@ function ManagerListPage({
   return (
     <Page
       title={`Managers in ${organization.name}`}
+      layer="drawer"
       back={{ href: administrationPath(organization.slug), label: "Administration" }}
     >
       <Filtered by={<OrganizationSwitcher organizations={organizations} current={organization} />}>

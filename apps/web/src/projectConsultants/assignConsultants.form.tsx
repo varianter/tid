@@ -1,7 +1,7 @@
 import { formatDate } from "@tid/calendar/dateDisplay";
-import { Checkbox, DataGrid, FormError } from "@tid/ui";
+import { Checkbox, DataGrid, FormError, FormPage } from "@tid/ui";
 import { z } from "zod";
-import type { FormProps } from "../framework/formAction";
+import type { FormState } from "../framework/formAction";
 
 // One ticked box comes as a string, several as an array, none as nothing.
 export const assignConsultantsForm = z.object({
@@ -19,30 +19,34 @@ type AssignablePerson = {
   leftProjectOn: string | null;
 };
 
-type AssignConsultantsProps = {
+type AssignConsultantsFormPageProps = {
   project: { id: number; name: string };
   /** Sorted by organization, so they group. */
   people: AssignablePerson[];
+  form: FormState<typeof assignConsultantsForm>;
 };
 
-export const assignConsultantsFrame = ({ project, people }: AssignConsultantsProps) => ({
-  title: `Assign consultants to ${project.name}`,
-  cancel: `/projects/${project.id}`,
-  submit: people.length === 0 ? undefined : "Assign",
-});
-
-export function AssignConsultantsFields({
+export function AssignConsultantsFormPage({
+  project,
   people,
-  fieldErrors,
-}: AssignConsultantsProps & FormProps) {
+  form,
+}: AssignConsultantsFormPageProps) {
   const organizations = Map.groupBy(people, (person) => person.orgName);
   return (
-    <>
+    <FormPage
+      title={`Assign consultants to ${project.name}`}
+      cancel={`/projects/${project.id}`}
+      submit={people.length === 0 ? undefined : "Assign"}
+      form={form}
+      layer="drawer"
+    >
       {people.length === 0 ? (
         <p class="ink-subtle">Everyone is assigned already.</p>
       ) : (
-        <>
-          {fieldErrors?.userId && <FormError id="userId-error" errors={fieldErrors.userId} />}
+        <div class="w-full">
+          {form.fieldErrors.userId && (
+            <FormError id="userId-error" errors={form.fieldErrors.userId} />
+          )}
           <DataGrid columns={[{ kind: "fit" }, { label: "Consultant" }]}>
             {[...organizations].map(([orgName, orgPeople]) => (
               <>
@@ -67,8 +71,8 @@ export function AssignConsultantsFields({
               </>
             ))}
           </DataGrid>
-        </>
+        </div>
       )}
-    </>
+    </FormPage>
   );
 }

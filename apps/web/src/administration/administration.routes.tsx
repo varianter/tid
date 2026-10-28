@@ -1,9 +1,9 @@
 import { Hono } from "hono";
 import { managersOnly } from "../domain/managers/manager.middleware";
 import type { UserEnv } from "../domain/users/user";
+import { chooseOpenProjects } from "./chooseOpenProjects.command";
 import { makeManager } from "./makeManager.command";
 import { managerList } from "./managerList.query";
-import { chooseOpenProjects } from "./openProjects.command";
 import { organizationOverview, organizationOverviewRedirect } from "./organizationOverview.query";
 import { removeManager } from "./removeManager.command";
 

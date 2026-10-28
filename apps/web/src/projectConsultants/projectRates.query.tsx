@@ -2,6 +2,7 @@ import { formatDate } from "@tid/calendar/dateDisplay";
 import { todayInOslo } from "@tid/calendar/osloClock";
 import { assignmentRates, projectAssignments, projects, users } from "@tid/db/schema";
 import { Badge, DataGrid, Page, Section } from "@tid/ui";
+import { attributes } from "@tid/via/attributes";
 import { and, eq, sql } from "drizzle-orm";
 import type { Context } from "hono";
 import { formatAmount } from "../domain/amount/amount";
@@ -74,7 +75,7 @@ function ProjectRatesPage({ project, consultants, today }: ProjectRatesPageProps
                 label: "Add rate",
                 href: `${ratesPath(ids)}/new`,
                 "aria-label": `Add a rate for ${consultant.name}`,
-                "via-layer": true,
+                [attributes.layer]: true,
               },
             ]}
           >

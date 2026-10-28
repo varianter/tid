@@ -26,6 +26,7 @@ import {
 } from "../domain/organizations/organizationFilter";
 import { database } from "../framework/database";
 import { Filtered } from "../framework/filter";
+import { yearsAround } from "../framework/periodNavigation";
 import { type QueryProps, queryPage } from "../framework/queryPage";
 import { projectReportUrl } from "../projects/projects.url";
 import { formatShare } from "../share/share";
@@ -254,6 +255,7 @@ function ReportPage({
               nextHref={href({ month: addMonths(month, 1) })}
               previousLabel="Previous month"
               nextLabel="Next month"
+              years={yearsAround(month, href)}
             >
               {formatDate(month, "month")}
             </PeriodNavigation>

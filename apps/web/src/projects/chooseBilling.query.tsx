@@ -7,7 +7,11 @@ export const chooseBilling = (c: Context) => {
   const client = c.req.query("client");
   const query = client ? `?${new URLSearchParams({ client })}` : "";
   return c.render(
-    <Page title="New project" back={{ href: "/projects", label: "Back to projects" }}>
+    <Page
+      title="New project"
+      back={{ href: "/projects", label: "Back to projects" }}
+      layer="tooltip"
+    >
       <Section title="How is the project billed?">
         <ul class="stack-v gap-s w-max-5">
           {billings.map((billing) => (

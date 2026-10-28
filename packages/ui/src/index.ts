@@ -10,7 +10,11 @@ export { FormError } from "./compositions/forms/FormError";
 export { FormField } from "./compositions/forms/FormField";
 export { FormPage } from "./compositions/forms/FormPage";
 export { Page } from "./compositions/Page";
-export { PeriodNavigation } from "./compositions/PeriodNavigation";
+export {
+  type MonthChoice,
+  PeriodNavigation,
+  type YearChoice,
+} from "./compositions/PeriodNavigation";
 export { Section } from "./compositions/Section";
 export { Stat, StatList } from "./compositions/Stat";
 export { Tabs } from "./compositions/Tabs";
@@ -19,6 +23,7 @@ export { Badge } from "./primitives/Badge";
 export { Button, type ButtonProps } from "./primitives/Button";
 export { Checkbox } from "./primitives/Checkbox";
 export { ColorMode, type Palette } from "./primitives/ColorMode";
+export { Fieldset } from "./primitives/Fieldset";
 export { findIconSvg, Icon, type IconName, iconNames, iconsPath } from "./primitives/Icon";
 export { Input } from "./primitives/Input";
 export { Label } from "./primitives/Label";

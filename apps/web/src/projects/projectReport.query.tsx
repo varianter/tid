@@ -10,6 +10,7 @@ import {
 } from "../domain/organizations/organizationFilter";
 import type { UserEnv } from "../domain/users/user";
 import { Filtered } from "../framework/filter";
+import { yearsAround } from "../framework/periodNavigation";
 import { type QueryProps, queryPage } from "../framework/queryPage";
 import { MonthEntries, type MonthEntry } from "../timeEntries/monthEntries";
 import { billingLabels } from "./billing";
@@ -58,6 +59,7 @@ function ProjectReportPage({
               nextHref={href({ month: addMonths(query.month, 1) })}
               previousLabel="Previous month"
               nextLabel="Next month"
+              years={yearsAround(query.month, href)}
             >
               {period}
             </PeriodNavigation>

@@ -13,10 +13,10 @@ import {
   removeUnneededParticipation,
 } from "../projects/projectParticipation.data";
 import { openProjectsPath } from "./administration.url";
-import { OpenProjectsFields, openProjectsForm, openProjectsFrame } from "./openProjects.form";
+import { ChooseOpenProjectsFormPage, chooseOpenProjectsForm } from "./chooseOpenProjects.form";
 
 export const chooseOpenProjects = formAction({
-  schema: openProjectsForm,
+  schema: chooseOpenProjectsForm,
   loader: async (c) => {
     const organization = await findOrganizationBySlug(c.req.param("organization") ?? "");
     if (!organization) return c.notFound();
@@ -60,8 +60,7 @@ export const chooseOpenProjects = formAction({
         if (!open) await removeUnneededParticipation(transaction, ids);
       }
     });
-    return { redirect: openProjectsPath(organization.slug) };
+    return { redirect: `${openProjectsPath(organization.slug)}?saved` };
   },
-  frame: openProjectsFrame,
-  view: OpenProjectsFields,
+  view: ChooseOpenProjectsFormPage,
 });

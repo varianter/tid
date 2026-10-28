@@ -4,13 +4,7 @@ import { listOrganizations } from "../domain/organizations/organization.data";
 import type { User } from "../domain/users/user";
 import { database } from "../framework/database";
 import { formAction } from "../framework/formAction";
-import {
-  ProjectFields,
-  parseBilling,
-  projectColumns,
-  projectFrame,
-  startProjectForm,
-} from "./project.form";
+import { ProjectFormPage, parseBilling, projectColumns, startProjectForm } from "./project.form";
 import { suggestProjectCode } from "./projectCode";
 import { listProjectCurrencies } from "./projectCurrency.data";
 
@@ -87,6 +81,5 @@ export const startProject = formAction({
       ? { fieldErrors: { code: ["Another project uses this code"] } }
       : { fieldErrors: { name: ["The client already has a project with this name"] } };
   },
-  frame: projectFrame,
-  view: ProjectFields,
+  view: ProjectFormPage,
 });

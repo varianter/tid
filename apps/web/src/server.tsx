@@ -72,8 +72,6 @@ app.use(
     },
   }),
 );
-// Login is a session cookie, so form posts from other sites would otherwise be trusted.
-app.use(csrf());
 app.use(
   jsxRenderer(async ({ children }, c) => {
     // Early discovery of the stylesheet and scripts, before the browser reaches their tags in head.
@@ -99,6 +97,9 @@ app.use(
     );
   }),
 );
+// Login is a session cookie, so form posts from other sites would otherwise be trusted. After the
+// renderer, so a refused post renders as a page.
+app.use(csrf());
 
 app.use(reportRenderTiming);
 
@@ -108,8 +109,14 @@ app.notFound((c) => {
 });
 
 app.onError((error, c) => {
-  // Hono throws these itself, for example when the CSRF check fails.
-  if (error instanceof HTTPException) return error.getResponse();
+  // Routes throw these to refuse a request, and Hono throws them itself when the CSRF check fails.
+  // A page rather than plain text, so a form in a layer shows why it was refused.
+  if (error instanceof HTTPException) {
+    c.status(error.status);
+    return c.render(
+      <ErrorPage status={error.status} message={error.message || "This request was refused"} />,
+    );
+  }
   console.error(error);
   c.status(500);
 

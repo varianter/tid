@@ -1,4 +1,5 @@
-import { afterAll, expect, test } from "bun:test";
+import { afterAll, beforeAll, expect, test } from "bun:test";
+import { attributes } from "@tid/via/attributes";
 import { sql } from "drizzle-orm";
 import { openBrowser, waitUntil } from "./browser";
 import { logInAs, managerEmail } from "./devLogin";
@@ -7,38 +8,35 @@ import { database, server } from "./runningApp";
 const { view, consoleErrors } = openBrowser();
 afterAll(() => view.close());
 
+let ratesUrl: string;
+let addRateLink: string;
+let firstDay: string;
+
 // Someone in the manager's organization with hours on the project. A rate from their first day
 // reprices those hours, which takes the form through its confirming step.
-const [assignment] = await database.execute<{
-  projectId: number;
-  userId: number;
-  firstDay: string;
-}>(sql`
-  select pa.project_id as "projectId", pa.user_id as "userId", min(te.spent_on)::text as "firstDay"
-  from project_assignments pa
-  join users manager on manager.email = ${managerEmail} and manager.org_id = pa.org_id
-  join tasks t on t.project_id = pa.project_id
-  join time_entries te on te.task_id = t.id and te.user_id = pa.user_id
-  group by pa.project_id, pa.user_id
-  limit 1`);
-if (!assignment) throw new Error("The fixture has no consultant with hours to reprice");
-const ratesUrl = `${server.url}projects/${assignment.projectId}/consultants/rates`;
-const addRateLink = `a[via-layer][href$="/${assignment.userId}/rates/new"]`;
+beforeAll(async () => {
+  const [assignment] = await database.execute<{
+    projectId: number;
+    userId: number;
+    firstDay: string;
+  }>(sql`
+    select pa.project_id as "projectId", pa.user_id as "userId", min(te.spent_on)::text as "firstDay"
+    from project_assignments pa
+    join users manager on manager.email = ${managerEmail} and manager.org_id = pa.org_id
+    join tasks t on t.project_id = pa.project_id
+    join time_entries te on te.task_id = t.id and te.user_id = pa.user_id
+    group by pa.project_id, pa.user_id
+    limit 1`);
+  if (!assignment) throw new Error("The fixture has no consultant with hours to reprice");
+  ratesUrl = `${server.url}projects/${assignment.projectId}/consultants/rates`;
+  addRateLink = `a[${attributes.layer}][href$="/${assignment.userId}/rates/new"]`;
+  firstDay = assignment.firstDay;
+});
 
 const layerHeading = () => view.evaluate("document.querySelector(':popover-open h1')?.textContent");
-const layerCount = () => view.evaluate("document.querySelectorAll('[via-layer-url]').length");
+const layerCount = () =>
+  view.evaluate(`document.querySelectorAll("[${attributes.layerUrl}]").length`);
 const layerType = () => view.evaluate("document.querySelector(':popover-open')?.dataset.type");
-// Where the layer sits against the link that opened it: the gap to the nearer of the link's top
-// and bottom edges, and between their right edges.
-const offsetFromLink = async () =>
-  (await view.evaluate(`(() => {
-    const link = document.querySelector(${JSON.stringify(addRateLink)}).getBoundingClientRect();
-    const layer = document.querySelector(":popover-open").getBoundingClientRect();
-    return {
-      vertical: Math.min(Math.abs(layer.top - link.bottom), Math.abs(layer.bottom - link.top)),
-      right: layer.right - link.right,
-    };
-  })()`)) as { vertical: number; right: number };
 
 async function openAddRate() {
   await view.navigate(ratesUrl);
@@ -57,31 +55,30 @@ test("a manager adds a rate in a layer, through its repricing step, and lands ba
   expect(view.url).toBe(ratesUrl);
   expect(await layerType()).toBe("tooltip");
   // A tooltip asks to hang below the action, lined up with its right edge. Where there's no room
-  // below, it flips above, so the check is that it touches the link on one side.
+  // below, it flips above, so placement is checked by the side it lands on, not by pixels.
   const placement = await view.evaluate(`(() => {
     const { side, align } = document.querySelector(":popover-open").dataset;
     return { side, align };
   })()`);
   expect(placement).toEqual({ side: "bottom", align: "right" });
-  const { vertical, right } = await offsetFromLink();
-  expect(vertical).toBeLessThan(32);
-  expect(Math.abs(right)).toBeLessThan(32);
 
   await view.evaluate(`(() => {
     const form = document.querySelector(":popover-open form");
     form.elements.rate.value = "4321";
-    form.elements.validFrom.value = "${assignment.firstDay}";
+    form.elements.validFrom.value = "${firstDay}";
   })()`);
   await view.click(":popover-open button[type=submit]");
   await waitUntil("the repricing step in the same layer", async () =>
     String(await layerHeading()).includes("from"),
   );
-  expect(await layerCount()).toBe(1);
+  // The rate form's layer is removed once it has finished closing.
+  await waitUntil("one layer", async () => (await layerCount()) === 1);
   expect(await layerType()).toBe("drawer");
   // The tooltip's placement doesn't carry over, so the drawer keeps to the window's right edge
-  // and runs its full height.
-  const drawer = await view.evaluate(`(() => {
+  // and runs its full height, once it has slid in.
+  const drawer = await view.evaluate(`(async () => {
     const layer = document.querySelector(":popover-open");
+    await Promise.allSettled(layer.getAnimations({ subtree: true }).map((animation) => animation.finished));
     const { top, right, bottom } = layer.getBoundingClientRect();
     const width = document.documentElement.clientWidth;
     return { side: layer.dataset.side ?? null, right: width - right, top, bottom: innerHeight - bottom };

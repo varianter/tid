@@ -1,5 +1,6 @@
 import { projectOrganizations, projects } from "@tid/db/schema";
 import { type Action, Actions, EmptyState, Page } from "@tid/ui";
+import { attributes } from "@tid/via/attributes";
 import { and, eq, exists, inArray } from "drizzle-orm";
 import type { Context } from "hono";
 import {
@@ -40,7 +41,11 @@ export const projectList = async (c: Context<UserEnv>) => {
   );
 };
 
-const newProject: Action = { label: "New project", href: "/projects/new" };
+const newProject: Action = {
+  label: "New project",
+  href: "/projects/new",
+  [attributes.layer]: true,
+};
 
 function ProjectListPage({
   projects,

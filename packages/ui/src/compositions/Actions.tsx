@@ -1,3 +1,4 @@
+import { attributes } from "@tid/via/attributes";
 import { classes } from "../primitives/attributes";
 import { Button } from "../primitives/Button";
 import { Icon, type IconName } from "../primitives/Icon";
@@ -10,7 +11,7 @@ export type Action = {
   /** Names what the action is about when several on a page share a label. */
   "aria-label"?: string;
   /** Opens the form in a layer over the page, shown the way the form's page asks. */
-  "via-layer"?: boolean;
+  [attributes.layer]?: boolean;
 };
 
 /**
@@ -28,15 +29,17 @@ export function Actions({
   if (allowed.length === 0) return null;
   return (
     <div class={classes("stack-h items-center gap-xs", className)}>
-      {allowed.map(({ label, href, icon, "aria-label": ariaLabel, "via-layer": layer }) => (
+      {allowed.map(({ label, href, icon, "aria-label": ariaLabel, [attributes.layer]: layer }) => (
         <Button
           as="a"
           href={href}
-          data-variant="tinted"
+          data-variant="filled"
           aria-label={ariaLabel}
-          via-layer={layer}
-          via-layer-side={layer && "bottom"}
-          via-layer-align={layer && "right"}
+          {...(layer && {
+            [attributes.layer]: true,
+            [attributes.layerSide]: "bottom",
+            [attributes.layerAlign]: "right",
+          })}
         >
           {icon && <Icon name={icon} />}
           {label}

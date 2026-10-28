@@ -1,6 +1,7 @@
 import { clients, projects, tasks, timeEntries } from "@tid/db/schema";
 import { formatTotalHours } from "@tid/elements/hours";
 import { type Action, Actions, DataGrid, EmptyState, Page } from "@tid/ui";
+import { attributes } from "@tid/via/attributes";
 import { countDistinct, eq, sql } from "drizzle-orm";
 import type { Context } from "hono";
 import type { UserEnv } from "../domain/users/user";
@@ -26,7 +27,7 @@ export const clientList = async (c: Context<UserEnv>) => {
 
 type ClientRow = Client & { projectCount: number; spentMinutes: number };
 
-const newClient: Action = { label: "New client", href: "/clients/new" };
+const newClient: Action = { label: "New client", href: "/clients/new", [attributes.layer]: true };
 
 function ClientListPage({
   clients,

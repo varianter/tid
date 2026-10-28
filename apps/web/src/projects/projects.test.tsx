@@ -12,11 +12,11 @@ import {
   users,
 } from "@tid/db/schema";
 import { eq } from "drizzle-orm";
-import { Hono } from "hono";
+import type { Hono } from "hono";
 import type { UserEnv } from "../domain/users/user";
 import { database } from "../framework/database";
 import { projectConsultants } from "../projectConsultants/projectConsultants.routes";
-import { loadLoggedInUser, type UserRow } from "../testing/loggedInUser";
+import { postForm, requestAsUser, type UserRow } from "../testing/loggedInUser";
 import { organizationIdBySlug } from "../testing/rows";
 import { projects } from "./projects.routes";
 
@@ -28,23 +28,16 @@ let oslo: number;
 let bergen: number;
 let clientId: number;
 
+const mount = (app: Hono<UserEnv>) =>
+  app.route("/projects", projects).route("/projects/:projectId/consultants", projectConsultants);
+
 // Pairs repeat a field, like several ticked checkboxes.
 function requestAs(
   user: UserRow,
   path: string,
   form?: Record<string, string> | [string, string][],
 ) {
-  const app = new Hono<UserEnv>()
-    .use(async (c, next) => {
-      c.set("user", await loadLoggedInUser(user));
-      await next();
-    })
-    .route("/projects", projects)
-    .route("/projects/:projectId/consultants", projectConsultants);
-  return app.request(
-    path,
-    form ? { method: "POST", body: new URLSearchParams(form) } : { method: "GET" },
-  );
+  return requestAsUser(user, mount, path, form && postForm(form));
 }
 
 const participants = async (projectId: number) =>

@@ -14,6 +14,7 @@ import {
 } from "@tid/db/schema";
 import { formatTotalHours } from "@tid/elements/hours";
 import { Badge, Button, DataGrid, Detail, Icon, Page, Section, Stat, StatList } from "@tid/ui";
+import { attributes } from "@tid/via/attributes";
 import { and, desc, eq, lte, type SQL, sql } from "drizzle-orm";
 import type { Context } from "hono";
 import { consultantPath } from "../consultants/consultants.url";
@@ -213,6 +214,7 @@ function ProjectDetailsPage({
           label: "Edit",
           href: `/projects/${project.id}/edit`,
           icon: "settings",
+          [attributes.layer]: true,
         },
       ]}
     >
@@ -265,7 +267,11 @@ function ProjectDetailsPage({
       <Section
         title="Consultants"
         actions={[
-          canAssign && { label: "Assign", href: `${projectConsultantsPath(project.id)}/new` },
+          canAssign && {
+            label: "Assign",
+            href: `${projectConsultantsPath(project.id)}/new`,
+            [attributes.layer]: true,
+          },
         ]}
       >
         {assignedPeople.length === 0 ? (
@@ -310,6 +316,7 @@ function ProjectDetailsPage({
                       data-variant="plain"
                       data-size="small"
                       aria-label={`End ${person.name}'s assignment`}
+                      {...{ [attributes.layer]: true }}
                     >
                       <Icon name="close" />
                     </Button>
@@ -324,7 +331,11 @@ function ProjectDetailsPage({
       <Section
         title="Tasks"
         actions={[
-          canManageProject && { label: "Add task", href: `/projects/${project.id}/tasks/new` },
+          canManageProject && {
+            label: "Add task",
+            href: `/projects/${project.id}/tasks/new`,
+            [attributes.layer]: true,
+          },
         ]}
       >
         {tasks.length === 0 ? (

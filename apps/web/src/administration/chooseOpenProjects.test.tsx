@@ -2,10 +2,10 @@ import { beforeAll, expect, test } from "bun:test";
 import { rebuildDatabase } from "@tid/db/client";
 import { clients, projectOrganizations, projects, userRoles, users } from "@tid/db/schema";
 import { eq } from "drizzle-orm";
-import { Hono } from "hono";
+import type { Hono } from "hono";
 import type { UserEnv } from "../domain/users/user";
 import { database } from "../framework/database";
-import { loadLoggedInUser, type UserRow } from "../testing/loggedInUser";
+import { postForm, requestAsUser, type UserRow } from "../testing/loggedInUser";
 import { organizationIdBySlug } from "../testing/rows";
 import { administration } from "./administration.routes";
 
@@ -16,14 +16,10 @@ let osloId: number;
 let internalId: number;
 let billableId: number;
 
+const mount = (app: Hono<UserEnv>) => app.route("/administration", administration);
+
 function requestAs(user: UserRow, path: string, form?: Record<string, string>) {
-  const app = new Hono<UserEnv>()
-    .use(async (c, next) => {
-      c.set("user", await loadLoggedInUser(user));
-      await next();
-    })
-    .route("/administration", administration);
-  return app.request(path, form ? { method: "POST", body: new URLSearchParams(form) } : {});
+  return requestAsUser(user, mount, path, form && postForm(form));
 }
 
 const osloParticipation = async () =>
@@ -78,7 +74,10 @@ test("only managers choose open projects", async () => {
 
 test("managers of any organization open a non-billable project, and close it again", async () => {
   const opened = await requestAs(bergenManager, path, { projectId: String(internalId) });
-  expect(opened.headers.get("location")).toBe(path);
+  expect(opened.headers.get("location")).toBe(`${path}?saved`);
+  expect(await (await requestAs(manager, `${path}?saved`)).text()).toContain(
+    "Your changes have been saved.",
+  );
   expect(await osloParticipation()).toEqual([{ projectId: internalId, openToMembers: true }]);
   expect(await (await requestAs(manager, path)).text()).toContain("checked");
 
