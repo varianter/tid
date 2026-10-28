@@ -11,7 +11,7 @@ export function CellShortcuts() {
     [["Shift", "↓"], "Remove half an hour"],
   ];
   return (
-    <footer class="stack-h wrap gap-m gap-row-xs fs-s ink-subtle justify-center">
+    <footer class="stack-h wrap gap-m gap-row-xs fs-s ink-subtle justify-center mt-xl">
       {shortcuts.map(([keys, description]) => (
         <span class="stack-h nowrap items-center gap-2xs">
           <Keys keys={keys} />

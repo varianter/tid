@@ -6,6 +6,7 @@ import { Checkbox, Label, Page, PeriodNavigation } from "@tid/ui";
 import { capacityMinutes } from "../domain/capacity/capacity";
 import type { User } from "../domain/users/user";
 import { Filtered, FilterForm, PageSearch } from "../framework/filter";
+import { yearsAround } from "../framework/periodNavigation";
 import { CellShortcuts } from "./cellShortcuts";
 import { ShowBillableAssignmentsForm } from "./showBillableAssignments.form";
 import { cellsActionOf, monthPath } from "./timesheet.url";
@@ -61,6 +62,7 @@ export function MonthPage({
                 nextHref={monthPath(addMonths(month, 1), showWeekends)}
                 previousLabel="Previous month"
                 nextLabel="Next month"
+                years={yearsAround(month, (change) => monthPath(change.month, showWeekends))}
               >
                 {formatDate(month, "month")}
               </PeriodNavigation>
@@ -74,6 +76,7 @@ export function MonthPage({
             </p>
           )}
           <timesheet-conductor
+            class="-mr-s-m"
             cell-action={`/timesheet/month/${month}/cell${search}`}
             full-day-minutes={fullDayMinutes}
             today={todayInOslo()}

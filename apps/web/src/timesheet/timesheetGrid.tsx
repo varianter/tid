@@ -77,7 +77,7 @@ export function TimesheetGrid({
     <>
       {addable && <AddTaskForm addableTasks={addableTasks} class="mt-s mb-m" />}
       <div
-        class={cx("d-grid t-tabular my-s gap-column-3xs pr-m", sheetLayout)}
+        class={cx("d-grid t-tabular my-s gap-column-3xs pr-m pb-l", sheetLayout)}
         style={`--days: ${days.length}; --task-columns: ${rows.length};`}
       >
         <div class="grid-subgrid grid-all-columns fs-s">

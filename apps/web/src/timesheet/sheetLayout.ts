@@ -38,6 +38,7 @@ export const sheetLayout = css`
     margin-inline-start: var(--spacing-xs);
   }
   & [data-task] {
+    --fade-color: var(--surface-base);
     background: ${stickyFade};
   }
   /* Only the sheet should scroll to today; a screen of margin keeps the page itself at the top. */

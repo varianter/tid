@@ -4,6 +4,7 @@ import { tasks, timeEntries } from "@tid/db/schema";
 import { and, eq, sql } from "drizzle-orm";
 import type { Context } from "hono";
 import { getCookie } from "hono/cookie";
+import { HTTPException } from "hono/http-exception";
 import type { User, UserEnv } from "../domain/users/user";
 import { database } from "../framework/database";
 import { isLockedOn, isMonthLockedError } from "../monthClose/monthLock.data";
@@ -53,10 +54,10 @@ async function readPostedCell(c: Context<UserEnv>) {
   const user = c.get("user");
   const body = await c.req.parseBody();
   const cell = cellFields.safeParse(body);
-  if (!cell.success) return c.text("Bad request", 400);
+  if (!cell.success) throw new HTTPException(400, { message: "Bad request" });
   const [task] = await userTasks().where(and(eq(tasks.id, cell.data.taskId), loggableBy(user.id)));
   // The grid only offers loggable tasks, so this is a stale or hand-made request.
-  if (!task) return c.text("You're not on this project", 403);
+  if (!task) throw new HTTPException(403, { message: "You're not on this project" });
   return { user, task, day: cell.data.date, hours: body.hours };
 }
 
@@ -81,7 +82,6 @@ export const logHours = async (c: Context<UserEnv, "/month/:month">) => {
   const month = c.req.param("month");
   if (!isIsoMonth(month)) return c.notFound();
   const cell = await readPostedCell(c);
-  if (cell instanceof Response) return cell;
   const { user, task, day } = cell;
   const saved = await saveHours(user, task.id, day, cell.hours);
   if (saved.error) {
@@ -111,7 +111,6 @@ export const logHoursInPlace = async (c: Context<UserEnv, "/month/:month">) => {
   const month = c.req.param("month");
   if (!isIsoMonth(month)) return c.notFound();
   const cell = await readPostedCell(c);
-  if (cell instanceof Response) return cell;
   const { user, task, day } = cell;
   const { error } = await saveHours(user, task.id, day, cell.hours);
   const [stored] = await database
