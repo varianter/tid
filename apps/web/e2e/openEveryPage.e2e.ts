@@ -1,5 +1,5 @@
 import { afterAll, expect, test } from "bun:test";
-import { openBrowser } from "./browser";
+import { navigateAndWait, openBrowser } from "./browser";
 import { logInAs, managerEmail } from "./devLogin";
 import { server } from "./runningApp";
 
@@ -22,9 +22,9 @@ const pages = [
 test("a manager can open every page without a script error", async () => {
   await logInAs(view, managerEmail);
   for (const { path, heading } of pages) {
-    await view.navigate(`${server.url}${path.slice(1)}`);
+    await navigateAndWait(view, `${server.url}${path.slice(1)}`);
     const actual = await view.evaluate("document.querySelector('h1')?.textContent");
     expect(`${path}: ${actual}`).toStartWith(`${path}: ${heading}`);
   }
   expect(consoleErrors).toEqual([]);
-}, 30_000);
+});

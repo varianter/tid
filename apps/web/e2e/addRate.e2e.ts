@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import { attributes } from "@tid/via/attributes";
 import { sql } from "drizzle-orm";
-import { openBrowser, waitUntil } from "./browser";
+import { navigateAndWait, openBrowser, scrollToAndClick, waitUntil } from "./browser";
 import { logInAs, managerEmail } from "./devLogin";
 import { database, server } from "./runningApp";
 
@@ -39,11 +39,10 @@ const layerCount = () =>
 const layerType = () => view.evaluate("document.querySelector(':popover-open')?.dataset.type");
 
 async function openAddRate() {
-  await view.navigate(ratesUrl);
+  await navigateAndWait(view, ratesUrl);
   // Gone after a reload, so it shows the page stayed.
   await view.evaluate("window.sameDocument = true");
-  await view.scrollTo(addRateLink, { block: "center" });
-  await view.click(addRateLink);
+  await scrollToAndClick(view, addRateLink);
   await waitUntil("the form to open in a layer", async () =>
     String(await layerHeading()).startsWith("New rate for"),
   );
@@ -67,7 +66,7 @@ test("a manager adds a rate in a layer, through its repricing step, and lands ba
     form.elements.rate.value = "4321";
     form.elements.validFrom.value = "${firstDay}";
   })()`);
-  await view.click(":popover-open button[type=submit]");
+  await scrollToAndClick(view, ":popover-open button[type=submit]");
   await waitUntil("the repricing step in the same layer", async () =>
     String(await layerHeading()).includes("from"),
   );
@@ -84,9 +83,7 @@ test("a manager adds a rate in a layer, through its repricing step, and lands ba
     return { side: layer.dataset.side ?? null, right: width - right, top, bottom: innerHeight - bottom };
   })()`);
   expect(drawer).toEqual({ side: null, right: 0, top: 0, bottom: 0 });
-  await view.scrollTo(":popover-open button[type=submit]", { block: "center" });
-
-  await view.click(":popover-open button[type=submit]");
+  await scrollToAndClick(view, ":popover-open button[type=submit]");
   await waitUntil("the layer to close", async () => (await layerCount()) === 0);
   const page = (await view.evaluate("document.querySelector('main').textContent")) as string;
   // Amounts group thousands with a space, which may be a non-breaking one.
@@ -94,7 +91,7 @@ test("a manager adds a rate in a layer, through its repricing step, and lands ba
   expect(view.url).toBe(ratesUrl);
   expect((await view.evaluate("window.sameDocument")) as boolean).toBe(true);
   expect(consoleErrors).toEqual([]);
-}, 30_000);
+});
 
 test("dismissing the layer leaves the page as it was", async () => {
   await logInAs(view, managerEmail);
@@ -102,4 +99,4 @@ test("dismissing the layer leaves the page as it was", async () => {
   await view.press("Escape");
   await waitUntil("the layer to be removed", async () => (await layerCount()) === 0);
   expect((await view.evaluate("window.sameDocument")) as boolean).toBe(true);
-}, 30_000);
+});

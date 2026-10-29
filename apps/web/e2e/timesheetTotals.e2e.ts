@@ -1,6 +1,6 @@
 import { afterAll, expect, test } from "bun:test";
 import { formatHours } from "@tid/elements/hours";
-import { openBrowser, waitUntil } from "./browser";
+import { openBrowser, scrollToAndClick, waitUntil } from "./browser";
 import { employeeEmail, logInAs } from "./devLogin";
 import { findEmptyCell } from "./timesheetGrid";
 
@@ -24,8 +24,7 @@ test("saving a cell updates the totals without reloading the page", async () => 
   // Gone after a reload, so it shows the page stayed.
   await view.evaluate("window.sameDocument = true");
 
-  await view.scrollTo(input, { block: "center" });
-  await view.click(input);
+  await scrollToAndClick(view, input);
   await view.type("4");
   await view.press("Enter");
 
@@ -39,15 +38,14 @@ test("saving a cell updates the totals without reloading the page", async () => 
   expect(await textOf(`[data-day-total="${day}"]`)).toBe(formatHours(dayMinutesBefore + 240));
   const sameDocument = await view.evaluate("window.sameDocument");
   expect(sameDocument).toBe(true);
-}, 30_000);
+});
 
 test("typing in a cell updates the totals before it's saved", async () => {
   await logInAs(view, employeeEmail);
   const { input } = await findEmptyCell(view);
   const minutesBefore = await minutesIn("form[data-minutes]");
 
-  await view.scrollTo(input, { block: "center" });
-  await view.click(input);
+  await scrollToAndClick(view, input);
   await view.type("4");
   expect(await textOf("[data-grand-total]")).toBe(formatHours(minutesBefore + 240));
 
@@ -58,7 +56,7 @@ test("typing in a cell updates the totals before it's saved", async () => {
   // Back to what's stored, so leaving the page saves nothing into later tests.
   await view.press("Backspace");
   await view.press("Backspace");
-}, 30_000);
+});
 
 test("stepping a cell's hours updates the totals before it's saved", async () => {
   await logInAs(view, employeeEmail);
@@ -66,12 +64,11 @@ test("stepping a cell's hours updates the totals before it's saved", async () =>
   const dayTotal = `[data-day-total="${day}"]`;
   const dayMinutesBefore = await minutesIn(`form[data-day="${day}"]`);
 
-  await view.scrollTo(input, { block: "center" });
-  await view.click(input);
+  await scrollToAndClick(view, input);
   await view.press("ArrowUp", { modifiers: ["Shift"] });
   expect(await textOf(dayTotal)).toBe(formatHours(dayMinutesBefore + 30));
 
   // Back to blank, so leaving the page saves nothing into later tests.
   await view.press("ArrowDown", { modifiers: ["Shift"] });
   expect(await textOf(dayTotal)).toBe(formatHours(dayMinutesBefore));
-}, 30_000);
+});

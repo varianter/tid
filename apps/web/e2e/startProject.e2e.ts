@@ -1,6 +1,6 @@
 import { afterAll, expect, test } from "bun:test";
 import { attributes } from "@tid/via/attributes";
-import { openBrowser, waitUntil } from "./browser";
+import { navigateAndWait, openBrowser, scrollToAndClick, waitUntil } from "./browser";
 import { logInAs, managerEmail } from "./devLogin";
 import { server } from "./runningApp";
 
@@ -13,6 +13,9 @@ const layerCount = () =>
 // A nested layer sits inside the one that opened it, so the last is the one on top.
 const topLayer = `[${attributes.layerUrl}]:not(:has([${attributes.layerUrl}]))`;
 const topHeading = () => view.evaluate(`document.querySelector("${topLayer} h1")?.textContent`);
+// Both billing steps are titled "New project", so the form is told apart by the billing it carries.
+const topBilling = () =>
+  view.evaluate(`document.querySelector("${topLayer} input[name=billing]")?.value`);
 const sameDocument = () => view.evaluate("window.sameDocument === true");
 
 /**
@@ -20,21 +23,16 @@ const sameDocument = () => view.evaluate("window.sameDocument === true");
  * the page's URL, which the projects page redirects to with its organization.
  */
 async function openHourlyProjectForm() {
-  await view.navigate(projectsUrl);
-  // `url` can lag behind the redirect, still naming the page before.
-  const pageUrl = await waitUntil("the projects page", () =>
-    view.url.startsWith(projectsUrl) ? view.url : undefined,
-  );
+  await navigateAndWait(view, projectsUrl);
+  const pageUrl = view.url;
   // Gone after a page load, so it shows the page stayed.
   await view.evaluate("window.sameDocument = true");
-  await view.click(`a[${attributes.layer}][href="/projects/new"]`);
+  await scrollToAndClick(view, `a[${attributes.layer}][href="/projects/new"]`);
   await waitUntil("the billing choice in a layer", async () =>
     String(await topHeading()).startsWith("New project"),
   );
-  await view.click(`${topLayer} a[href*="/projects/new/hourly"]`);
-  await waitUntil("the project form in a layer", async () =>
-    String(await topHeading()).startsWith("New hourly project"),
-  );
+  await scrollToAndClick(view, `${topLayer} a[href*="/projects/new/hourly"]`);
+  await waitUntil("the project form in a layer", async () => (await topBilling()) === "hourly");
   // The billing choice is removed once it has finished closing.
   await waitUntil("the billing choice to close", async () => (await layerCount()) === 1);
   return pageUrl;
@@ -64,7 +62,7 @@ test("a project that fails to start shows its errors in its layer", async () => 
     form.noValidate = true;
     form.elements.name.value = "";
   })()`);
-  await view.click(`${topLayer} button[type=submit]`);
+  await scrollToAndClick(view, `${topLayer} button[type=submit]`);
   await waitUntil("the error in the layer", async () =>
     String(await view.evaluate(`document.querySelector("${topLayer}")?.textContent`)).includes(
       "Enter a name",
@@ -73,14 +71,14 @@ test("a project that fails to start shows its errors in its layer", async () => 
   expect(await layerCount()).toBe(1);
   expect(view.url).toBe(pageUrl);
   expect(await sameDocument()).toBe(true);
-}, 30_000);
+});
 
 test("a started project leaves its layer for the project's own page", async () => {
   await logInAs(view, managerEmail);
   await openHourlyProjectForm();
   const name = `E2E started ${Date.now()}`;
   await fillProjectForm(name);
-  await view.click(`${topLayer} button[type=submit]`);
+  await scrollToAndClick(view, `${topLayer} button[type=submit]`);
   await waitUntil("the project's page", () => /\/projects\/\d+$/.test(view.url));
   await waitUntil(
     "the page to load",
@@ -91,12 +89,12 @@ test("a started project leaves its layer for the project's own page", async () =
     name,
   );
   expect(consoleErrors).toEqual([]);
-}, 30_000);
+});
 
 test("a client added from the project form comes back to it, chosen", async () => {
   await logInAs(view, managerEmail);
   const pageUrl = await openHourlyProjectForm();
-  await view.click(`${topLayer} a[href*="/clients/new"]`);
+  await scrollToAndClick(view, `${topLayer} a[href*="/clients/new"]`);
   await waitUntil("the client form on top", async () => (await topHeading()) === "New client");
   expect(await layerCount()).toBe(2);
 
@@ -104,7 +102,7 @@ test("a client added from the project form comes back to it, chosen", async () =
   await view.evaluate(
     `document.querySelector("${topLayer} form").elements.name.value = ${JSON.stringify(client)}`,
   );
-  await view.click(`${topLayer} button[type=submit]`);
+  await scrollToAndClick(view, `${topLayer} button[type=submit]`);
   await waitUntil("the client form to close", async () => (await layerCount()) === 1);
   await waitUntil(
     "the project form with the client chosen",
@@ -114,23 +112,23 @@ test("a client added from the project form comes back to it, chosen", async () =
       return select?.selectedOptions[0]?.textContent;
     })()`)) === client,
   );
-  expect(await topHeading()).toBe("New hourly project");
+  expect(await topBilling()).toBe("hourly");
   expect(view.url).toBe(pageUrl);
   expect(await sameDocument()).toBe(true);
-}, 30_000);
+});
 
 test("cancelling the client form closes it, keeping what was typed in the project form", async () => {
   await logInAs(view, managerEmail);
   const pageUrl = await openHourlyProjectForm();
   await view.evaluate(`document.querySelector("${topLayer} form").elements.name.value = "Typed"`);
-  await view.click(`${topLayer} a[href*="/clients/new"]`);
+  await scrollToAndClick(view, `${topLayer} a[href*="/clients/new"]`);
   await waitUntil("the client form on top", async () => (await topHeading()) === "New client");
 
   await view.evaluate(
     `[...document.querySelectorAll("${topLayer} a")].find((link) => link.textContent === "Cancel").click()`,
   );
   await waitUntil("the client form to close", async () => (await layerCount()) === 1);
-  expect(await topHeading()).toBe("New hourly project");
+  expect(await topBilling()).toBe("hourly");
   expect(
     (await view.evaluate(
       `document.querySelector("${topLayer} form").elements.name.value`,
@@ -138,4 +136,4 @@ test("cancelling the client form closes it, keeping what was typed in the projec
   ).toBe("Typed");
   expect(view.url).toBe(pageUrl);
   expect(await sameDocument()).toBe(true);
-}, 30_000);
+});
