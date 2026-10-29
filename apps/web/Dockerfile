@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.20
 # apps/web/Dockerfile — build context is the repo root
-FROM oven/bun:1.4.3-slim
+FROM oven/bun:1.4.4-slim
 WORKDIR /repo
 
 # Manifests first, so code changes reuse the installed dependencies.
