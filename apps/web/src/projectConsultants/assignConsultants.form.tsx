@@ -2,11 +2,11 @@ import { formatDate } from "@tid/calendar/dateDisplay";
 import { Checkbox, DataGrid, FormError, FormPage } from "@tid/ui";
 import { z } from "zod";
 import type { FormState } from "../framework/formAction";
+import { checkboxArray } from "../framework/formValues";
 
-// One ticked box comes as a string, several as an array, none as nothing.
 export const assignConsultantsForm = z.object({
   userId: z.preprocess(
-    (value) => (value === undefined ? [] : [value].flat()),
+    checkboxArray,
     z.array(z.coerce.number().int()).min(1, "Choose at least one consultant"),
   ),
 });

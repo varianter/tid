@@ -1,10 +1,14 @@
 import { Field, FormField, FormPage, fieldErrorAttributes, Select } from "@tid/ui";
 import { z } from "zod";
 import type { FormState } from "../framework/formAction";
+import { emptyAsMissing } from "../framework/formValues";
 
 export const signUpForm = z.object({
   name: z.string().trim().min(1, "Enter your name"),
-  organizationId: z.coerce.number().int(),
+  organizationId: z.preprocess(
+    emptyAsMissing,
+    z.coerce.number({ error: "Choose your organization" }).int(),
+  ),
 });
 
 type OrganizationOption = { id: number; name: string };

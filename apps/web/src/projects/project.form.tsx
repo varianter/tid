@@ -16,14 +16,13 @@ import { attributes } from "@tid/via/attributes";
 import { z } from "zod";
 import type { OrganizationOption } from "../domain/organizations/organization";
 import type { FormState } from "../framework/formAction";
+import { emptyAsMissing } from "../framework/formValues";
 import { type Billing, billingLabels, billings } from "./billing";
 
 const checkbox = z
   .literal("on")
   .optional()
   .transform((value) => value === "on");
-
-const emptyAsMissing = (value: unknown) => (value === "" ? undefined : value);
 
 const commonFields = {
   name: z.string().trim().min(1, "Enter a name"),
@@ -53,7 +52,10 @@ const nonBillableFields = z.object({
 
 // A project without tasks can't take hours, so it starts with one.
 const startFields = {
-  clientId: z.coerce.number().int({ error: "Choose a client" }),
+  clientId: z.preprocess(
+    emptyAsMissing,
+    z.coerce.number({ error: "Choose a client" }).int({ error: "Choose a client" }),
+  ),
   firstTask: z.string().trim().min(1, "Enter a task name"),
 };
 

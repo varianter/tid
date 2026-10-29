@@ -2,15 +2,12 @@ import { Checkbox, DataGrid, EmptyState, FormPage } from "@tid/ui";
 import { z } from "zod";
 import type { OrganizationOption } from "../domain/organizations/organization";
 import type { FormState } from "../framework/formAction";
+import { checkboxArray } from "../framework/formValues";
 import { administrationPath } from "./administration.url";
 import { OtherOrganizationNotice } from "./organizationSwitch";
 
-// One ticked box comes as a string, several as an array, none as nothing.
 export const chooseOpenProjectsForm = z.object({
-  projectId: z.preprocess(
-    (value) => (value === undefined ? [] : [value].flat()),
-    z.array(z.coerce.number().int()),
-  ),
+  projectId: z.preprocess(checkboxArray, z.array(z.coerce.number().int())),
 });
 
 export type OpenableProject = {

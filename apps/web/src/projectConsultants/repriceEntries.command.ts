@@ -1,6 +1,7 @@
 import { isIsoDate } from "@tid/calendar/isoDate";
 import { z } from "zod";
 import { formAction } from "../framework/formAction";
+import { emptyAsMissing } from "../framework/formValues";
 import { idParams } from "./projectConsultant";
 import { loadConsultant } from "./projectConsultant.data";
 import { projectRatesPath } from "./projectConsultants.url";
@@ -9,7 +10,7 @@ import { addRateAndReprice, entriesToReprice } from "./repricing.data";
 
 // The rate in minor units, as the rates form passes it on.
 const repriceQuery = z.object({
-  rate: z.coerce.number().int().min(0),
+  rate: z.preprocess(emptyAsMissing, z.coerce.number().int().min(0)),
   validFrom: z.string().refine(isIsoDate),
 });
 
