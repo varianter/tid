@@ -67,4 +67,4 @@ Docs that drift are worse than no docs, so write them to stay true as the code c
 
 ## CSS
 
-We're using Varde to do the heavy lifting for our CSS needs. See `https://varde.variant.dev/llms.txt` for docs and examples. To get all the available classes, grab `https://varde.variant.dev/v/1.0.0/styles.css`.
+We're using Varde to do the heavy lifting for our CSS needs. See `https://varde.variant.dev/llms.txt` for docs and examples. To get all the available classes, grab `https://varde.variant.dev/v/2.1.0/styles.css`.

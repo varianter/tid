@@ -281,7 +281,7 @@ export function ProjectFormPage({
               <Checkbox name="countsTowardBillableBase" checked={countsTowardBillableBase} />
               Counts toward billable base
             </Label>
-            <p class="fs-s ink-subtle mt-3xs pl-l w-max-5">
+            <p class="fs-s ink-subtle mt-3xs pl-l w-max-3">
               Untick for absence, like holidays, so it doesn't lower the billable share.
             </p>
           </div>

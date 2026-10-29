@@ -13,7 +13,7 @@ export const chooseBilling = (c: Context) => {
       layer="tooltip"
     >
       <Section title="How is the project billed?">
-        <ul class="stack-v gap-s w-max-5">
+        <ul class="stack-v gap-s w-max-3">
           {billings.map((billing) => (
             <li>
               <a

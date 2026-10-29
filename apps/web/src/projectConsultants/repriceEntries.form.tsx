@@ -43,7 +43,7 @@ export function RepriceEntriesFormPage({
       form={form}
       // The entries it reprices can run long.
       layer="drawer"
-      width={7}
+      width={6}
     >
       <p>
         {money(newRate.rate)} reprices {entries.length} logged{" "}

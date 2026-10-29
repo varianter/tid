@@ -41,7 +41,7 @@ export function PeriodNavigation({
   return (
     <nav
       composite-component="PeriodNavigation"
-      class="stack-h nowrap br-l p-4xs justify-between ml-auto gap-3xs"
+      class="stack-h flex-nowrap br-l p-4xs justify-between ml-auto gap-3xs"
       style="width: 30ch; min-width: max-content;"
     >
       <Button
@@ -103,7 +103,7 @@ export function PeriodNavigation({
           </Popover>
         </>
       ) : (
-        <span class="stack-h nowrap gap-2xs px-xs fw-medium">
+        <span class="stack-h flex-nowrap gap-2xs px-xs fw-medium">
           <Icon class="fs-xs" name="calendar_today" />
           <span class="fw-regular">{children}</span>
         </span>

@@ -29,7 +29,7 @@ export function Stat({ label, value, share, note, children }: StatProps) {
   return (
     <div composite-component="Stat" class="stack-v gap-3xs flex-1 b-all bc-subtle br-l p-s">
       <dt class="fs-s ink-subtle">{label}</dt>
-      <dd class="stack-h nowrap items-baseline gap-xs">
+      <dd class="stack-h flex-nowrap items-baseline gap-xs">
         <span class="fs-l fw-medium">{value}</span>
         {share && <span class="ink-subtle">{share}</span>}
       </dd>

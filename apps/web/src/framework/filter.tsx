@@ -15,7 +15,7 @@ export const usePageSearch = () => useContext(PageSearch);
 export function Filtered({ by, children }: PropsWithChildren<{ by: Child }>) {
   return (
     <InsideFiltered.Provider value={true}>
-      <div class="stack-v nowrap gap-m">
+      <div class="stack-v flex-nowrap gap-m">
         <div class="stack-h wrap gap-m py-4xs b-all bc-subtle br-l surface-tinted pl-2xs pr-4xs">
           {by}
         </div>
@@ -33,7 +33,7 @@ export function FilterForm({ field, children }: PropsWithChildren<{ field: strin
   if (!useContext(InsideFiltered)) throw new Error(`The ${field} filter is outside a Filtered`);
   return (
     <auto-submit>
-      <form method="get" class="stack-h nowrap gap-3xs br-m p-4xs">
+      <form method="get" class="stack-h flex-nowrap gap-3xs br-m p-4xs">
         {[...usePageSearch()].map(([name, value]) =>
           name === field ? null : <input type="hidden" name={name} value={value} />,
         )}

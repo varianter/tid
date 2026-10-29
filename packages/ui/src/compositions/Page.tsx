@@ -47,7 +47,7 @@ export function Page({ title, description, back, actions, layer, children }: Pag
             {actions && <Actions actions={actions} class="ml-auto" />}
           </div>
         </header>
-        <div data-transition="content" class="stack-v nowrap gap-xl">
+        <div data-transition="content" class="stack-v flex-nowrap gap-xl">
           {children}
         </div>
       </div>

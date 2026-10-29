@@ -24,7 +24,7 @@ export function ProgressBar({
   return (
     <div
       class={classes(
-        "stack-h nowrap gap-none of-hidden b-all bc-subtle surface-tinted br-m",
+        "stack-h flex-nowrap gap-none of-hidden b-all bc-subtle surface-tinted br-m",
         className,
       )}
       style="height: 1em;"
@@ -33,7 +33,8 @@ export function ProgressBar({
     >
       {segments.map((segment) => (
         <span
-          style={`height: 100%; width: ${(segment.value / scale) * 100}%; background: var(--palette-${segment.palette}-${shadeSteps[segment.shade ?? "strong"]});`}
+          class="h-full"
+          style={`width: ${(segment.value / scale) * 100}%; background: var(--palette-${segment.palette}-${shadeSteps[segment.shade ?? "strong"]});`}
         />
       ))}
     </div>

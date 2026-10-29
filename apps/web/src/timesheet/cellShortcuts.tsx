@@ -13,7 +13,7 @@ export function CellShortcuts() {
   return (
     <footer class="stack-h wrap gap-m gap-row-xs fs-s ink-subtle justify-center mt-xl">
       {shortcuts.map(([keys, description]) => (
-        <span class="stack-h nowrap items-center gap-2xs">
+        <span class="stack-h flex-nowrap items-center gap-2xs">
           <Keys keys={keys} />
           {description}
         </span>
@@ -24,7 +24,7 @@ export function CellShortcuts() {
 
 function Keys({ keys }: { keys: string[] }) {
   return (
-    <span class="stack-h nowrap gap-3xs">
+    <span class="stack-h flex-nowrap gap-3xs">
       {keys.map((key) => (
         <Key>{key}</Key>
       ))}

@@ -16,7 +16,7 @@ export function ProjectTotals({
 }) {
   const projects = Map.groupBy(rows, (task) => task.projectId);
   return (
-    <Section title="Project totals" class="w-max-5">
+    <Section title="Project totals" class="w-max-3">
       <div class="stack-v fs-s t-tabular">
         {[...projects].map(([projectId, tasks]) => {
           const taskIds = tasks.map((task) => task.id);

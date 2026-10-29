@@ -13,7 +13,7 @@ import { reportUrl } from "../reports/reports.url";
 import { monthPath } from "../timesheet/timesheet.url";
 import { TidSymbol, tidFaviconHref } from "./tidLogo";
 
-export const vardeStylesheet = "https://varde.variant.dev/v/2.0.1/styles.css";
+export const vardeStylesheet = "https://varde.variant.dev/v/2.1.0/styles.css";
 
 // Sets the scheme even without a saved one, so <theme-toggle> knows which way to flip.
 const themeScript = `
@@ -201,7 +201,7 @@ export function Layout({ currentPath, user, logoutUrl, scriptSrcs, children }: L
           `}
         </Style>
       </head>
-      <body class="stack-h nowrap items-stretch">
+      <body class="stack-h flex-nowrap items-stretch">
         {/* The surface is the drawer's. On wide screens it's `display: contents`, so the nav sits
             on the page's tint. */}
         <Popover
@@ -215,7 +215,7 @@ export function Layout({ currentPath, user, logoutUrl, scriptSrcs, children }: L
             style="min-width: 240px;"
             aria-label="Main"
           >
-            <span class="stack-h nowrap items-center gap-2xs fs-l fw-bold px-xs py-2xs mb-xs">
+            <span class="stack-h flex-nowrap items-center gap-2xs fs-l fw-bold px-xs py-2xs mb-xs">
               <TidSymbol time={timeOfDayInOslo(new Date())} />
             </span>
             {navigationFor(user).map(({ heading, links }) => (
@@ -229,7 +229,7 @@ export function Layout({ currentPath, user, logoutUrl, scriptSrcs, children }: L
                     <a
                       href={href ?? section}
                       aria-current={active ? "page" : undefined}
-                      class={`stack-h nowrap items-center gap-xs px-xs py-2xs br-m ${active ? "surface-tinted ink-prominent" : "ink-subtle bg-wash:hover"}`}
+                      class={`stack-h flex-nowrap items-center gap-xs px-xs py-2xs br-m ${active ? "surface-tinted ink-prominent" : "ink-subtle bg-wash:hover"}`}
                     >
                       <Icon name={icon} class="lh-snug fs-xs" />
                       <p class="fs-s">{label}</p>

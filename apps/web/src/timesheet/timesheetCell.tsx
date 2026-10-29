@@ -58,9 +58,8 @@ export function TimesheetCell({
       name="hours"
       type="text"
       value={error ? error.typed : formatHours(minutes)}
-      class="ta-right w-min-0 w-full"
+      class="ta-right w-min-0 w-full h-full"
       data-size="large"
-      style={`height: 100%;`}
       inputmode="decimal"
       autocomplete="false"
       aria-label={`${task.projectName}, ${task.name}, ${formatDate(day)}`}
@@ -85,7 +84,7 @@ export function TimesheetCell({
       <input type="hidden" name="taskId" value={task.id} />
       <input type="hidden" name="date" value={day} />
       {error ? (
-        <ColorMode palette="coral" class="pos-relative stack-h nowrap items-center gap-3xs">
+        <ColorMode palette="coral" class="pos-relative stack-h flex-nowrap items-center gap-3xs">
           {input}
           <button
             type="button"

@@ -424,7 +424,7 @@ const barWidth = "width: 6em;";
 
 function BillableHours({ hours, billableHours }: { hours: number; billableHours: number }) {
   return (
-    <span class="stack-h nowrap items-center justify-end gap-xs">
+    <span class="stack-h flex-nowrap items-center justify-end gap-xs">
       {formatTotalHours(billableHours * 60)}
       <span class="ink-subtle fw-regular">{formatShare(billableHours, hours)}</span>
       <span style={barWidth}>
@@ -442,7 +442,7 @@ function BillableHours({ hours, billableHours }: { hours: number; billableHours:
 
 function Utilization({ hours, capacityHours }: { hours: number; capacityHours: number }) {
   return (
-    <span class="stack-h nowrap items-center justify-end gap-xs">
+    <span class="stack-h flex-nowrap items-center justify-end gap-xs">
       {formatShare(hours, capacityHours)}
       <span style={barWidth}>
         <ProgressBar max={capacityHours} segments={[{ value: hours, palette: "purple" }]} />

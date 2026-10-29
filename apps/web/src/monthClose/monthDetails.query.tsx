@@ -225,7 +225,7 @@ function MonthDetailsPage({
             )
           }
         >
-          <div class="stack-v nowrap gap-s">
+          <div class="stack-v flex-nowrap gap-s">
             <ColorMode
               palette={missingCount === 0 ? "green" : "yellow"}
               class="stack-h items-center gap-m b-all bc-default br-l py-xs px-m ink-default surface-tinted"
@@ -320,7 +320,7 @@ function ConsultantGroup({
         <DataGrid.Row href={canOpenConsultants ? consultantPath(row.id, month) : undefined}>
           {""}
           <DataGrid.Title>{row.name}</DataGrid.Title>
-          <span class="stack-h nowrap items-center justify-end gap-xs">
+          <span class="stack-h flex-nowrap items-center justify-end gap-xs">
             {formatTotalHours(row.minutes)}
             <span style="width: 6em;">
               <ProgressBar

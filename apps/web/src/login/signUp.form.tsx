@@ -24,7 +24,7 @@ export function SignUpFormPage({
 }: SignUpProps & { form: FormState<typeof signUpForm> }) {
   return (
     <FormPage title="Welcome to Tid" submit="Start using Tid" form={form}>
-      <p class="w-max-5">
+      <p class="w-max-3">
         You're logging in as {email} for the first time. Tell us who you are and which Variant
         organization you work for. You can't change the organization yourself later, so ask a
         manager if it needs changing.

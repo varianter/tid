@@ -27,7 +27,7 @@ export function Section({
   return (
     <section
       composite-component="Section"
-      class={classes("stack-v nowrap gap-s", className)}
+      class={classes("stack-v flex-nowrap gap-s", className)}
       {...attributes}
     >
       <div class="stack-h items-center justify-between gap-m wrap">

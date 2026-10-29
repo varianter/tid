@@ -39,8 +39,8 @@ function DataGridTable({
     <ColumnsContext.Provider value={shown}>
       <div
         composite-component="DataGrid"
-        class="d-grid gap-column-l lh-snug t-tabular"
-        style={`grid-template-columns: ${template}; overflow: auto; overflow-wrap: anywhere;`}
+        class="d-grid gap-column-l lh-snug t-tabular of-auto t-wrap-anywhere"
+        style={`grid-template-columns: ${template};`}
       >
         <div class="grid-all-columns grid-subgrid items-center b-b bc-subtle p-xs fs-s ink-subtle fw-bold">
           {shown.map((column) => (
@@ -150,7 +150,7 @@ function DataGridFooter({ children }: PropsWithChildren) {
 /** What a row is about, with an optional detail such as a code or email under it. */
 function DataGridTitle({ secondary, children }: PropsWithChildren<{ secondary?: Child }>) {
   return (
-    <span composite-component="DataGrid.Title" class="stack-v nowrap gap-4xs">
+    <span composite-component="DataGrid.Title" class="stack-v flex-nowrap gap-4xs">
       <span class="fw-medium">{children}</span>
       {secondary && <span class="fs-xs ink-subtle">{secondary}</span>}
     </span>

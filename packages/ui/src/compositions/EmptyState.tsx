@@ -7,7 +7,7 @@ export function EmptyState({ emoji, title, action, children }: EmptyStateProps) 
   return (
     <div
       composite-component="EmptyState"
-      class="surface-tinted b-all bc-subtle br-xl p-xl stack-v items-center w-max-7 mx-auto"
+      class="surface-tinted b-all bc-subtle br-xl p-xl stack-v items-center w-max-6 mx-auto"
     >
       <span class="fs-2xl" aria-hidden="true">
         {emoji}

@@ -16,7 +16,7 @@ export function ShowBillableAssignmentsForm({
       <form
         method="post"
         action={billableAssignmentsActionOf(month, search)}
-        class="stack-v nowrap gap-3xs"
+        class="stack-v flex-nowrap gap-3xs"
       >
         <Label for="billable-assignments" class="stack-h items-center gap-2xs">
           <Checkbox id="billable-assignments" name="show" value="on" checked={shown} />

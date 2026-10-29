@@ -31,7 +31,7 @@ export function AddRateFormPage({ consultant, today, form }: AddRateFormPageProp
       submit="Add rate"
       form={form}
       layer="tooltip"
-      width={5}
+      width={3}
     >
       <FormField
         name="rate"
