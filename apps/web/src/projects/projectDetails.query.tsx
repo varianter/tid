@@ -151,6 +151,13 @@ function stateBadge({ endsOn, state }: Pick<Consultant, "endsOn" | "state">) {
   );
 }
 
+// Hours logged without a rate have no billable amount, so it's flagged while they can still log.
+function rateCell({ rate, state }: Pick<Consultant, "rate" | "state">, currency: string | null) {
+  if (rate !== null && currency !== null) return `${formatAmount(rate / 100, currency, 2)}/h`;
+  if (state !== "onProject") return "–";
+  return <Badge palette="coral">No rate</Badge>;
+}
+
 type TaskTotal = { name: string; spentMinutes: number };
 
 type Person = { id: number; name: string };
@@ -205,7 +212,7 @@ function ProjectDetailsPage({
       description={
         <>
           <a href={`/clients/${project.clientId}`}>{project.client}</a>
-          <Badge>{project.code}</Badge>
+          <Badge class="px-m">{project.code}</Badge>
         </>
       }
       back={{ href: "/projects", label: "Back to projects" }}
@@ -303,10 +310,7 @@ function ProjectDetailsPage({
                 {formatTotalHours(person.total)}
                 {formatTotalHours(person.lastMonth)}
                 {formatTotalHours(person.thisMonth)}
-                {isHourly &&
-                  (person.rate === null || project.currency === null
-                    ? "–"
-                    : `${formatAmount(person.rate / 100, project.currency, 2)}/h`)}
+                {isHourly && rateCell(person, project.currency)}
                 {canManageProject &&
                   (person.state === "onProject" ? (
                     <Button

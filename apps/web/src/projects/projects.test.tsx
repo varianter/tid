@@ -221,6 +221,29 @@ test("a consultant with logged time is rolled off by ending the assignment, whic
   ).toHaveLength(1);
 });
 
+test("an hourly project flags consultants on it who have no current rate", async () => {
+  const started = await requestAs(manager, "/projects/new/hourly", {
+    name: "Rates",
+    code: "ACME-12",
+    billing: "hourly",
+    currency: "NOK",
+    contractOwnerId: String(oslo),
+    clientId: String(clientId),
+    firstTask: "Consulting",
+  });
+  const projectId = Number(started.headers.get("location")?.split("/").at(-1));
+  await requestAs(manager, `/projects/${projectId}/consultants/new`, {
+    userId: String(member.id),
+  });
+  const page = async () => (await requestAs(manager, `/projects/${projectId}`)).text();
+  expect(await page()).toContain("No rate");
+
+  await database
+    .insert(assignmentRates)
+    .values({ projectId, userId: member.id, validFrom: "2026-01-01", rate: 100000 });
+  expect(await page()).not.toContain("No rate");
+});
+
 const startNonBillable = async (code: string) => {
   const started = await requestAs(manager, "/projects/new/non_billable", {
     name: `Internal ${code}`,

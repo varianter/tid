@@ -18,7 +18,7 @@ export const chooseBilling = (c: Context) => {
             <li>
               <a
                 href={`/projects/new/${billing}${query}`}
-                class="stack-v gap-3xs b-all bc-default br-l p-m"
+                class="stack-v gap-3xs b-all bc-subtle br-l p-xs bg-wash:hover"
               >
                 <span class="fw-medium">{billingLabels[billing]}</span>
                 <span class="fs-s ink-subtle">{billingDescriptions[billing]}</span>

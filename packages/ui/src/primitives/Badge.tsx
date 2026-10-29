@@ -8,10 +8,11 @@ export function Badge({
   class: className,
   ...attributes
 }: PropsWithChildren<Props<"span", { palette?: Palette }>>) {
+  console.log(className);
   return (
     <ColorMode palette={palette}>
       <span
-        class={classes("b-all br-s fs-xs ink-prominent px-3xs py-3xs surface-tinted", className)}
+        class={classes("b-all br-s fs-xs ink-prominent p-3xs surface-tinted", className)}
         {...attributes}
       />
     </ColorMode>

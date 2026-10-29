@@ -27,7 +27,9 @@ const stickyFade = `linear-gradient(
  */
 export const sheetLayout = css`
   overflow-x: scroll;
-  scroll-behavior: smooth;
+  @media (prefers-reduced-motion: no-preference) {
+    scroll-behavior: smooth;
+  }
   /* Focusing a cell scrolls it into view at the scrollport's edge, under the sticky task
      column. Padding the scrollport by that column keeps the first day's cells in sight. The
      task column takes its 1fr share only while everything fits, so when the sheet scrolls at

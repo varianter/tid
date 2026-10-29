@@ -17,7 +17,7 @@ import { z } from "zod";
 import type { OrganizationOption } from "../domain/organizations/organization";
 import type { FormState } from "../framework/formAction";
 import { emptyAsMissing } from "../framework/formValues";
-import { type Billing, billingLabels, billings } from "./billing";
+import { type Billing, billingDescriptions, billingLabels, billings } from "./billing";
 
 const checkbox = z
   .literal("on")
@@ -153,7 +153,18 @@ export function ProjectFormPage({
             submit: "Save changes",
           }
         : {
-            title: `New ${billingLabels[billing].toLowerCase()} project`,
+            title: "New project",
+            description: (
+              <>
+                {billingDescriptions[billing]}{" "}
+                <a
+                  class="v-link"
+                  href={`/projects/new${suggestedClientId ? `?${new URLSearchParams({ client: suggestedClientId })}` : ""}`}
+                >
+                  Change billing
+                </a>
+              </>
+            ),
             cancel: "/projects/new",
             submit: "Create project",
             // It ends on the new project's page, not back on the page it was started from.
@@ -224,9 +235,14 @@ export function ProjectFormPage({
             {...fieldErrorAttributes("contractOwnerId", fieldErrors.contractOwnerId)}
           >
             <option value="" selected={selectedContractOwnerId === ""}>
-              {isBillable ? "Choose an organization" : "Not applicable"}
+              {isBillable ? "Choose an organization" : "None"}
             </option>
           </Select>
+          <p class="fs-s ink-subtle mt-3xs">
+            {isBillable
+              ? "The Variant organization that invoices the client."
+              : "The organization that owns the project, if any."}
+          </p>
         </Field>
         {isBillable &&
           (project?.hasLoggedTime ? (
@@ -252,6 +268,9 @@ export function ProjectFormPage({
                   </Label>
                 ))}
               </div>
+              <p class="fs-s ink-subtle">
+                As agreed with the client. It can't change once hours are logged.
+              </p>
               {fieldErrors.currency && (
                 <FormError id="currency-error" errors={fieldErrors.currency} />
               )}
@@ -275,10 +294,12 @@ export function ProjectFormPage({
             required
             {...fieldErrorAttributes("code", fieldErrors.code)}
           />
-          {codeSuggestion && <p class="fs-s ink-subtle mt-3xs">Suggestion: {codeSuggestion}</p>}
+          <p class="fs-s ink-subtle mt-3xs">
+            Up to 16 characters.{codeSuggestion && ` Suggestion: ${codeSuggestion}`}
+          </p>
         </Field>
         {!isBillable && (
-          <div>
+          <div class="b-all bc-subtle py-2xs px-xs br-l surface-tinted">
             <Label class="stack-h items-center gap-xs">
               <Checkbox name="countsTowardBillableBase" checked={countsTowardBillableBase} />
               Counts toward billable base
@@ -299,7 +320,9 @@ export function ProjectFormPage({
               required
               {...fieldErrorAttributes("firstTask", fieldErrors.firstTask)}
             />
-            <p class="fs-s ink-subtle mt-3xs">You can add more tasks on the project page.</p>
+            <p class="fs-s ink-subtle mt-3xs">
+              {isBillable && "This is what the invoice shows. "}You can add more tasks later.
+            </p>
           </Field>
         </Fieldset>
       )}
