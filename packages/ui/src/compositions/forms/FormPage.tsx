@@ -51,7 +51,7 @@ export function FormPage({
   );
   return (
     // A layer takes only the box, so `main`'s padding is what a page has beyond a layer's.
-    <main composite-component="FormPage" class="py-l">
+    <main composite-component="FormPage">
       {/* Hono moves a title rendered in the body into the head. */}
       <title>{title}</title>
       {/* The page as a layer shows it: a layer takes this box whole, so its width comes along. */}
