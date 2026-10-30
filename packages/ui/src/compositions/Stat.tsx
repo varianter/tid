@@ -27,7 +27,7 @@ type StatProps = {
 /** One figure in a `StatList`. */
 export function Stat({ label, value, share, note, children }: StatProps) {
   return (
-    <div composite-component="Stat" class="stack-v gap-3xs flex-1 b-all bc-subtle br-l p-s">
+    <div composite-component="Stat" class="stack-v gap-3xs flex-1 b-all bc-subtle br-l p-xs">
       <dt class="fs-s ink-subtle">{label}</dt>
       <dd class="stack-h flex-nowrap items-baseline gap-xs">
         <span class="fs-l fw-medium">{value}</span>

@@ -8,7 +8,6 @@ export function Badge({
   class: className,
   ...attributes
 }: PropsWithChildren<Props<"span", { palette?: Palette }>>) {
-  console.log(className);
   return (
     <ColorMode palette={palette}>
       <span

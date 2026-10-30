@@ -16,7 +16,7 @@ type ActionListItemProps = {
   /** Shown before the title. */
   icon?: IconName;
   /** Shown at the right edge, e.g. a link, select or checkbox. */
-  action: Child;
+  action?: Child;
 };
 
 export function ActionListItem({ title, description, icon, action }: ActionListItemProps) {

@@ -1,5 +1,4 @@
-import { formatTotalHours } from "@tid/elements/hours";
-import { ActionList, ActionListItem, Button, Detail, Page } from "@tid/ui";
+import { ActionList, ActionListItem, Button, Page } from "@tid/ui";
 import { attributes } from "@tid/via/attributes";
 import type { Context } from "hono";
 import type { OrganizationOption } from "../domain/organizations/organization";
@@ -52,13 +51,16 @@ function OrganizationOverviewPage({
           current={organization}
           ownOrgId={ownOrgId}
         />
-        <dl class="stack-h items-start gap-xl gap-row-s b-all bc-default br-l p-m">
-          <Detail label="Legal name">{organization.legalName}</Detail>
-          <Detail label="Country">{organization.country}</Detail>
-          <Detail label="Currency">{organization.currency}</Detail>
-          <Detail label="Working day">{formatTotalHours(organization.fullDayMinutes)}</Detail>
-        </dl>
         <ActionList>
+          <ActionListItem
+            title="Organization details"
+            description="Legal name, country, currency and length of the working day"
+            action={
+              <Button type="button" data-size="small" data-variant="plain">
+                Edit
+              </Button>
+            }
+          />
           <ActionListItem
             title="Projects open to everyone"
             description="Everyone can log hours on these"
