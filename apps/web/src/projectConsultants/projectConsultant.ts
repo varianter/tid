@@ -3,6 +3,9 @@ import { and, eq } from "drizzle-orm";
 
 export type ProjectConsultantIds = { projectId: number; userId: number };
 
+/** What an hour costs, in minor units, or null where no rate covers the day. */
+export type Price = { rate: number; currency: string } | null;
+
 export type NewRate = { validFrom: string; rate: number; currency: string };
 
 export function idParams(params: Record<string, string>) {

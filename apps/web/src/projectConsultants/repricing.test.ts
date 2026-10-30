@@ -70,7 +70,7 @@ beforeAll(async () => {
 test("a backdated rate reprices its period up to the next rate, locked months included", async () => {
   const newRate = { validFrom: "2026-03-01", rate: 110000, currency: "NOK" };
 
-  expect(await entriesToReprice(ids, newRate)).toMatchObject([
+  expect(await entriesToReprice(ids, newRate.validFrom, newRate)).toMatchObject([
     { spentOn: "2026-03-02", rate: 100000, isLocked: true },
   ]);
 
@@ -84,5 +84,5 @@ test("a backdated rate reprices its period up to the next rate, locked months in
     { spentOn: "2026-03-02", rate: 110000 },
     { spentOn: "2026-07-01", rate: 120000 },
   ]);
-  expect(await entriesToReprice(ids, newRate)).toEqual([]);
+  expect(await entriesToReprice(ids, newRate.validFrom, newRate)).toEqual([]);
 });

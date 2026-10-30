@@ -18,4 +18,4 @@ export const projectConsultants = new Hono<UserEnv>()
   .on(["GET", "POST"], "/:userId/end", endAssignment)
   .on(["GET", "POST"], "/:userId/rates/new", addRate)
   .on(["GET", "POST"], "/:userId/rates/reprice", repriceEntries)
-  .post("/:userId/rates/:validFrom/delete", deleteRate);
+  .on(["GET", "POST"], "/:userId/rates/:validFrom/delete", deleteRate);

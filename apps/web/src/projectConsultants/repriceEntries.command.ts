@@ -23,7 +23,11 @@ export const repriceEntries = formAction({
     const consultant = await loadConsultant(ids);
     if (!consultant) return c.notFound();
     const newRate = { ...query.data, currency: consultant.currency };
-    return { consultant, newRate, entries: await entriesToReprice(ids, newRate) };
+    return {
+      consultant,
+      newRate,
+      entries: await entriesToReprice(ids, newRate.validFrom, newRate),
+    };
   },
   onSubmit: async (_c, _form, { consultant, newRate }) => {
     await addRateAndReprice(consultant, newRate);

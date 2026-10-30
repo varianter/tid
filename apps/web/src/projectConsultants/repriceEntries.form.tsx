@@ -1,11 +1,11 @@
 import { formatDate } from "@tid/calendar/dateDisplay";
-import { formatHours } from "@tid/elements/hours";
-import { Badge, DataGrid, FormPage } from "@tid/ui";
+import { FormPage } from "@tid/ui";
 import { z } from "zod";
 import { formatAmount } from "../domain/amount/amount";
 import type { FormState } from "../framework/formAction";
 import type { Consultant, NewRate } from "./projectConsultant";
 import { projectRatesPath } from "./projectConsultants.url";
+import { RepricedEntries, type RepricedEntry } from "./repricedEntries";
 
 // Confirming takes no fields; what to reprice comes from the query.
 export const repriceEntriesForm = z.object({});
@@ -13,14 +13,7 @@ export const repriceEntriesForm = z.object({});
 type RepriceEntriesFormPageProps = {
   consultant: Consultant;
   newRate: NewRate;
-  entries: {
-    id: number;
-    spentOn: string;
-    task: string;
-    minutes: number;
-    rate: number | null;
-    isLocked: boolean;
-  }[];
+  entries: RepricedEntry[];
   form: FormState<typeof repriceEntriesForm>;
 };
 
@@ -30,11 +23,6 @@ export function RepriceEntriesFormPage({
   entries,
   form,
 }: RepriceEntriesFormPageProps) {
-  const money = (minorUnits: number) => formatAmount(minorUnits / 100, newRate.currency, 2);
-  const difference = (entry: RepriceEntriesFormPageProps["entries"][number]) =>
-    (entry.minutes / 60) * (newRate.rate - (entry.rate ?? 0));
-  const totalMinutes = entries.reduce((sum, entry) => sum + entry.minutes, 0);
-  const totalDifference = entries.reduce((sum, entry) => sum + difference(entry), 0);
   return (
     <FormPage
       title={`New rate for ${consultant.name} from ${formatDate(newRate.validFrom)}`}
@@ -46,39 +34,11 @@ export function RepriceEntriesFormPage({
       width={6}
     >
       <p>
-        {money(newRate.rate)} reprices {entries.length} logged{" "}
+        {formatAmount(newRate.rate / 100, newRate.currency, 2)} reprices {entries.length} logged{" "}
         {entries.length === 1 ? "entry" : "entries"} on {consultant.projectName}, locked months
         included.
       </p>
-      <DataGrid
-        columns={[
-          { label: "Date" },
-          { label: "Hours", kind: "number" },
-          { label: "Old rate", kind: "number" },
-          { label: "New rate", kind: "number" },
-          { label: "Difference", kind: "number" },
-        ]}
-      >
-        {entries.map((entry) => (
-          <DataGrid.Row>
-            <DataGrid.Title secondary={entry.task}>
-              {formatDate(entry.spentOn, "numeric")}
-              {entry.isLocked && <Badge class="ml-xs">Locked</Badge>}
-            </DataGrid.Title>
-            {formatHours(entry.minutes)}
-            {entry.rate === null ? "No rate" : money(entry.rate)}
-            {money(newRate.rate)}
-            {money(difference(entry))}
-          </DataGrid.Row>
-        ))}
-        <DataGrid.Footer>
-          Total
-          {formatHours(totalMinutes)}
-          {""}
-          {""}
-          {money(totalDifference)}
-        </DataGrid.Footer>
-      </DataGrid>
+      <RepricedEntries entries={entries} price={newRate} currency={newRate.currency} />
     </FormPage>
   );
 }

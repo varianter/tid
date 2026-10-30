@@ -1,13 +1,12 @@
 import { formatDate } from "@tid/calendar/dateDisplay";
 import { todayInOslo } from "@tid/calendar/osloClock";
 import { assignmentRates, projectAssignments, projects, users } from "@tid/db/schema";
-import { Badge, DataGrid, Page, Section } from "@tid/ui";
+import { Badge, Button, DataGrid, Page, Section } from "@tid/ui";
 import { attributes } from "@tid/via/attributes";
 import { and, eq, sql } from "drizzle-orm";
 import type { Context } from "hono";
 import { formatAmount } from "../domain/amount/amount";
 import { database } from "../framework/database";
-import { DeleteRateForm } from "./deleteRate.form";
 import { ratesPath } from "./projectConsultants.url";
 import { ratePeriods } from "./ratePeriods";
 
@@ -99,7 +98,16 @@ function ProjectRatesPage({ project, consultants, today }: ProjectRatesPageProps
                     {formatDate(period.validFrom, "numeric")}
                     {period.validUntil ? formatDate(period.validUntil, "numeric") : "No end date"}
                     {period.validFrom > today ? (
-                      <DeleteRateForm ids={ids} validFrom={period.validFrom} />
+                      <Button
+                        as="a"
+                        href={`${ratesPath(ids)}/${period.validFrom}/delete`}
+                        data-variant="plain"
+                        data-size="small"
+                        aria-label={`Delete the rate starting ${formatDate(period.validFrom, "numeric")}`}
+                        {...{ [attributes.layer]: true }}
+                      >
+                        Delete
+                      </Button>
                     ) : (
                       ""
                     )}

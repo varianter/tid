@@ -18,7 +18,7 @@ export const addRate = formAction({
   // A rate that changes logged time is confirmed on its own page first.
   onSubmit: async (_c, form, { consultant }) => {
     const newRate = { ...form, currency: consultant.currency };
-    if ((await entriesToReprice(consultant, newRate)).length > 0) {
+    if ((await entriesToReprice(consultant, form.validFrom, newRate)).length > 0) {
       const query = new URLSearchParams({ validFrom: form.validFrom, rate: String(form.rate) });
       return { redirect: `${ratesPath(consultant)}/reprice?${query}` };
     }
