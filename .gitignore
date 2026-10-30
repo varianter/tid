@@ -9,3 +9,4 @@ harvest-export
 .claude/worktrees
 .claude/worktrees/
 sketchpad.md
+.claude/verify-runs/
