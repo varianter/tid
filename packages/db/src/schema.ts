@@ -104,7 +104,26 @@ export const billing = pgEnum("billing", ["hourly", "fixed_fee", "non_billable"]
 export const clients = pgTable("clients", {
   id: id(),
   name: text().notNull().unique(),
+  // Digits only, so the same company can't be entered twice in different formats.
+  organizationNumber: text().unique(),
+  // The legal name and registered address are copied from the company register when the number
+  // is confirmed, so they don't follow later changes there. Null when it couldn't be reached.
+  legalName: text(),
+  // One line per part: street, postcode and town, country.
+  registeredAddress: text().array(),
 });
+
+export const clientAccountManagers = pgTable(
+  "client_account_managers",
+  {
+    clientId: reference().references(() => clients.id),
+    userId: reference().references(() => users.id),
+  },
+  (table) => [
+    primaryKey({ columns: [table.clientId, table.userId] }),
+    index("client_account_managers_user_id").on(table.userId),
+  ],
+);
 
 export const projects = pgTable(
   "projects",
@@ -124,6 +143,9 @@ export const projects = pgTable(
     countsTowardBillableBase: boolean().notNull().default(true),
     startsOn: date(),
     endsOn: date(),
+    // The person who makes sure the client gets invoiced. The contract owner, an organization, is
+    // who invoices.
+    invoicingLeadId: bigint({ mode: "number" }).references(() => users.id),
   },
   (table) => [
     unique().on(table.clientId, table.name),

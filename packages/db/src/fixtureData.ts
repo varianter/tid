@@ -31,6 +31,8 @@ export type ProjectDefinition = {
   endsWeek?: number;
   // Internal projects are open to every organization in these countries. Defaults to the owner's.
   openTo?: Country[];
+  // The email of the person who makes sure it gets invoiced.
+  invoicingLead?: string;
 };
 
 export function openCountries(project: ProjectDefinition) {
@@ -62,6 +64,7 @@ export const projectCatalog = {
     client: "Lysning Energi AS",
     owner: "trondheim",
     billing: "hourly",
+    invoicingLead: "henrik.vik@example.com",
   },
   BOL1001: {
     name: "Ruteplanlegger",
@@ -82,7 +85,13 @@ export const projectCatalog = {
     owner: "trondheim",
     billing: "hourly",
   },
-  KVI1001: { name: "Nettbank", client: "Kvist Bank ASA", owner: "oslo", billing: "hourly" },
+  KVI1001: {
+    name: "Nettbank",
+    client: "Kvist Bank ASA",
+    owner: "oslo",
+    billing: "hourly",
+    invoicingLead: "lars.eide@example.com",
+  },
   "KVI1001-B": {
     name: "Nettbank - rådgivning",
     client: "Kvist Bank ASA",
@@ -164,6 +173,8 @@ export type Person = {
   // the start.
   assignments?: { project: ProjectCode; rates: { fromWeek?: number; rate: number }[] }[];
   exceptions?: Exception[];
+  // Names of the clients they look after.
+  accountManagerOf?: string[];
 };
 
 // Applies to everyone in the country, alongside their own exceptions. A Variantdag in Norway.
@@ -261,6 +272,7 @@ export const people: Person[] = [
     email: "henrik.vik@example.com",
     organization: "trondheim",
     manager: true,
+    accountManagerOf: ["Lysning Energi AS", "Fjære Helse AS"],
     usualDay: { administration: 4, portalProjectManagement: 3.5 },
     // The future rate can still be deleted.
     assignments: [{ project: "LYS1001", rates: [{ rate: 1650 }, { fromWeek: 2, rate: 1700 }] }],
@@ -273,6 +285,7 @@ export const people: Person[] = [
     name: "Nora Bakke",
     email: "nora.bakke@example.com",
     organization: "oslo",
+    accountManagerOf: ["Kvist Bank ASA"],
     usualDay: { bankDevelopment: 7.5 },
     assignments: [
       { project: "KVI1001", rates: [{ rate: 1600 }] },
@@ -289,6 +302,7 @@ export const people: Person[] = [
     email: "lars.eide@example.com",
     organization: "oslo",
     manager: true,
+    accountManagerOf: ["Kvist Bank ASA"],
     usualDay: { portalDevelopment: 7.5 },
     assignments: [{ project: "LYS1001", rates: [{ rate: 1500 }] }],
   },

@@ -18,6 +18,7 @@ import {
 import { plannedEntries } from "./plannedEntries";
 import {
   assignmentRates,
+  clientAccountManagers,
   clients,
   monthLocks,
   organizations,
@@ -99,6 +100,14 @@ export function seedDatabase(
       .values(clientNames.map((name) => ({ name })))
       .returning();
     const clientIds = byKey(clientRows, (row) => row.name);
+    await transaction.insert(clientAccountManagers).values(
+      allPeople.flatMap((person) =>
+        (person.accountManagerOf ?? []).map((client) => ({
+          clientId: lookup(clientIds, client).id,
+          userId: userId(person),
+        })),
+      ),
+    );
 
     const projectRows = await transaction
       .insert(projects)
@@ -113,6 +122,8 @@ export function seedDatabase(
               ? null
               : lookup(organizationIds, project.owner).currency,
           countsTowardBillableBase: project.countsTowardBillableBase ?? true,
+          invoicingLeadId:
+            project.invoicingLead === undefined ? null : lookup(userIds, project.invoicingLead).id,
           endsOn:
             project.endsWeek === undefined ? null : dayOf(now, project.endsWeek, Weekday.Friday),
         })),
