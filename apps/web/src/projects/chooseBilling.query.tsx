@@ -20,8 +20,8 @@ export const chooseBilling = (c: Context) => {
                 href={`/projects/new/${billing}${query}`}
                 class="stack-v gap-3xs b-all bc-subtle br-l p-xs bg-wash:hover"
               >
-                <span class="fw-medium">{billingLabels[billing]}</span>
-                <span class="fs-s ink-subtle">{billingDescriptions[billing]}</span>
+                <p class="fw-medium">{billingLabels[billing]}</p>
+                <p class="fs-s ink-subtle">{billingDescriptions[billing]}</p>
               </a>
             </li>
           ))}

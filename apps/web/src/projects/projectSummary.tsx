@@ -50,14 +50,8 @@ export type ProjectSummary = {
   organizations: string[];
 };
 
-/** Projects with their organizations and time spent, under a heading per client unless `groupByClient` is off. */
-export function ProjectTable({
-  projects,
-  groupByClient = true,
-}: {
-  projects: ProjectSummary[];
-  groupByClient?: boolean;
-}) {
+/** Projects with their organizations and time spent, under a heading per client. */
+export function ProjectTable({ projects }: { projects: ProjectSummary[] }) {
   return (
     <DataGrid
       columns={[{ label: "Name" }, { label: "Organizations" }, { label: "Spent", kind: "number" }]}
@@ -65,11 +59,9 @@ export function ProjectTable({
       {/* Rows arrive sorted by client, so each group is contiguous. */}
       {[...Map.groupBy(projects, (project) => project.clientId).values()].map((group) => (
         <>
-          {groupByClient && (
-            <DataGrid.Group href={`/clients/${group[0]?.clientId}`}>
-              {group[0]?.client}
-            </DataGrid.Group>
-          )}
+          <DataGrid.Group href={`/clients/${group[0]?.clientId}`}>
+            {group[0]?.client}
+          </DataGrid.Group>
           {group.map((project) => (
             <DataGrid.Row href={`/projects/${project.id}`}>
               <DataGrid.Title secondary={project.code}>{project.name}</DataGrid.Title>

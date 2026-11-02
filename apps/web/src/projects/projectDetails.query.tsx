@@ -58,9 +58,10 @@ export const projectDetails = async (c: Context<UserEnv>) => {
   const id = Number(c.req.param("id"));
   if (!Number.isSafeInteger(id)) return c.notFound();
   const [project] = await database
-    .select(projectSummary)
+    .select({ ...projectSummary, invoicingLead: users.name })
     .from(projects)
     .innerJoin(clients, eq(clients.id, projects.clientId))
+    .leftJoin(users, eq(users.id, projects.invoicingLeadId))
     .where(eq(projects.id, id));
   if (!project) return c.notFound();
 
@@ -179,7 +180,7 @@ type Participation = {
 };
 
 type ProjectDetailsPageProps = {
-  project: ProjectSummary;
+  project: ProjectSummary & { invoicingLead: string | null };
   hours: HoursSpent;
   tasks: TaskTotal[];
   /** On the project first, then those who rolled off, then those who left the company. */
@@ -245,6 +246,7 @@ function ProjectDetailsPage({
           {[billingLabels[project.billing], project.currency].filter(Boolean).join(" · ")}
         </Detail>
         <Detail label="Contract owner">{contractOwner?.name ?? "None"}</Detail>
+        <Detail label="Invoicing lead">{project.invoicingLead ?? "None"}</Detail>
         <Detail label="Organizations">
           {participations.length === 0 ? (
             "None"

@@ -17,7 +17,7 @@ import type { UserEnv } from "../domain/users/user";
 import { database } from "../framework/database";
 import { projectConsultants } from "../projectConsultants/projectConsultants.routes";
 import { postForm, requestAsUser, type UserRow } from "../testing/loggedInUser";
-import { organizationIdBySlug } from "../testing/rows";
+import { onlyRow, organizationIdBySlug } from "../testing/rows";
 import { projects } from "./projects.routes";
 
 let manager: UserRow;
@@ -350,4 +350,45 @@ test("a project's report shows a month on screen and links to its print version"
     `/projects/${projectId}/report/print?organization=oslo&month=2026-10`,
   );
   expect(await print.text()).toContain("Timesheet details");
+});
+
+test("editing a project sets and clears its invoicing lead, who may have left since", async () => {
+  const projectId = await startNonBillable("ACME-13");
+  const edit = (invoicingLead: UserRow | undefined) =>
+    requestAs(manager, `/projects/${projectId}/edit`, {
+      name: "Internal ACME-13",
+      code: "ACME-13",
+      billing: "non_billable",
+      contractOwnerId: String(oslo),
+      invoicingLeadId: invoicingLead ? String(invoicingLead.id) : "",
+    });
+  const invoicingLeadId = async () =>
+    onlyRow(
+      await database
+        .select({ id: projectsTable.invoicingLeadId })
+        .from(projectsTable)
+        .where(eq(projectsTable.id, projectId)),
+    ).id;
+  const [leftBefore, leftAfter] = (await database
+    .insert(users)
+    .values([
+      { name: "Åse", email: "ase@variant.no", orgId: oslo, endsOn: "2026-01-31" },
+      { name: "Tor", email: "tor@variant.no", orgId: oslo, endsOn: "2026-01-31" },
+    ])
+    .returning()) as [UserRow, UserRow];
+
+  expect((await edit(bergenMember)).status).toBe(303);
+  expect(await invoicingLeadId()).toBe(bergenMember.id);
+  expect((await edit(leftBefore)).status).toBe(422);
+  expect(await invoicingLeadId()).toBe(bergenMember.id);
+
+  await database
+    .update(projectsTable)
+    .set({ invoicingLeadId: leftAfter.id })
+    .where(eq(projectsTable.id, projectId));
+  expect((await edit(leftAfter)).status).toBe(303);
+  expect(await invoicingLeadId()).toBe(leftAfter.id);
+
+  expect((await edit(undefined)).status).toBe(303);
+  expect(await invoicingLeadId()).toBeNull();
 });

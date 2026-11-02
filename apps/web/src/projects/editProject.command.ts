@@ -5,9 +5,16 @@ import {
   listOrganizations,
 } from "../domain/organizations/organization.data";
 import type { User } from "../domain/users/user";
+import { listCurrentPeople } from "../domain/users/user.data";
 import { database } from "../framework/database";
 import { formAction } from "../framework/formAction";
-import { editProjectForm, ProjectFormPage, parseBilling, projectColumns } from "./project.form";
+import {
+  editProjectForm,
+  ProjectFormPage,
+  parseBilling,
+  projectColumns,
+  unknownInvoicingLead,
+} from "./project.form";
 import { listProjectCurrencies } from "./projectCurrency.data";
 import {
   ensureParticipation,
@@ -29,6 +36,7 @@ export const editProject = formAction({
         billing: projects.billing,
         currency: projects.currency,
         countsTowardBillableBase: projects.countsTowardBillableBase,
+        invoicingLeadId: projects.invoicingLeadId,
         hasLoggedTime: exists(
           database
             .select()
@@ -64,9 +72,13 @@ export const editProject = formAction({
       currencies: await listProjectCurrencies(),
       currency: project.currency ?? defaultCurrency ?? "",
       contractOwnerId: project.contractOwnerId,
+      people: await listCurrentPeople(
+        project.invoicingLeadId === null ? [] : [project.invoicingLeadId],
+      ),
+      invoicingLeadId: project.invoicingLeadId,
     };
   },
-  onSubmit: async (_c, form, { billing, project, organizations, currencies }) => {
+  onSubmit: async (_c, form, { billing, project, organizations, currencies, people }) => {
     if (form.billing !== billing)
       return { formError: "The billing doesn't match. Go back and choose it again." };
     const contractOwnerId = form.contractOwnerId ?? null;
@@ -81,6 +93,12 @@ export const editProject = formAction({
       return {
         fieldErrors: { contractOwnerId: ["Choose the organization that invoices the client"] },
       };
+    }
+    if (
+      columns.invoicingLeadId !== null &&
+      !people.some((person) => person.id === columns.invoicingLeadId)
+    ) {
+      return unknownInvoicingLead;
     }
     if (
       project.hasLoggedTime &&

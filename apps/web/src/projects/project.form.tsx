@@ -28,6 +28,8 @@ const commonFields = {
   name: z.string().trim().min(1, "Enter a name"),
   // The reporting database holds at most 16 characters.
   code: z.string().trim().min(1, "Enter a code").max(16, "At most 16 characters"),
+  // Empty when no one has been given the job.
+  invoicingLeadId: z.preprocess(emptyAsMissing, z.coerce.number().int().optional()),
 };
 
 // Billable projects are invoiced, so someone invoices them in an agreed currency, and their time
@@ -59,6 +61,10 @@ const startFields = {
   firstTask: z.string().trim().min(1, "Enter a task name"),
 };
 
+export const unknownInvoicingLead = {
+  fieldErrors: { invoicingLeadId: ["Choose someone who works at Variant"] },
+};
+
 export const startProjectForm = z.discriminatedUnion("billing", [
   billableFields.extend(startFields),
   nonBillableFields.extend(startFields),
@@ -70,10 +76,12 @@ export const editProjectForm = z.discriminatedUnion("billing", [billableFields, 
 /** The project's own columns for a valid form, whichever billing it has. */
 export function projectColumns(form: z.infer<typeof editProjectForm>) {
   const { name, code } = form;
+  const invoicingLeadId = form.invoicingLeadId ?? null;
   return form.billing === "non_billable"
     ? {
         name,
         code,
+        invoicingLeadId,
         billing: form.billing,
         currency: null,
         countsTowardBillableBase: form.countsTowardBillableBase,
@@ -81,6 +89,7 @@ export function projectColumns(form: z.infer<typeof editProjectForm>) {
     : {
         name,
         code,
+        invoicingLeadId,
         billing: form.billing,
         currency: form.currency,
         countsTowardBillableBase: true,
@@ -92,6 +101,8 @@ export function parseBilling(value: string | undefined): Billing | undefined {
 }
 
 type ClientOption = typeof clients.$inferSelect & { codeSuggestion?: string };
+
+type PersonOption = { id: number; name: string; orgName: string };
 
 type ProjectFormProps = {
   /** Picked before the form, since it decides which fields the project has. */
@@ -115,6 +126,9 @@ type ProjectFormProps = {
   currency: string;
   /** The organization that invoices the client, selected until the user picks another. */
   contractOwnerId: number | null;
+  /** Who can be the invoicing lead, sorted by organization so they group. */
+  people: PersonOption[];
+  invoicingLeadId: number | null;
   form: FormState<typeof startProjectForm | typeof editProjectForm>;
 };
 
@@ -127,6 +141,8 @@ export function ProjectFormPage({
   currencies,
   currency,
   contractOwnerId,
+  people,
+  invoicingLeadId,
   form,
 }: ProjectFormProps) {
   const { values, fieldErrors } = form;
@@ -141,6 +157,7 @@ export function ProjectFormPage({
     : (project?.countsTowardBillableBase ?? true);
   const selectedCurrency = values?.currency ?? currency;
   const selectedContractOwnerId = values?.contractOwnerId ?? String(contractOwnerId ?? "");
+  const selectedInvoicingLeadId = values?.invoicingLeadId ?? String(invoicingLeadId ?? "");
   const otherBillings = billings.filter((other) => other !== billing);
   return (
     <FormPage
@@ -243,6 +260,24 @@ export function ProjectFormPage({
               ? "The Variant organization that invoices the client."
               : "The organization that owns the project, if any."}
           </p>
+        </Field>
+        <Field name="invoicingLeadId" label="Invoicing lead" errors={fieldErrors.invoicingLeadId}>
+          <Select
+            id="invoicingLeadId"
+            name="invoicingLeadId"
+            selected={selectedInvoicingLeadId}
+            options={people.map((person) => ({
+              value: person.id,
+              label: person.name,
+              group: person.orgName,
+            }))}
+            {...fieldErrorAttributes("invoicingLeadId", fieldErrors.invoicingLeadId)}
+          >
+            <option value="" selected={selectedInvoicingLeadId === ""}>
+              None
+            </option>
+          </Select>
+          <p class="fs-s ink-subtle mt-3xs">Makes sure the client gets invoiced.</p>
         </Field>
         {isBillable &&
           (project?.hasLoggedTime ? (
