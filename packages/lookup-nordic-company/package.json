@@ -1,0 +1,11 @@
+{
+  "name": "@tid/lookup-nordic-company",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/lookUpNordicCompany.ts"
+  },
+  "dependencies": {
+    "zod": "catalog:"
+  }
+}

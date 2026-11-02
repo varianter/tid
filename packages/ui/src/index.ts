@@ -17,6 +17,7 @@ export {
 } from "./compositions/PeriodNavigation";
 export { Section } from "./compositions/Section";
 export { Stat, StatList } from "./compositions/Stat";
+export { SummaryList, type SummaryListRow } from "./compositions/SummaryList";
 export { Tabs } from "./compositions/Tabs";
 export { SidebarLayout } from "./custom/SidebarLayout";
 export { Badge } from "./primitives/Badge";

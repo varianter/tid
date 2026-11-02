@@ -4,8 +4,12 @@ import { createDatabase, migrateDatabase } from "@tid/db/client";
 import { startDevelopmentDatabase } from "@tid/db/container";
 import { users } from "@tid/db/schema";
 import { seedDatabase } from "@tid/db/seedDatabase";
+import { readDevelopmentSecrets } from "./developmentSecrets";
 
-const container = await startDevelopmentDatabase();
+const [container, secrets] = await Promise.all([
+  startDevelopmentDatabase(),
+  readDevelopmentSecrets(),
+]);
 const databaseUrl = container.getConnectionUri();
 
 const database = createDatabase(databaseUrl);
@@ -17,7 +21,7 @@ console.log(`Postgres running at ${databaseUrl}`);
 // Watching only the server keeps the database running while code reloads.
 const startServer = () =>
   Bun.spawn([process.execPath, "--watch", `${import.meta.dir}/server.tsx`], {
-    env: { ...process.env, DATABASE_URL: databaseUrl, DEV_LOGIN: "true" },
+    env: { ...process.env, ...secrets, DATABASE_URL: databaseUrl, DEV_LOGIN: "true" },
     stdio: ["inherit", "inherit", "inherit"],
   });
 let server = startServer();

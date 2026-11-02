@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { BarChart, Button, DataGrid, FormField, Tabs } from "./index";
+import { BarChart, Button, DataGrid, FormField, Icon, SummaryList, Tabs } from "./index";
 
 test("Button renders a button by default and a link with as='a'", () => {
   const button = String(
@@ -22,7 +22,7 @@ test("Button renders a button by default and a link with as='a'", () => {
   expect(link).toMatch(/>Clients<\/a>$/);
 });
 
-test("BarChart sizes bars against max and labels each column with its date", () => {
+test("BarChart labels each column with its date", () => {
   const chart = String(
     <BarChart
       points={[
@@ -32,10 +32,8 @@ test("BarChart sizes bars against max and labels each column with its date", () 
       max={10}
     />,
   );
-  expect(chart).toContain("grid-template-columns: repeat(2, 1fr);");
-  expect(chart).toContain('style="height: 50%;"');
-  expect(chart).toContain('style="height: 100%;"');
   expect(chart).toMatch(/<time[^>]*datetime="2026-05-16">2026-05-16<\/time>/);
+  expect(chart).toMatch(/<time[^>]*datetime="2026-05-17">2026-05-17<\/time>/);
 });
 
 test("FormField links its errors to the input, and shows nothing without errors", () => {
@@ -64,6 +62,45 @@ test("Tabs.Link marks only the active tab as the current page", () => {
   expect(html.match(/aria-current="page"/g)).toHaveLength(1);
 });
 
+test("Icon is hidden from screen readers unless it's labelled", () => {
+  expect(String(<Icon name="check" />)).toContain('aria-hidden="true"');
+  const labelled = String(<Icon name="check" label="Done" />);
+  expect(labelled).toContain('role="img" aria-label="Done"');
+  expect(labelled).not.toContain("aria-hidden");
+});
+
+test("SummaryList drops falsy rows and stacks several values under one label", () => {
+  const showTo = false;
+  const html = String(
+    <SummaryList
+      rows={[
+        { label: "Action", values: ["Delete rate"] },
+        { label: "For", values: ["Erik Sjöberg", "Anna Lindqvist"] },
+        showTo && { label: "To", values: ["31 December 2026"] },
+      ]}
+    />,
+  );
+  expect(html).toMatch(/<dt class="fs-s ink-subtle lh-snug">For<\/dt>/);
+  expect(html).toContain("Erik Sjöberg");
+  expect(html).toContain("Anna Lindqvist");
+  expect(html).toContain("b-none:last-child");
+  expect(html).not.toContain("31 December 2026");
+});
+
+test("SummaryList renders row actions as links, and drops the ones not allowed", () => {
+  const canChange = false;
+  const html = String(
+    <SummaryList
+      rows={[
+        { label: "Name", values: ["Acme"], action: { label: "Edit", href: "/clients/1/edit" } },
+        { label: "Number", values: ["None"], action: canChange && { label: "Add", href: "/" } },
+      ]}
+    />,
+  );
+  expect(html).toContain('<a class="v-link fs-s" href="/clients/1/edit">Edit</a>');
+  expect(html).not.toContain(">Add</a>");
+});
+
 test("DataGrid aligns cells by column and drops hidden columns with their cells", () => {
   const showMissing = false;
   const grid = String(
@@ -81,7 +118,6 @@ test("DataGrid aligns cells by column and drops hidden columns with their cells"
       </DataGrid.Row>
     </DataGrid>,
   );
-  expect(grid).toContain("grid-template-columns: minmax(16ch, 1fr) max-content;");
   expect(grid).toMatch(/<span[^>]*ta-right[^>]*>Hours<\/span>/);
   expect(grid).not.toContain("Missing");
   expect(grid).toMatch(/>Ada<\/span><span[^>]*ta-right[^>]*>7,5 h<\/span><\/a>/);

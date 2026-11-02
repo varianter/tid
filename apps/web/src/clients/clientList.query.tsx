@@ -1,8 +1,7 @@
-import { clients, projects, tasks, timeEntries } from "@tid/db/schema";
-import { formatTotalHours } from "@tid/elements/hours";
-import { type Action, Actions, DataGrid, EmptyState, Page } from "@tid/ui";
+import { clients, projects } from "@tid/db/schema";
+import { type Action, Actions, DataGrid, EmptyState, Icon, Page } from "@tid/ui";
 import { attributes } from "@tid/via/attributes";
-import { countDistinct, eq, sql } from "drizzle-orm";
+import { countDistinct, eq } from "drizzle-orm";
 import type { Context } from "hono";
 import type { UserEnv } from "../domain/users/user";
 import { database } from "../framework/database";
@@ -13,19 +12,17 @@ export const clientList = async (c: Context<UserEnv>) => {
     .select({
       id: clients.id,
       name: clients.name,
+      organizationNumber: clients.organizationNumber,
       projectCount: countDistinct(projects.id),
-      spentMinutes: sql`coalesce(sum(${timeEntries.minutes}), 0)`.mapWith(Number),
     })
     .from(clients)
     .leftJoin(projects, eq(projects.clientId, clients.id))
-    .leftJoin(tasks, eq(tasks.projectId, projects.id))
-    .leftJoin(timeEntries, eq(timeEntries.taskId, tasks.id))
     .groupBy(clients.id)
     .orderBy(clients.name);
   return c.render(<ClientListPage clients={rows} canAddClients={c.get("user").isManager} />);
 };
 
-type ClientRow = Client & { projectCount: number; spentMinutes: number };
+type ClientRow = Pick<Client, "id" | "name" | "organizationNumber"> & { projectCount: number };
 
 const newClient: Action = { label: "New client", href: "/clients/new", [attributes.layer]: true };
 
@@ -48,15 +45,19 @@ function ClientListPage({
         <DataGrid
           columns={[
             { label: "Name" },
+            { label: "Org. number", kind: "fit" },
             { label: "Projects", kind: "number" },
-            { label: "Spent", kind: "number" },
           ]}
         >
           {clients.map((client) => (
             <DataGrid.Row href={`/clients/${client.id}`}>
               <DataGrid.Title>{client.name}</DataGrid.Title>
+              {client.organizationNumber ? (
+                <Icon name="check" class="fs-xs" label="Has an organization number" />
+              ) : (
+                ""
+              )}
               {client.projectCount}
-              {formatTotalHours(client.spentMinutes)}
             </DataGrid.Row>
           ))}
         </DataGrid>

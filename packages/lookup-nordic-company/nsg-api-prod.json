@@ -1,0 +1,168 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "Nordic Smart Government api - prod",
+    "description": "Api used for cross-nordic registry information.",
+    "version": "1.0"
+  },
+  "servers": [
+    {
+      "url": "https://api.data.altinn.no/nordicinformation/v1"
+    }
+  ],
+  "paths": {
+    "/registered-organisations": {
+      "post": {
+        "summary": "Retrieve data about a registered organisation.",
+        "description": "With this operation you can retrieve data about a registered organisation.",
+        "operationId": "post-nsg-registered-organisation",
+        "parameters": [
+          {
+            "name": "X-Request-Id",
+            "in": "header",
+            "description": "Client generated ID to call the API. In case of error this will be sent in the attribute requestId or as a header attribute.",
+            "schema": {
+              "type": "string"
+            },
+            "examples": {
+              "": {
+                "summary": "",
+                "description": "Example",
+                "value": "d120654c-0d09-481a-8956-940a76474e6b",
+                "externalValue": ""
+              }
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Request body",
+          "content": {
+            "application/json": {
+              "examples": {
+                "Example": {
+                  "summary": "",
+                  "description": "",
+                  "value": {
+                    "country": "NO",
+                    "notation": "999999999"
+                  },
+                  "externalValue": ""
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Returns dataset",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "Example": {
+                    "summary": "",
+                    "description": "",
+                    "value": {
+                      "activity": [
+                        {
+                          "code": "0112",
+                          "inClassification": "http://data.europa.eu/ux2/nace2/nace2",
+                          "reference": "http://data.europa.eu/ux2/nace2/0112",
+                          "sequence": 1
+                        }
+                      ],
+                      "identifier": {
+                        "issuingAuthorityName": "SEBOLREG",
+                        "notation": "5523451234"
+                      },
+                      "legalForm": {
+                        "code": "SE_AB",
+                        "name": "Aktiebolag"
+                      },
+                      "legalStatus": {
+                        "code": "NONE",
+                        "name": "No extraordinary circumstances registered."
+                      },
+                      "name": "Volvo AB",
+                      "postalAddress": {
+                        "fullAddress": "Queen Street 1; 23456; City of Gold; Sweden"
+                      },
+                      "registeredAddress": {
+                        "fullAddress": "Queen Street 1; 23456; City of Gold; Sweden"
+                      },
+                      "registrationDate": "2023-01-12"
+                    },
+                    "externalValue": ""
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Incorrectly formatted identifier"
+          },
+          "401": {
+            "description": "Invalid access token"
+          },
+          "403": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Registered oprganisation data not found"
+          }
+        }
+      }
+    },
+    "/is-alive": {
+      "get": {
+        "summary": "API-status",
+        "description": "With this operation you can check to see that the API is up and running.",
+        "operationId": "get-nsg-is-alive",
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Server unavailable"
+          }
+        }
+      }
+    },
+    "/oas": {
+      "get": {
+        "summary": "OAS",
+        "description": "Gets the oas yaml for the NSG api",
+        "operationId": "oas",
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "apiKeyHeader": {
+        "type": "apiKey",
+        "name": "Ocp-Apim-Subscription-Key",
+        "in": "header"
+      },
+      "apiKeyQuery": {
+        "type": "apiKey",
+        "name": "subscription-key",
+        "in": "query"
+      }
+    }
+  },
+  "security": [
+    {
+      "apiKeyHeader": []
+    },
+    {
+      "apiKeyQuery": []
+    }
+  ]
+}

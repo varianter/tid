@@ -60,7 +60,7 @@ export function FormPage({
         style="min-width: min(55ch, 90svw);"
         {...{ [attributes.layerType]: layer }}
       >
-        <header class="-mt-m -mx-s-m b-b bc-subtle gap-3xs mb-s px-s-m py-2xs stack-v surface-tinted">
+        <header class="-mt-m -mx-s-m b-b bc-subtle gap-4xs mb-s px-s-m py-2xs stack-v surface-tinted">
           <h1 class="fs-m fw-medium">{title}</h1>
           {description && <p class="ink-subtle">{description}</p>}
         </header>

@@ -5,13 +5,16 @@
 You need [Bun](https://bun.sh) (the version in `.bun-version`) and Docker.
 
 ```sh
+az login
 bun install
 bun run dev
 ```
 
+`bun run dev` reads the app's secrets from the dev Key Vault as you, through the [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli), and keeps them in memory. You need read access to the vault. Without it, dev still starts, but features that need a secret don't work. The list of secrets is in `apps/web/src/developmentSecrets.ts`.
+
 The app runs on http://localhost:3000.
 
-Before pushing, run `bun run check`. It type-checks, lints and runs the tests.
+Before pushing, run `bun run verify`. It type-checks, lints and runs the tests.
 
 ## Database
 

@@ -14,6 +14,7 @@ import { classes, type Props } from "./attributes";
 export const iconNames = [
   "bar_chart",
   "calendar_today",
+  "check",
   "chevron_left",
   "chevron_right",
   "close",
@@ -53,19 +54,23 @@ export function findIconSvg(fileName: string) {
   return icons.values().find((icon) => icon.fileName === fileName)?.svg;
 }
 
-/** A decorative Material Symbol drawn in the current text color. */
+/**
+ * A Material Symbol drawn in the current text color. Decorative unless given a `label`, which it
+ * needs when nothing beside it says the same.
+ */
 export function Icon({
   name,
+  label,
   class: className,
   style = "",
   ...attributes
-}: Props<"span", { name: IconName }>) {
+}: Props<"span", { name: IconName; label?: string }>) {
   return (
     <span
       class={classes("v-icon", className)}
       // Set via --icon-src, a relative URL would resolve against Varde's stylesheet.
       style={`mask-image: url('${iconsPath}/${icons.get(name)?.fileName}'); ${style}`}
-      aria-hidden="true"
+      {...(label ? { role: "img", "aria-label": label } : { "aria-hidden": "true" })}
       {...attributes}
     />
   );
