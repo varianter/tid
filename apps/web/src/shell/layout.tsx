@@ -7,6 +7,7 @@ import type { PropsWithChildren } from "hono/jsx";
 import { administrationPath } from "../administration/administration.url";
 import { consultantPath, consultantsPath } from "../consultants/consultants.url";
 import type { User } from "../domain/users/user";
+import { projectsToInvoiceUrl } from "../invoiceData/invoiceData.url";
 import { officeSummaryUrl } from "../officeSummary/officeSummary.url";
 import { projectsPath } from "../projects/projects.url";
 import { reportUrl } from "../reports/reports.url";
@@ -53,6 +54,12 @@ function navigationFor(user: User | undefined): NavigationSection[] {
           href: organization && reportUrl.path({ organization, month, tab: "projects" }),
           label: "Reports",
           icon: "bar_chart",
+        },
+        {
+          section: "/invoice-data",
+          href: projectsToInvoiceUrl.path({ month }),
+          label: "Invoice data",
+          icon: "receipt_long",
         },
         { section: "/month-close", label: "Month close", icon: "event_available" },
       ],

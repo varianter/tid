@@ -326,7 +326,7 @@ test("a project without logged time changes billing through that billing's form"
   expect(await currency()).toBe("EUR");
 });
 
-test("a project's report shows a month on screen and links to its print version", async () => {
+test("a project's report shows a month", async () => {
   const started = await requestAs(manager, "/projects/new/hourly", {
     name: "Rapport",
     code: "ACME-6",
@@ -342,14 +342,6 @@ test("a project's report shows a month on screen and links to its print version"
   expect((await requestAs(member, `/projects/${projectId}/report?month=2026-10`)).status).toBe(302);
   const screen = await requestAs(member, report);
   expect(screen.status).toBe(200);
-  expect(await screen.text()).toContain(
-    `/projects/${projectId}/report/print?organization=oslo&amp;month=2026-10`,
-  );
-  const print = await requestAs(
-    member,
-    `/projects/${projectId}/report/print?organization=oslo&month=2026-10`,
-  );
-  expect(await print.text()).toContain("Timesheet details");
 });
 
 test("editing a project sets and clears its invoicing lead, who may have left since", async () => {

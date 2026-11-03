@@ -28,6 +28,7 @@ export const iconNames = [
   "lock",
   "lock_open",
   "menu",
+  "receipt_long",
   "settings",
   "table",
   "thumb_down",

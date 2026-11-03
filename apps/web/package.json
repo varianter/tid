@@ -15,9 +15,11 @@
     "@tid/db": "workspace:*",
     "@tid/elements": "workspace:*",
     "@tid/lookup-nordic-company": "workspace:*",
-    "@tid/via": "workspace:*",
+    "@tid/pdf-export": "workspace:*",
     "@tid/ui": "workspace:*",
+    "@tid/via": "workspace:*",
     "drizzle-orm": "catalog:",
+    "fflate": "0.8.3",
     "hono": "4.13.9",
     "zod": "catalog:"
   },
