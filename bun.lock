@@ -54,6 +54,9 @@
         "zod": "catalog:",
       },
     },
+    "packages/pdf-export": {
+      "name": "@tid/pdf-export",
+    },
     "packages/ui": {
       "name": "@tid/ui",
       "dependencies": {
@@ -310,6 +313,8 @@
     "@tid/elements": ["@tid/elements@workspace:packages/elements"],
 
     "@tid/lookup-nordic-company": ["@tid/lookup-nordic-company@workspace:packages/lookup-nordic-company"],
+
+    "@tid/pdf-export": ["@tid/pdf-export@workspace:packages/pdf-export"],
 
     "@tid/ui": ["@tid/ui@workspace:packages/ui"],
 

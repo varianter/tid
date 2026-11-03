@@ -1,0 +1,11 @@
+{
+  "name": "@tid/pdf-export",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "postinstall": "bun scripts/installTypst.ts"
+  },
+  "exports": {
+    ".": "./src/renderPdf.ts"
+  }
+}
