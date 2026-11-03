@@ -50,9 +50,7 @@ function navigationFor(user: User | undefined): NavigationSection[] {
         { section: "/timesheet", href: monthPath(month, false), label: "Timesheet", icon: "table" },
         {
           section: "/reports",
-          href:
-            organization &&
-            reportUrl.path({ organization, month, tab: "projects", billable: undefined }),
+          href: organization && reportUrl.path({ organization, month, tab: "projects" }),
           label: "Reports",
           icon: "bar_chart",
         },
