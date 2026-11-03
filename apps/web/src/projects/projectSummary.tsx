@@ -7,7 +7,7 @@ import {
   timeEntries,
 } from "@tid/db/schema";
 import { formatTotalHours } from "@tid/elements/hours";
-import { DataGrid } from "@tid/ui";
+import { DataGrid, ListSummary } from "@tid/ui";
 import { sql } from "drizzle-orm";
 import type { Billing } from "./billing";
 
@@ -65,7 +65,7 @@ export function ProjectTable({ projects }: { projects: ProjectSummary[] }) {
           {group.map((project) => (
             <DataGrid.Row href={`/projects/${project.id}`}>
               <DataGrid.Title secondary={project.code}>{project.name}</DataGrid.Title>
-              {project.organizations.join(", ")}
+              <ListSummary items={project.organizations} />
               {formatTotalHours(project.spentMinutes)}
             </DataGrid.Row>
           ))}

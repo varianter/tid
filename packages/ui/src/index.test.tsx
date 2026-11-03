@@ -1,5 +1,14 @@
 import { expect, test } from "bun:test";
-import { BarChart, Button, DataGrid, FormField, Icon, SummaryList, Tabs } from "./index";
+import {
+  BarChart,
+  Button,
+  DataGrid,
+  FormField,
+  Icon,
+  ListSummary,
+  SummaryList,
+  Tabs,
+} from "./index";
 
 test("Button renders a button by default and a link with as='a'", () => {
   const button = String(
@@ -131,4 +140,19 @@ test("DataGrid rejects a row whose cells don't match its columns", () => {
       </DataGrid>,
     ),
   ).toThrow("1 cells for 2 columns");
+});
+
+test("ListSummary writes out up to three items, then names the first and counts the rest", () => {
+  expect(String(<ListSummary items={[]} />)).toBe("");
+  expect(String(<ListSummary items={["Oslo", "Bergen", "Trondheim"]} />)).toBe(
+    "Oslo, Bergen, Trondheim",
+  );
+  expect(String(<ListSummary items={["Oslo", "Bergen", "Trondheim", "Stavanger"]} />)).toBe(
+    "Oslo +3 more",
+  );
+  expect(
+    String(
+      <ListSummary shown={2} items={["Oslo", "Bergen", "Trondheim", "Stavanger", "Tromsø"]} />,
+    ),
+  ).toBe("Oslo, Bergen +3 more");
 });

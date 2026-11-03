@@ -9,6 +9,7 @@ export { Field, fieldErrorAttributes } from "./compositions/forms/Field";
 export { FormError } from "./compositions/forms/FormError";
 export { FormField } from "./compositions/forms/FormField";
 export { FormPage } from "./compositions/forms/FormPage";
+export { ListSummary } from "./compositions/ListSummary";
 export { Page } from "./compositions/Page";
 export {
   type MonthChoice,
