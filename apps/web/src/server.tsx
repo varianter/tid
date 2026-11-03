@@ -109,19 +109,18 @@ app.notFound((c) => {
 });
 
 app.onError((error, c) => {
-  // Routes throw these to refuse a request, and Hono throws them itself when the CSRF check fails.
-  // A page rather than plain text, so a form in a layer shows why it was refused.
-  if (error instanceof HTTPException) {
-    c.status(error.status);
-    return c.render(
-      <ErrorPage status={error.status} message={error.message || "This request was refused"} />,
-    );
-  }
-  console.error(error);
-  c.status(500);
-
-  const report = c.get("user") ? errorReport(error) : undefined;
-  return c.render(<ErrorPage status={500} message="Something went wrong" report={report} />);
+  // Routes throw an HTTPException to refuse a request or to word a failure, and Hono throws one
+  // when the CSRF check fails. A page rather than plain text, so a form in a layer shows why. A
+  // server error is unexpected even when a route words it, so it's logged and reported too.
+  const status = error instanceof HTTPException ? error.status : 500;
+  if (status >= 500) console.error(error);
+  const report = status >= 500 && c.get("user") ? errorReport(error) : undefined;
+  const message =
+    error instanceof HTTPException
+      ? error.message || "This request was refused"
+      : "Something went wrong";
+  c.status(status);
+  return c.render(<ErrorPage status={status} message={message} report={report} />);
 });
 
 app.get("/health", (c) => c.text("ok"));
