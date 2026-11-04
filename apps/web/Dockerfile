@@ -5,7 +5,7 @@
 FROM oven/bun:1.4.4 AS typst
 RUN apt-get update && apt-get install -y --no-install-recommends xz-utils && rm -rf /var/lib/apt/lists/*
 WORKDIR /repo
-COPY --parents packages/pdf-export/scripts packages/pdf-export/src/typstBinary.ts ./
+COPY --parents packages/pdf-export/scripts/installTypst.ts packages/pdf-export/src/typstBinary.ts ./
 RUN bun packages/pdf-export/scripts/installTypst.ts
 
 FROM oven/bun:1.4.4-slim
