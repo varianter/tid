@@ -11,7 +11,7 @@ test("a canonical report URL reads back to itself", () => {
   for (const path of [
     "/reports?organization=variant-as&month=2026-09&tab=projects",
     "/reports?organization=se&month=2028-02&tab=tasks&billable=yes",
-    "/reports?organization=se&month=2028-02&tab=consultants&billable=no",
+    "/reports?organization=se&month=2028-02&tab=consultants&fixedPrice=yes",
   ]) {
     expect(roundTrip(path)).toBe(path);
   }

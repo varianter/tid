@@ -1,5 +1,6 @@
-import { Button } from "@tid/ui";
+import { Button, Checkbox, Label } from "@tid/ui";
 import { type Child, createContext, type PropsWithChildren, useContext } from "hono/jsx";
+import { z } from "zod";
 
 const InsideFiltered = createContext(false);
 
@@ -45,5 +46,35 @@ export function FilterForm({ field, children }: PropsWithChildren<{ field: strin
         </noscript>
       </form>
     </auto-submit>
+  );
+}
+
+const checked = "yes";
+
+/**
+ * `?<field>=yes` turns on a filter that is off without it. Spread `{ <field>: checkboxQuery }` into a
+ * page's query, and leave it out of a link to turn the filter off.
+ */
+export const checkboxQuery = z
+  .stringbool({ truthy: [checked], falsy: ["no"] })
+  .optional()
+  .catch(undefined);
+
+export type CheckboxValue = z.output<typeof checkboxQuery>;
+
+/** Turns `field` on and off, for a filter with only two states. */
+export function FilterCheckbox({ field, label }: { field: string; label: string }) {
+  return (
+    <FilterForm field={field}>
+      <Label for={field} class="stack-h items-center gap-2xs">
+        <Checkbox
+          id={field}
+          name={field}
+          value={checked}
+          checked={usePageSearch().get(field) === checked}
+        />
+        {label}
+      </Label>
+    </FilterForm>
   );
 }

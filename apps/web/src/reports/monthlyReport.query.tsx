@@ -28,15 +28,16 @@ import { database } from "../framework/database";
 import { Filtered } from "../framework/filter";
 import { yearsAround } from "../framework/periodNavigation";
 import { type QueryProps, queryPage } from "../framework/queryPage";
+import { FixedPriceCheckbox, fixedPriceCondition } from "../projects/fixedPriceFilter";
 import { projectReportUrl } from "../projects/projects.url";
 import { formatShare } from "../share/share";
-import { BillableSelect, billableCondition } from "./billableFilter";
+import { BillableCheckbox, billableCondition } from "./billableFilter";
 import { reportUrl, type Tab, tabs } from "./reports.url";
 
 export const monthlyReport = queryPage({
   url: reportUrl,
   complete: completeOrganization,
-  loader: async (c, { month, tab, billable }) => {
+  loader: async (c, { month, tab, billable, fixedPrice }) => {
     const organizationFilter = await resolveOrganizationFilter(c);
     if (organizationFilter instanceof Response) return organizationFilter;
     const { selected } = organizationFilter;
@@ -48,6 +49,8 @@ export const monthlyReport = queryPage({
       ),
       between(view.spentDate, firstDayOfMonth(month), lastDayOfMonth(month)),
       billableCondition(billable, view.billable),
+      // Fixed price only narrows billable hours, so a report without filters has every hour.
+      billable ? fixedPriceCondition(fixedPrice, projects.billing) : undefined,
     );
 
     const totals = {
@@ -244,12 +247,13 @@ function ReportPage({
   const consultantHref = (userId: number) => consultantPath(userId, month);
   const table = reportTable(report, total, currency, projectHref, consultantHref);
   return (
-    <Page title="Reports">
+    <Page title="Reports" layer="drawer">
       <Filtered
         by={
           <>
             <OrganizationSelect {...organizationFilter} />
-            <BillableSelect />
+            <BillableCheckbox />
+            {query.billable && <FixedPriceCheckbox />}
             <PeriodNavigation
               previousHref={href({ month: addMonths(month, -1) })}
               nextHref={href({ month: addMonths(month, 1) })}
@@ -304,8 +308,8 @@ function reportTable(
         columns: [
           { label: "Name" },
           { label: "Client" },
+          // A project is billable or not as a whole, so one column holds all its hours.
           { label: "Hours", kind: "number" },
-          { label: "Billable hours", kind: "number" },
           { label: "Billable amount", kind: "number" },
         ],
         rows: report.rows.map((row) => ({
@@ -313,7 +317,6 @@ function reportTable(
             <DataGrid.Title secondary={row.code}>{row.name}</DataGrid.Title>,
             row.client,
             formatTotalHours(row.hours * 60),
-            formatTotalHours(row.billableHours * 60),
             formatAmounts(row.amounts, currency),
           ],
           href: projectHref(row.id),
@@ -322,7 +325,6 @@ function reportTable(
           "Total",
           "",
           formatTotalHours(total.hours * 60),
-          formatTotalHours(total.billableHours * 60),
           formatAmounts(total.amounts, currency),
         ],
       };
