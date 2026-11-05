@@ -2,7 +2,6 @@ import { type Calendar, calendarFor } from "@tid/calendar";
 import { formatDate } from "@tid/calendar/dateDisplay";
 import { daysOfMonth } from "@tid/calendar/isoDate";
 import type { Country } from "@tid/calendar/publicHolidays";
-import { formatAmount } from "../domain/amount/amount";
 import type { Billing } from "./billing";
 
 type Consultant = { name: string; hoursByDay: Map<string, number>; hours: number };
@@ -15,6 +14,7 @@ export type ProjectReport = {
     billing: Billing;
     clientId: number;
     client: string;
+    currency: string | null;
   };
   /** The month, as people read it. */
   period: string;
@@ -22,8 +22,8 @@ export type ProjectReport = {
   calendar: Calendar;
   consultants: Consultant[];
   hours: number;
-  /** Only hourly projects have an amount to show. */
-  amount: string | undefined;
+  /** In the project's currency. Only hourly projects have an amount to show. */
+  amount: number | undefined;
 };
 
 /** A consultant's hours and amount on one day. */
@@ -31,7 +31,7 @@ export type DayEntry = { email: string; name: string; day: string; hours: number
 
 /** The report of a project's day entries in `month`, a row per consultant. */
 export function buildProjectReport(
-  project: ProjectReport["project"] & { currency: string | null },
+  project: ProjectReport["project"],
   entries: DayEntry[],
   month: string,
   country: Country,
@@ -57,11 +57,7 @@ export function buildProjectReport(
     hours: entries.reduce((total, entry) => total + entry.hours, 0),
     amount:
       project.billing === "hourly" && project.currency
-        ? formatAmount(
-            entries.reduce((total, entry) => total + entry.amount, 0),
-            project.currency,
-            2,
-          )
+        ? entries.reduce((total, entry) => total + entry.amount, 0)
         : undefined,
   };
 }

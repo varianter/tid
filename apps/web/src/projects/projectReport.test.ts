@@ -1,5 +1,4 @@
 import { expect, test } from "bun:test";
-import { formatAmount } from "../domain/amount/amount";
 import { buildProjectReport } from "./projectReport";
 
 const project = {
@@ -24,8 +23,7 @@ test("a consultant's days add up to one row, and only hourly projects get an amo
     { name: "B", hours: 1 },
   ]);
   expect(report.hours).toBe(10.5);
-  // The three entries' amounts add up to 10500.
-  expect(report.amount).toBe(formatAmount(10500, "NOK", 2));
+  expect(report.amount).toBe(10500);
 
   const fixed = buildProjectReport({ ...project, billing: "fixed_fee" }, entries, "2026-10", "NO");
   expect(fixed.amount).toBeUndefined();

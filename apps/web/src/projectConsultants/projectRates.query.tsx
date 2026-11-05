@@ -92,7 +92,7 @@ function ProjectRatesPage({ project, consultants, today }: ProjectRatesPageProps
                 {ratePeriods(consultant.rates, today).map((period) => (
                   <DataGrid.Row>
                     <span>
-                      {formatAmount(period.rate / 100, project.currency, 2)}
+                      {formatAmount(period.rate / 100, project.currency, "exact")}
                       {period.isCurrent && <Badge class="ml-xs">Current</Badge>}
                     </span>
                     {formatDate(period.validFrom, "numeric")}

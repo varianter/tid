@@ -24,7 +24,7 @@ export function RepricedEntries({
   price: Price;
   currency: string;
 }) {
-  const money = (minorUnits: number) => formatAmount(minorUnits / 100, currency, 2);
+  const money = (minorUnits: number) => formatAmount(minorUnits / 100, currency, "exact");
   const difference = (entry: RepricedEntry) =>
     (entry.minutes / 60) * ((price?.rate ?? 0) - (entry.rate ?? 0));
   const totalMinutes = entries.reduce((sum, entry) => sum + entry.minutes, 0);

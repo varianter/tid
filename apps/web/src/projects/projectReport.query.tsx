@@ -2,6 +2,7 @@ import { addMonths } from "@tid/calendar/isoDate";
 import { formatTotalHours } from "@tid/elements/hours";
 import { Detail, Page, PeriodNavigation } from "@tid/ui";
 import type { Context } from "hono";
+import { formatAmount } from "../domain/amount/amount";
 import {
   completeOrganization,
   type OrganizationFilter,
@@ -73,7 +74,9 @@ function ProjectReportPage({
           <Detail label="Code">{project.code}</Detail>
           <Detail label="Billing">{billingLabels[project.billing]}</Detail>
           <Detail label="Hours">{formatTotalHours(hours * 60)}</Detail>
-          {amount && <Detail label="Amount">{amount}</Detail>}
+          {amount !== undefined && project.currency && (
+            <Detail label="Amount">{formatAmount(amount, project.currency, "exact")}</Detail>
+          )}
         </dl>
         <MonthEntries month={query.month} entries={entries} titleLabel="Consultant" />
       </Filtered>

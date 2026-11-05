@@ -1,5 +1,6 @@
 import { formatDate } from "@tid/calendar/dateDisplay";
 import { formatHours, formatTotalHours } from "@tid/elements/hours";
+import { formatAmount } from "../domain/amount/amount";
 import type { ProjectReport } from "../projects/projectReport";
 
 /** What `invoiceData.typ` lays out. Every value is formatted here, so the PDF reads like the app. */
@@ -34,7 +35,10 @@ export function toInvoiceData({
     client: project.client,
     project: project.name,
     period,
-    amount,
+    amount:
+      amount !== undefined && project.currency
+        ? formatAmount(amount, project.currency, "exact")
+        : undefined,
     days: days.map((day) => ({
       label: String(Number(day.slice(8))),
       dayOff: !calendar.isWorkday(day),

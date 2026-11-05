@@ -34,9 +34,9 @@ export function RepriceEntriesFormPage({
       width={6}
     >
       <p>
-        {formatAmount(newRate.rate / 100, newRate.currency, 2)} reprices {entries.length} logged{" "}
-        {entries.length === 1 ? "entry" : "entries"} on {consultant.projectName}, locked months
-        included.
+        {formatAmount(newRate.rate / 100, newRate.currency, "exact")} reprices {entries.length}{" "}
+        logged {entries.length === 1 ? "entry" : "entries"} on {consultant.projectName}, locked
+        months included.
       </p>
       <RepricedEntries entries={entries} price={newRate} currency={newRate.currency} />
     </FormPage>
