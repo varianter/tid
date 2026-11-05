@@ -1,4 +1,3 @@
-import { firstDayOfMonth, lastDayOfMonth } from "@tid/calendar/isoDate";
 import {
   organizations,
   projectOrganizations,
@@ -6,9 +5,10 @@ import {
   timeEntriesExport,
   users,
 } from "@tid/db/schema";
-import { and, between, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { database } from "../framework/database";
 import type { Billing } from "../projects/billing";
+import { invoicedHoursIn } from "./invoicedHours";
 
 export type ProjectToInvoice = {
   id: number;
@@ -26,14 +26,13 @@ export type ProjectToInvoice = {
 /**
  * The projects with hours in `month`, whichever organization owns the contract: hourly ones, and
  * fixed-price ones too when `includeFixedPrice`. Every hour on them is billable, whoever logged it.
- * By client, then project.
+ * By contract owner, then client, then project.
  */
 export function loadProjectsToInvoice(
   month: string,
   includeFixedPrice: boolean,
 ): Promise<ProjectToInvoice[]> {
   const view = timeEntriesExport;
-  const billings: Billing[] = includeFixedPrice ? ["hourly", "fixed_fee"] : ["hourly"];
   return database
     .select({
       id: projects.id,
@@ -58,12 +57,7 @@ export function loadProjectsToInvoice(
     )
     .innerJoin(organizations, eq(organizations.id, projectOrganizations.orgId))
     .leftJoin(users, eq(users.id, projects.invoicingLeadId))
-    .where(
-      and(
-        between(view.spentDate, firstDayOfMonth(month), lastDayOfMonth(month)),
-        inArray(projects.billing, billings),
-      ),
-    )
+    .where(invoicedHoursIn(month, includeFixedPrice))
     .groupBy(projects.id, view.clientName, organizations.name, users.name)
-    .orderBy(view.clientName, projects.name);
+    .orderBy(organizations.name, view.clientName, projects.name);
 }

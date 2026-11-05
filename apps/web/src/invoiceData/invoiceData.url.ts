@@ -1,22 +1,13 @@
 import { z } from "zod";
 import { monthField } from "../framework/pageMonth";
 import { idParam, pageUrl } from "../framework/pageUrl";
+import { fixedPriceField } from "../projects/fixedPriceFilter";
 
-/** `?fixedPrice=yes` adds fixed-price projects to hourly ones. */
-const fixedPriceField = {
-  fixedPrice: z
-    .stringbool({ truthy: ["yes"], falsy: ["no"] })
-    .optional()
-    .catch(undefined),
-};
-
-const invoiceDataQuery = z.object({ ...monthField, ...fixedPriceField });
-
-/** The projects to invoice for a month, whichever organization owns the contract. */
-export const projectsToInvoiceUrl = pageUrl("/invoice-data", invoiceDataQuery);
-
-/** Every project on the invoice data page, each as its PDF and CSV, in one zip. */
-export const invoiceDataZipUrl = pageUrl("/invoice-data/zip", invoiceDataQuery);
+/** Every project on month close's invoice data page, each as its PDF and CSV, in one zip. */
+export const invoiceDataZipUrl = pageUrl(
+  "/invoice-data/zip",
+  z.object({ ...monthField, ...fixedPriceField }),
+);
 
 const projectInvoiceDataQuery = z.object({ projectId: idParam, ...monthField });
 

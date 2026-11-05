@@ -19,7 +19,7 @@ function TabLink({ href, active, children }: PropsWithChildren<{ href: string; a
       composite-component="Tabs.Link"
       href={href}
       aria-current={active ? "page" : undefined}
-      class="flex-1"
+      class="flex-1 t-nowrap"
       data-size="small"
       data-variant={active ? undefined : "plain"}
     >

@@ -7,7 +7,7 @@ import type { PropsWithChildren } from "hono/jsx";
 import { administrationPath } from "../administration/administration.url";
 import { consultantPath, consultantsPath } from "../consultants/consultants.url";
 import type { User } from "../domain/users/user";
-import { projectsToInvoiceUrl } from "../invoiceData/invoiceData.url";
+import { ownConsultantHoursPath } from "../monthClose/monthClose.url";
 import { officeSummaryUrl } from "../officeSummary/officeSummary.url";
 import { projectsPath } from "../projects/projects.url";
 import { reportUrl } from "../reports/reports.url";
@@ -41,7 +41,7 @@ type NavigationSection = {
 };
 
 // Each link goes straight to its page's canonical URL, which a bare section path redirects to.
-// Month close picks its month from the database, so it keeps the redirect.
+// Month close picks its month from the database, so it keeps the redirects.
 function navigationFor(user: User | undefined): NavigationSection[] {
   const month = thisMonthInOslo();
   const organization = user?.organization.slug;
@@ -56,12 +56,12 @@ function navigationFor(user: User | undefined): NavigationSection[] {
           icon: "bar_chart",
         },
         {
-          section: "/invoice-data",
-          href: projectsToInvoiceUrl.path({ month }),
-          label: "Invoice data",
-          icon: "receipt_long",
+          section: "/month-close",
+          // Managers watch every organization; everyone else closes their own.
+          href: user?.isManager ? undefined : ownConsultantHoursPath,
+          label: "Month close",
+          icon: "event_available",
         },
-        { section: "/month-close", label: "Month close", icon: "event_available" },
       ],
     },
     {
@@ -282,7 +282,7 @@ export function Layout({ currentPath, user, logoutUrl, scriptSrcs, children }: L
         {/* What @tid/via clones for each `a[via-layer]` it opens. */}
         <template id={layerTemplateId}>
           {/* Only the surface: the page inside sets its own width and padding. */}
-          <Popover role="dialog" tabindex={-1} class="" data-backdrop>
+          <Popover role="dialog" class="" data-backdrop>
             <div
               class="m-2xs surface-base b-all bc-subtle shadow-mid br-l"
               style="height: calc(100% - ( var(--spacing-2xs) * 2 )); overflow-y: auto;"

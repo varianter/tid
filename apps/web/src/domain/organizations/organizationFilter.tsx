@@ -7,6 +7,7 @@ import { database } from "../../framework/database";
 import { FilterForm } from "../../framework/filter";
 import { countryVisibility } from "../managers/manager";
 import type { User, UserEnv } from "../users/user";
+import { countryNames } from "./country";
 
 type Organization = typeof organizations.$inferSelect;
 
@@ -24,8 +25,6 @@ export type OrganizationOption = {
   fullDayMinutes: number;
   organizations: Organization[];
 };
-
-const countryNames: Record<Country, string> = { NO: "Norway", SE: "Sweden" };
 
 /** Each country as a whole, followed by its organizations. */
 export function listOrganizationOptions(organizations: Organization[]): OrganizationOption[] {

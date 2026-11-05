@@ -46,6 +46,15 @@ export function addAmounts(left: Amounts, right: Amounts): Amounts {
   return sum;
 }
 
+/** Adds up amounts that each carry their own currency. Ones without a currency or amount bill nothing. */
+export function sumAmounts(items: { amount: number; currency: string | null }[]): Amounts {
+  return items.reduce<Amounts>(
+    (sum, { amount, currency }) =>
+      currency && amount !== 0 ? addAmounts(sum, { [currency]: amount }) : sum,
+    {},
+  );
+}
+
 /** One amount per currency, so nothing is converted. Zero in `fallbackCurrency` when empty. */
 export function formatAmounts(amounts: Amounts, fallbackCurrency: string) {
   const nonZero = Object.entries(amounts).filter(([, amount]) => amount !== 0);
