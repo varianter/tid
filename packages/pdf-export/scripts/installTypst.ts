@@ -22,6 +22,20 @@ const releases: Record<string, { target: string; sha256: string }> = {
   },
 };
 
+/** Retried, since this runs on every install and GitHub's release downloads fail now and then. */
+async function download(url: string, attempts = 4) {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      const response = await fetch(url, { signal: AbortSignal.timeout(60_000) });
+      if (!response.ok) throw new Error(`Downloading ${url} failed with ${response.status}`);
+      return new Uint8Array(await response.arrayBuffer());
+    } catch (error) {
+      if (attempt >= attempts) throw error;
+      await Bun.sleep(2 ** attempt * 1000);
+    }
+  }
+}
+
 if (await Bun.file(typstBinaryPath).exists()) process.exit(0);
 
 const platform = `${process.platform}-${process.arch}`;
@@ -29,9 +43,7 @@ const release = releases[platform];
 if (!release) throw new Error(`No Typst ${typstVersion} release is pinned for ${platform}`);
 
 const url = `https://github.com/typst/typst/releases/download/v${typstVersion}/typst-${release.target}.tar.xz`;
-const response = await fetch(url);
-if (!response.ok) throw new Error(`Downloading ${url} failed with ${response.status}`);
-const archive = new Uint8Array(await response.arrayBuffer());
+const archive = await download(url);
 const sha256 = new Bun.CryptoHasher("sha256").update(archive).digest("hex");
 if (sha256 !== release.sha256) throw new Error(`${url} has SHA-256 ${sha256}, not the pinned one`);
 

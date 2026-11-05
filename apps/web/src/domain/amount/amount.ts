@@ -12,7 +12,8 @@ function withoutCurrency(amount: number, currency: string) {
 const styles = {
   /**
    * Like "5 071 662,50", for amounts in the one currency a page or document is about, such as a
-   * rate or an invoice. Its reader knows the currency, so naming it is only noise.
+   * rate or an invoice. Name the currency once where the amounts are, such as in their label,
+   * since repeating it on each is only noise.
    */
   exact: withoutCurrency,
   /**

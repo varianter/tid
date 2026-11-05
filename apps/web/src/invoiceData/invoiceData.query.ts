@@ -1,6 +1,7 @@
 import { renderPdf } from "@tid/pdf-export";
 import { zipSync } from "fflate";
 import type { Context } from "hono";
+import { getBunServer } from "hono/bun";
 import { HTTPException } from "hono/http-exception";
 import type { UserEnv } from "../domain/users/user";
 import { fileDownload } from "../framework/fileDownload";
@@ -14,7 +15,11 @@ import {
 import { invoiceDataCsvUrl, invoiceDataPdfUrl, invoiceDataZipUrl } from "./invoiceData.url";
 import { toInvoiceDataCsv } from "./invoiceDataCsv";
 import { loadInvoiceDataCsv } from "./invoiceDataCsv.data";
-import { loadProjectsToInvoice, type ProjectToInvoice } from "./projectsToInvoice.data";
+import {
+  loadProjectsToInvoice,
+  loadProjectToInvoice,
+  type ProjectToInvoice,
+} from "./projectsToInvoice.data";
 
 type InvoiceDataFile = { name: string; body: Uint8Array };
 
@@ -35,6 +40,9 @@ export const invoiceDataCsv = async (c: Context<UserEnv>) => {
 export const invoiceDataZip = async (c: Context<UserEnv>) => {
   const query = invoiceDataZipUrl.read(c.req.url);
   if (!query) return c.notFound();
+  // Nothing is sent until every project's files are made, which can outlast Bun's idle timeout.
+  // Tests call the app without a Bun server.
+  if (c.env) getBunServer<Bun.Server<unknown>>(c)?.timeout(c.req.raw, 0);
   const projects = await loadProjectsToInvoice(query.month, query.fixedPrice === true);
   const files: Record<string, Uint8Array> = {};
   for (const project of projects) {
@@ -45,8 +53,9 @@ export const invoiceDataZip = async (c: Context<UserEnv>) => {
   return fileDownload(zip, invoiceDataZipFileName(query.month), "application/zip");
 };
 
-/** Undefined for no such project, or for one without a contract owner. */
+/** Undefined for a project that isn't in `month`'s invoice data. */
 async function pdfFile(projectId: number, month: string): Promise<InvoiceDataFile | undefined> {
+  if (!(await loadProjectToInvoice(projectId, month))) return undefined;
   const report = await loadInvoicedProjectReport(projectId, month);
   if (!report) return undefined;
   return {
@@ -55,8 +64,9 @@ async function pdfFile(projectId: number, month: string): Promise<InvoiceDataFil
   };
 }
 
-/** Undefined for no such project. */
+/** Undefined for a project that isn't in `month`'s invoice data. */
 async function csvFile(projectId: number, month: string): Promise<InvoiceDataFile | undefined> {
+  if (!(await loadProjectToInvoice(projectId, month))) return undefined;
   const csv = await loadInvoiceDataCsv(projectId, month);
   if (!csv) return undefined;
   return {
@@ -82,10 +92,10 @@ async function bothFiles(project: ProjectToInvoice, month: string) {
       cause: error,
     });
   }
-  // The list only holds projects with a contract owner, so this one changed while the zip was made.
+  // The list only holds projects in the month's invoice data, so this one changed while the zip was made.
   if (!pdf || !csv) {
     throw new HTTPException(409, {
-      message: `${which} was deleted, or lost its contract owner, while the zip was made. Try again.`,
+      message: `${which} changed while the zip was made, so it's no longer invoiced. Try again.`,
     });
   }
   return [pdf, csv];

@@ -5,7 +5,7 @@ import {
   timeEntriesExport,
   users,
 } from "@tid/db/schema";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, type SQL, sql } from "drizzle-orm";
 import { database } from "../framework/database";
 import type { Billing } from "../projects/billing";
 import { invoicedHoursIn } from "./invoicedHours";
@@ -32,6 +32,24 @@ export function loadProjectsToInvoice(
   month: string,
   includeFixedPrice: boolean,
 ): Promise<ProjectToInvoice[]> {
+  return selectProjectsToInvoice(invoicedHoursIn(month, includeFixedPrice));
+}
+
+/**
+ * Whether `month`'s invoice data holds the project, with fixed-price projects included: undefined
+ * when it doesn't, so its files aren't made for a month it isn't invoiced in.
+ */
+export async function loadProjectToInvoice(
+  projectId: number,
+  month: string,
+): Promise<ProjectToInvoice | undefined> {
+  const [project] = await selectProjectsToInvoice(
+    and(eq(projects.id, projectId), invoicedHoursIn(month, true)),
+  );
+  return project;
+}
+
+function selectProjectsToInvoice(where: SQL | undefined): Promise<ProjectToInvoice[]> {
   const view = timeEntriesExport;
   return database
     .select({
@@ -57,7 +75,7 @@ export function loadProjectsToInvoice(
     )
     .innerJoin(organizations, eq(organizations.id, projectOrganizations.orgId))
     .leftJoin(users, eq(users.id, projects.invoicingLeadId))
-    .where(invoicedHoursIn(month, includeFixedPrice))
+    .where(where)
     .groupBy(projects.id, view.clientName, organizations.name, users.name)
     .orderBy(organizations.name, view.clientName, projects.name);
 }

@@ -6,7 +6,8 @@ import { onlyRow, organizationIdBySlug } from "./rows";
 
 /**
  * October 2026 with hours on every kind of project, logged from Oslo, Bergen and across contract
- * owners in both countries. `member` is Ola in Oslo; `portalId` is Oslo's hourly project.
+ * owners in both countries. `member` is Ola in Oslo; `portalId` is Oslo's hourly project and
+ * `internalId` its non-billable one.
  */
 export async function seedInvoicingMonth() {
   await rebuildDatabase(database);
@@ -70,5 +71,5 @@ export async function seedInvoicingMonth() {
     { userId: bergenMember.id, taskId: bergenOwned.taskId, spentOn: "2026-10-05", minutes: 60 },
     { userId: member.id, taskId: swedish.taskId, spentOn: "2026-10-05", minutes: 60 },
   ]);
-  return { member, portalId: portal.id };
+  return { member, portalId: portal.id, internalId: internal.id };
 }

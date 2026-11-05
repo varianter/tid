@@ -8,6 +8,7 @@ import { invoiceData } from "./invoiceData.routes";
 
 let member: UserRow;
 let portalId: number;
+let internalId: number;
 
 const mount = (app: Hono<UserEnv>) => app.route("/invoice-data", invoiceData);
 const requestAs = (user: UserRow, path: string) => requestAsUser(user, mount, path);
@@ -15,7 +16,7 @@ const requestAs = (user: UserRow, path: string) => requestAsUser(user, mount, pa
 const isPdf = (bytes: Uint8Array) => new TextDecoder().decode(bytes.subarray(0, 5)) === "%PDF-";
 
 beforeAll(async () => {
-  ({ member, portalId } = await seedInvoicingMonth());
+  ({ member, portalId, internalId } = await seedInvoicingMonth());
 });
 
 test("one project's invoice data downloads as a PDF named after its code", async () => {
@@ -38,6 +39,13 @@ test("one project's entries download as a CSV shaped like the legacy export", as
       "OL-1;Portal;05.10.2026;Ola;Build;7,5;11250",
     ].join("\n"),
   );
+});
+
+test("a project outside the month's invoice data has no files to download", async () => {
+  for (const file of ["pdf", "csv"]) {
+    const response = await requestAs(member, `/invoice-data/${internalId}/${file}?month=2026-10`);
+    expect(response.status).toBe(404);
+  }
 });
 
 test("the zip holds the invoice data of every project on the page", async () => {

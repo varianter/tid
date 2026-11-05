@@ -75,7 +75,9 @@ function ProjectReportPage({
           <Detail label="Billing">{billingLabels[project.billing]}</Detail>
           <Detail label="Hours">{formatTotalHours(hours * 60)}</Detail>
           {amount !== undefined && project.currency && (
-            <Detail label="Amount">{formatAmount(amount, project.currency, "exact")}</Detail>
+            <Detail label={`Amount (${project.currency})`}>
+              {formatAmount(amount, project.currency, "exact")}
+            </Detail>
           )}
         </dl>
         <MonthEntries month={query.month} entries={entries} titleLabel="Consultant" />

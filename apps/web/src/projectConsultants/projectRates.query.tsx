@@ -83,7 +83,7 @@ function ProjectRatesPage({ project, consultants, today }: ProjectRatesPageProps
             ) : (
               <DataGrid
                 columns={[
-                  { label: "Hourly rate" },
+                  { label: `Hourly rate (${project.currency})` },
                   { label: "Start date", kind: "fit" },
                   { label: "End date", kind: "fit" },
                   { kind: "action" },
