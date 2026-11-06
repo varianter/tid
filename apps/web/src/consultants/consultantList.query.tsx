@@ -1,7 +1,7 @@
 import { formatDate } from "@tid/calendar/dateDisplay";
 import { todayInOslo } from "@tid/calendar/osloClock";
 import { userRoles, users } from "@tid/db/schema";
-import { Badge, DataGrid, EmptyState, Page } from "@tid/ui";
+import { Badge, DataGrid, EmptyState, Page, Stat, StatList } from "@tid/ui";
 import { and, eq, exists, inArray } from "drizzle-orm";
 import type { Context } from "hono";
 import {
@@ -25,6 +25,7 @@ export const consultantList = async (c: Context<UserEnv>) => {
       name: users.name,
       email: users.email,
       endsOn: users.endsOn,
+      orgId: users.orgId,
       isManager: exists(
         database
           .select()
@@ -40,14 +41,23 @@ export const consultantList = async (c: Context<UserEnv>) => {
       ),
     )
     .orderBy(users.name);
+  const today = todayInOslo();
   const projectsByUser = await loadCurrentBillableProjects(
     rows.map((row) => row.id),
-    todayInOslo(),
+    today,
+  );
+  const officeNames = new Map(
+    organizationFilter.selected.organizations.map((organization) => [
+      organization.id,
+      organization.name,
+    ]),
   );
   return c.render(
     <ConsultantListPage
       consultants={rows.map((row) => ({
         ...row,
+        officeName: officeNames.get(row.orgId) ?? "",
+        hasLeft: row.endsOn !== null && row.endsOn < today,
         projectNames: (projectsByUser.get(row.id) ?? []).map((project) => project.name),
       }))}
       {...organizationFilter}
@@ -61,6 +71,8 @@ type ConsultantRow = {
   email: string;
   endsOn: string | null;
   isManager: boolean;
+  officeName: string;
+  hasLeft: boolean;
   projectNames: string[];
 };
 
@@ -75,28 +87,67 @@ function ConsultantListPage({
         {consultants.length === 0 ? (
           <EmptyState emoji="👥" title="No consultants yet" />
         ) : (
-          <DataGrid columns={[{ label: "Name" }, { label: "Billable projects" }]}>
-            {consultants.map((consultant) => (
-              <DataGrid.Row href={consultantPath(consultant.id)}>
-                <DataGrid.Title
-                  secondary={[
-                    consultant.email,
-                    consultant.endsOn && `Left Variant ${formatDate(consultant.endsOn)}`,
-                  ]
-                    .filter(Boolean)
-                    .join(" · ")}
-                >
-                  <span class="stack-h gap-xs items-center">
-                    <span class="fw-medium">{consultant.name}</span>
-                    {consultant.isManager && <Badge>Manager</Badge>}
-                  </span>
-                </DataGrid.Title>
-                {consultant.projectNames.join(", ")}
-              </DataGrid.Row>
-            ))}
-          </DataGrid>
+          <div class="stack-v gap-m">
+            <OfficeHeadcounts
+              offices={selected.organizations.map((organization) => organization.name)}
+              consultants={consultants}
+            />
+            <DataGrid
+              columns={[
+                { label: "Name" },
+                { label: "Office", kind: "fit" },
+                { label: "Billable projects" },
+              ]}
+            >
+              {consultants.map((consultant) => (
+                <DataGrid.Row href={consultantPath(consultant.id)}>
+                  <DataGrid.Title
+                    secondary={[
+                      consultant.email,
+                      consultant.endsOn && `Left Variant ${formatDate(consultant.endsOn)}`,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  >
+                    <span class="stack-h gap-xs items-center">
+                      <span class="fw-medium">{consultant.name}</span>
+                      {consultant.isManager && <Badge>Manager</Badge>}
+                    </span>
+                  </DataGrid.Title>
+                  {consultant.officeName}
+                  {consultant.projectNames.join(", ")}
+                </DataGrid.Row>
+              ))}
+            </DataGrid>
+          </div>
         )}
       </Filtered>
     </Page>
+  );
+}
+
+/** How many consultants each office has now; those who have left are counted apart. */
+function OfficeHeadcounts({
+  offices,
+  consultants,
+}: {
+  offices: string[];
+  consultants: ConsultantRow[];
+}) {
+  const byOffice = Map.groupBy(consultants, (consultant) => consultant.officeName);
+  return (
+    <StatList>
+      {offices.map((office) => {
+        const members = byOffice.get(office) ?? [];
+        const leftCount = members.filter((consultant) => consultant.hasLeft).length;
+        return (
+          <Stat
+            label={office}
+            value={String(members.length - leftCount)}
+            note={leftCount > 0 ? `${leftCount} have left` : undefined}
+          />
+        );
+      })}
+    </StatList>
   );
 }
