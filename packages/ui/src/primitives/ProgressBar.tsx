@@ -9,7 +9,8 @@ const shadeSteps: Record<Shade, number> = { strong: 500, soft: 250 };
 
 /**
  * A bar filled by segments in order. It is 1em tall, so a font-size class sizes it.
- * Segments beyond `max` stretch the scale rather than spill out of the bar.
+ * Segments beyond `max` stretch the scale rather than spill out of the bar,
+ * and a tick reaching past the bar's edges marks where `max` is.
  * Without a `label` the bar is decorative, so text next to it has to state the value.
  */
 export function ProgressBar({
@@ -23,20 +24,36 @@ export function ProgressBar({
   const scale = Math.max(total, max) || 1;
   return (
     <div
-      class={classes(
-        "stack-h flex-nowrap gap-none of-hidden b-all bc-subtle surface-tinted br-m",
-        className,
-      )}
-      style="height: 1em;"
+      class={classes("pos-relative", className)}
       {...(label ? { role: "img", "aria-label": label } : { "aria-hidden": "true" })}
       {...attributes}
     >
-      {segments.map((segment) => (
+      <div
+        class="stack-h flex-nowrap gap-none of-hidden b-all bc-subtle surface-tinted br-m"
+        style="height: 1em;"
+      >
+        {segments.map((segment) => (
+          <span
+            class="h-full"
+            style={`width: ${(segment.value / scale) * 100}%; background: var(--palette-${segment.palette}-${shadeSteps[segment.shade ?? "strong"]});`}
+          />
+        ))}
+      </div>
+      {exceeds(total, max) && (
         <span
-          class="h-full"
-          style={`width: ${(segment.value / scale) * 100}%; background: var(--palette-${segment.palette}-${shadeSteps[segment.shade ?? "strong"]});`}
+          class="pos-absolute top-0 bottom-0 ink-prominent br-pill"
+          // The ring in the page's surface keeps the tick apart from the segments it crosses.
+          style={`left: calc(${(max / scale) * 100}% - 1px); width: 2px; background: currentColor; box-shadow: 0 0 0 1px var(--surface-base); margin-block: -0.125em`}
         />
-      ))}
+      )}
     </div>
   );
+}
+
+/**
+ * Callers often split `max` into parts, such as billable and the rest of the hours,
+ * and floats can add those back up to a hair above `max`. That isn't going over.
+ */
+function exceeds(total: number, max: number) {
+  return total - max > Math.abs(max) * 1e-9;
 }

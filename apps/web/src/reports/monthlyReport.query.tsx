@@ -334,6 +334,8 @@ function reportTable(
           { label: "Name" },
           { label: "Hours", kind: "number" },
           { label: "Utilization", kind: "number" },
+          // Overtime explains the bar next to it, so it needs no header of its own.
+          { kind: "fit" },
           { label: "Billable hours", kind: "number" },
           { label: "Billable amount", kind: "number" },
         ],
@@ -341,7 +343,12 @@ function reportTable(
           cells: [
             <DataGrid.Title>{row.name}</DataGrid.Title>,
             formatTotalHours(row.hours * 60),
-            <Utilization hours={row.hours} capacityHours={row.capacityHours} />,
+            <Utilization
+              hours={row.hours}
+              billableHours={row.billableHours}
+              capacityHours={row.capacityHours}
+            />,
+            <Overtime hours={row.hours} capacityHours={row.capacityHours} />,
             <BillableHours hours={row.hours} billableHours={row.billableHours} />,
             formatAmounts(row.amounts, currency),
           ],
@@ -351,6 +358,7 @@ function reportTable(
         footer: [
           "Total",
           formatTotalHours(total.hours * 60),
+          "",
           "",
           <BillableHours hours={total.hours} billableHours={total.billableHours} />,
           formatAmounts(total.amounts, currency),
@@ -429,9 +437,26 @@ function BillableHours({ hours, billableHours }: { hours: number; billableHours:
     <span class="stack-h flex-nowrap items-center justify-end gap-xs">
       {formatTotalHours(billableHours * 60)}
       <span class="ink-subtle fw-regular">{formatShare(billableHours, hours)}</span>
+    </span>
+  );
+}
+
+/** Hours against capacity, with the billable share filling the bar first. */
+function Utilization({
+  hours,
+  billableHours,
+  capacityHours,
+}: {
+  hours: number;
+  billableHours: number;
+  capacityHours: number;
+}) {
+  return (
+    <span class="stack-h flex-nowrap items-center justify-end gap-xs">
+      {formatShare(hours, capacityHours)}
       <span style={barWidth}>
         <ProgressBar
-          max={hours}
+          max={capacityHours}
           segments={[
             { value: billableHours, palette: "blue" },
             { value: hours - billableHours, palette: "blue", shade: "soft" },
@@ -442,13 +467,9 @@ function BillableHours({ hours, billableHours }: { hours: number; billableHours:
   );
 }
 
-function Utilization({ hours, capacityHours }: { hours: number; capacityHours: number }) {
+function Overtime({ hours, capacityHours }: { hours: number; capacityHours: number }) {
+  if (hours <= capacityHours) return null;
   return (
-    <span class="stack-h flex-nowrap items-center justify-end gap-xs">
-      {formatShare(hours, capacityHours)}
-      <span style={barWidth}>
-        <ProgressBar max={capacityHours} segments={[{ value: hours, palette: "purple" }]} />
-      </span>
-    </span>
+    <span class="ink-subtle fw-regular">+{formatTotalHours((hours - capacityHours) * 60)}</span>
   );
 }
