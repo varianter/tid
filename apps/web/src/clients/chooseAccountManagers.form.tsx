@@ -31,7 +31,7 @@ export function ChooseAccountManagersFormPage({
   return (
     <FormPage
       title={`Account managers for ${client.name}`}
-      description="The people who look after the client."
+      description="The people who hold the relationship and the agreements with the Client."
       cancel={`/clients/${client.id}`}
       submit="Save"
       form={form}

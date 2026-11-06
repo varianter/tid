@@ -43,7 +43,7 @@ export function DeleteRateFormPage({
         <>
           <p>
             {price
-              ? `Deleting it reprices ${logged} at ${formatAmount(price.rate / 100, price.currency, 2)}, the rate before it`
+              ? `Deleting it reprices ${logged} at ${formatAmount(price.rate / 100, price.currency, "exact")}, the rate before it`
               : `Deleting it leaves ${logged} without a rate`}
             , locked months included.
           </p>

@@ -1,7 +1,6 @@
 import { formatDate } from "@tid/calendar/dateDisplay";
-import { addMonths, firstDayOfMonth, lastDayOfMonth } from "@tid/calendar/isoDate";
-import { isoDateInOslo, thisMonthInOslo, todayInOslo } from "@tid/calendar/osloClock";
-import { projects, tasks, timeEntries, users } from "@tid/db/schema";
+import { addMonths, lastDayOfMonth } from "@tid/calendar/isoDate";
+import { isoDateInOslo, todayInOslo } from "@tid/calendar/osloClock";
 import { formatTotalHours } from "@tid/elements/hours";
 import {
   ColorMode,
@@ -17,10 +16,8 @@ import {
   Stat,
   StatList,
 } from "@tid/ui";
-import { and, between, eq, gte, isNull, or, sql } from "drizzle-orm";
 import type { Context } from "hono";
 import { consultantPath } from "../consultants/consultants.url";
-import { capacityMinutes } from "../domain/capacity/capacity";
 import { managesOrganization } from "../domain/managers/manager";
 import {
   completeOrganization,
@@ -31,22 +28,22 @@ import {
   resolveOrganizationFilter,
 } from "../domain/organizations/organizationFilter";
 import type { UserEnv } from "../domain/users/user";
-import { database } from "../framework/database";
 import { Filtered } from "../framework/filter";
 import { yearsAround } from "../framework/periodNavigation";
 import { type QueryProps, queryPage } from "../framework/queryPage";
 import { formatShare } from "../share/share";
+import { type ConsultantHours, loadConsultantHours } from "./consultantHours.data";
 import { LockMonthForm } from "./lockMonth.form";
-import { monthUrl } from "./monthClose.url";
-import { findActiveLock } from "./monthLock.data";
+import { consultantHoursUrl } from "./monthClose.url";
+import { MonthCloseTabs } from "./monthCloseTabs";
+import { findActiveLock, findMonthBeingClosed } from "./monthLock.data";
 import { UnlockMonthForm } from "./unlockMonth.form";
 
 // Months are locked per organization, so a whole country has no month close.
 const organizationOf = (option: OrganizationOption) =>
   option.organizations.length === 1 ? option.organizations[0] : undefined;
 
-// The month being closed: last month until it's locked, then this one.
-export const monthDetailsRedirect = async (c: Context<UserEnv>) => {
+export const consultantHoursListRedirect = async (c: Context<UserEnv>) => {
   const organizationFilter = await findOrganizationFilter(
     c.get("user"),
     c.req.query("organization"),
@@ -54,14 +51,14 @@ export const monthDetailsRedirect = async (c: Context<UserEnv>) => {
   if (!organizationFilter) return c.notFound();
   const organization = organizationOf(organizationFilter.selected);
   if (!organization) return c.notFound();
-  const thisMonth = thisMonthInOslo();
-  const lastMonth = addMonths(thisMonth, -1);
-  const month = (await findActiveLock(organization.id, lastMonth)) ? thisMonth : lastMonth;
-  return c.redirect(monthUrl.path({ month, organization: organizationFilter.selected.value }));
+  const month = await findMonthBeingClosed(organization.id);
+  return c.redirect(
+    consultantHoursUrl.path({ month, organization: organizationFilter.selected.value }),
+  );
 };
 
-export const monthDetails = queryPage({
-  url: monthUrl,
+export const consultantHoursList = queryPage({
+  url: consultantHoursUrl,
   complete: completeOrganization,
   loader: async (c: Context<UserEnv>, { month }) => {
     const organizationFilter = await resolveOrganizationFilter(c);
@@ -69,54 +66,7 @@ export const monthDetails = queryPage({
     const organization = organizationOf(organizationFilter.selected);
     if (!organization) return c.notFound();
 
-    const first = firstDayOfMonth(month);
-    const today = todayInOslo();
-
-    const consultants = await database
-      .select({
-        id: users.id,
-        name: users.name,
-        endsOn: users.endsOn,
-        minutes: sql`coalesce(sum(${timeEntries.minutes}), 0)`.mapWith(Number),
-        billableMinutes:
-          sql`coalesce(sum(${timeEntries.minutes}) filter (where ${projects.billing} <> 'non_billable'), 0)`.mapWith(
-            Number,
-          ),
-      })
-      .from(users)
-      .leftJoin(
-        timeEntries,
-        and(
-          eq(timeEntries.userId, users.id),
-          between(timeEntries.spentOn, first, lastDayOfMonth(month)),
-        ),
-      )
-      .leftJoin(tasks, eq(tasks.id, timeEntries.taskId))
-      .leftJoin(projects, eq(projects.id, tasks.projectId))
-      .where(
-        and(eq(users.orgId, organization.id), or(isNull(users.endsOn), gte(users.endsOn, first))),
-      )
-      .groupBy(users.id)
-      .orderBy(users.name);
-
-    const rows = consultants.map((consultant) => {
-      // Hours not yet due don't count as missing, so the current month only checks up to today.
-      const until = consultant.endsOn && consultant.endsOn < today ? consultant.endsOn : today;
-      const expectedMinutes = capacityMinutes(
-        month,
-        organization.country,
-        organization.fullDayMinutes,
-        until,
-      );
-      return {
-        id: consultant.id,
-        name: consultant.name,
-        minutes: consultant.minutes,
-        billableMinutes: consultant.billableMinutes,
-        expectedMinutes,
-        missingMinutes: Math.max(expectedMinutes - consultant.minutes, 0),
-      };
-    });
+    const rows = await loadConsultantHours(organization, month);
 
     const activeLock = await findActiveLock(organization.id, month);
     const canChangeLock = managesOrganization(c.get("user"), organization.id);
@@ -132,19 +82,10 @@ export const monthDetails = queryPage({
       canChangeLock,
     };
   },
-  view: MonthDetailsPage,
+  view: ConsultantHoursListPage,
 });
 
-type ConsultantRow = {
-  id: number;
-  name: string;
-  minutes: number;
-  billableMinutes: number;
-  expectedMinutes: number;
-  missingMinutes: number;
-};
-
-function MonthDetailsPage({
+function ConsultantHoursListPage({
   organizationFilter,
   organizationSlug,
   rows,
@@ -156,11 +97,11 @@ function MonthDetailsPage({
 }: {
   organizationFilter: OrganizationFilter;
   organizationSlug: string;
-  rows: ConsultantRow[];
+  rows: ConsultantHours[];
   canOpenConsultants: boolean;
   activeLock?: { lockedAt: Date; lockedByName: string };
   canChangeLock: boolean;
-} & QueryProps<typeof monthUrl>) {
+} & QueryProps<typeof consultantHoursUrl>) {
   const loggedMinutes = rows.reduce((sum, row) => sum + row.minutes, 0);
   const expectedMinutes = rows.reduce((sum, row) => sum + row.expectedMinutes, 0);
   const billableMinutes = rows.reduce((sum, row) => sum + row.billableMinutes, 0);
@@ -173,7 +114,8 @@ function MonthDetailsPage({
       ? "ready to lock"
       : "open";
   return (
-    <Page title="Month close">
+    <Page title="Month close" description="Whether every consultant has logged their hours">
+      <MonthCloseTabs active="consultants" month={month} organization={organizationSlug} />
       <Filtered
         by={
           <>
@@ -300,7 +242,7 @@ function ConsultantGroup({
   palette: Palette;
   icon: IconName;
   title: string;
-  rows: ConsultantRow[];
+  rows: ConsultantHours[];
   month: string;
   canOpenConsultants: boolean;
 }) {

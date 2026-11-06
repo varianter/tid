@@ -154,7 +154,7 @@ function stateBadge({ endsOn, state }: Pick<Consultant, "endsOn" | "state">) {
 
 // Hours logged without a rate have no billable amount, so it's flagged while they can still log.
 function rateCell({ rate, state }: Pick<Consultant, "rate" | "state">, currency: string | null) {
-  if (rate !== null && currency !== null) return `${formatAmount(rate / 100, currency, 2)}/h`;
+  if (rate !== null && currency !== null) return `${formatAmount(rate / 100, currency, "exact")}/h`;
   if (state !== "onProject") return "–";
   return <Badge palette="coral">No rate</Badge>;
 }

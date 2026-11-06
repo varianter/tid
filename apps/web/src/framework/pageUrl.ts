@@ -2,6 +2,13 @@ import { z } from "zod";
 
 type PageSchema = z.ZodObject<Record<string, z.ZodType<unknown, string | undefined>>>;
 
+/** A page's state to link to, where a field that may be undefined can be left out. */
+type LinkState<State> = {
+  [Key in keyof State as undefined extends State[Key] ? Key : never]?: State[Key];
+} & {
+  [Key in keyof State as undefined extends State[Key] ? never : Key]: State[Key];
+};
+
 /** A path parameter naming a row by its id. */
 export const idParam = z.codec(z.string().regex(/^\d+$/), z.number().refine(Number.isSafeInteger), {
   decode: Number,
@@ -17,9 +24,9 @@ export const idParam = z.codec(z.string().regex(/^\d+$/), z.number().refine(Numb
 export function pageUrl<Schema extends PageSchema>(route: string, schema: Schema) {
   const pattern = new URLPattern({ pathname: route });
   const paramNames = new Set([...route.matchAll(/:(\w+)/g)].map((match) => match[1]));
-  const encode = (state: z.output<Schema>): Record<string, string | undefined> =>
-    z.encode(schema, state);
-  const search = (state: z.output<Schema>) =>
+  const encode = (state: LinkState<z.output<Schema>>): Record<string, string | undefined> =>
+    z.encode(schema, state as z.output<Schema>);
+  const search = (state: LinkState<z.output<Schema>>) =>
     new URLSearchParams(
       Object.entries(encode(state)).filter(
         (entry): entry is [string, string] => entry[1] !== undefined && !paramNames.has(entry[0]),
@@ -38,7 +45,7 @@ export function pageUrl<Schema extends PageSchema>(route: string, schema: Schema
     },
     /** The query alone, which a form on the page can submit to keep it. */
     search,
-    path: (state: z.output<Schema>) => {
+    path: (state: LinkState<z.output<Schema>>) => {
       const encoded = encode(state);
       const path = route.replace(/:(\w+)/g, (_, name: string) =>
         encodeURIComponent(encoded[name] ?? ""),

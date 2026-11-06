@@ -56,9 +56,10 @@ const doesIO = (file: string) => /\.(routes|command|query|middleware|data)\.tsx?
 const isPlumbing = (file: string) =>
   !file.includes("/") || /^(framework|shell|testing)\//.test(file);
 
-// Rendering and building SQL are pure; the rest of Hono and the database client aren't.
+// Rendering HTML and building SQL are pure; the rest of Hono, the database client and rendering a
+// PDF, which starts a process, aren't.
 const isIOPackage = (path: string) =>
-  /^(hono(?!\/(jsx|css|html)$)|@tid\/db(?!\/schema$))/.test(path);
+  /^(hono(?!\/(jsx|css|html)$)|@tid\/db(?!\/schema$)|@tid\/pdf-export$)/.test(path);
 
 /** Every import, type-only and re-exports too, of an app file or a package. */
 const allImports = sourceFiles.flatMap((file) => {

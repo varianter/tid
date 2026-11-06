@@ -1,4 +1,5 @@
 import { type Child, createContext, type PropsWithChildren, useContext } from "hono/jsx";
+import { classes } from "../primitives/attributes";
 
 /**
  * Text columns share the spare width; the others take their content's width. Numbers and
@@ -136,11 +137,11 @@ function DataGridGroup({
   );
 }
 
-function DataGridFooter({ children }: PropsWithChildren) {
+function DataGridFooter({ class: className, children }: PropsWithChildren<{ class?: string }>) {
   return (
     <div
       composite-component="DataGrid.Footer"
-      class="grid-all-columns grid-subgrid items-center p-xs fs-s fw-medium"
+      class={classes("grid-all-columns grid-subgrid items-center p-xs fs-s fw-medium", className)}
     >
       <Cells>{children}</Cells>
     </div>

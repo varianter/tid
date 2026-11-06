@@ -2,6 +2,7 @@ import { z } from "zod";
 import { organizationField } from "../domain/organizations/organizationFilter";
 import { monthField } from "../framework/pageMonth";
 import { pageUrl } from "../framework/pageUrl";
+import { fixedPriceField } from "../projects/fixedPriceFilter";
 import { billableField } from "./billableFilter";
 
 export const tabs = ["projects", "consultants", "tasks"] as const;
@@ -14,5 +15,6 @@ export const reportUrl = pageUrl(
     ...monthField,
     tab: z.enum(tabs).catch(tabs[0]),
     ...billableField,
+    ...fixedPriceField,
   }),
 );

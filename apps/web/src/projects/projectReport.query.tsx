@@ -1,7 +1,8 @@
 import { addMonths } from "@tid/calendar/isoDate";
 import { formatTotalHours } from "@tid/elements/hours";
-import { Button, Detail, Page, PeriodNavigation } from "@tid/ui";
+import { Detail, Page, PeriodNavigation } from "@tid/ui";
 import type { Context } from "hono";
+import { formatAmount } from "../domain/amount/amount";
 import {
   completeOrganization,
   type OrganizationFilter,
@@ -16,7 +17,7 @@ import { MonthEntries, type MonthEntry } from "../timeEntries/monthEntries";
 import { billingLabels } from "./billing";
 import type { ProjectReport } from "./projectReport";
 import { loadProjectEntries, loadProjectReport } from "./projectReport.data";
-import { projectReportPrintUrl, projectReportUrl } from "./projects.url";
+import { projectReportUrl } from "./projects.url";
 
 export const projectReport = queryPage({
   url: projectReportUrl,
@@ -73,14 +74,13 @@ function ProjectReportPage({
           <Detail label="Code">{project.code}</Detail>
           <Detail label="Billing">{billingLabels[project.billing]}</Detail>
           <Detail label="Hours">{formatTotalHours(hours * 60)}</Detail>
-          {amount && <Detail label="Amount">{amount}</Detail>}
+          {amount !== undefined && project.currency && (
+            <Detail label={`Amount (${project.currency})`}>
+              {formatAmount(amount, project.currency, "exact")}
+            </Detail>
+          )}
         </dl>
         <MonthEntries month={query.month} entries={entries} titleLabel="Consultant" />
-        <div>
-          <Button as="a" href={projectReportPrintUrl.path(query)} data-variant="outlined">
-            Print
-          </Button>
-        </div>
       </Filtered>
     </Page>
   );
