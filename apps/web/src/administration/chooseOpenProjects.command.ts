@@ -1,25 +1,23 @@
 import { clients, projectOrganizations, projects } from "@tid/db/schema";
 import { eq } from "drizzle-orm";
-import {
-  findOrganizationBySlug,
-  listOrganizations,
-} from "../domain/organizations/organization.data";
 import type { User } from "../domain/users/user";
 import { database } from "../framework/database";
-import { formAction } from "../framework/formAction";
+import { formAction, withSaved } from "../framework/formAction";
 import {
   ensureParticipation,
   participation,
   removeUnneededParticipation,
 } from "../projects/projectParticipation.data";
+import { resolveAdministeredOrganization } from "./administeredOrganization.data";
 import { openProjectsPath } from "./administration.url";
 import { ChooseOpenProjectsFormPage, chooseOpenProjectsForm } from "./chooseOpenProjects.form";
 
 export const chooseOpenProjects = formAction({
   schema: chooseOpenProjectsForm,
   loader: async (c) => {
-    const organization = await findOrganizationBySlug(c.req.param("organization") ?? "");
-    if (!organization) return c.notFound();
+    const administered = await resolveAdministeredOrganization(c);
+    if (administered instanceof Response) return administered;
+    const { organization, filter } = administered;
     const user: User = c.get("user");
     const openableProjects = await database
       .select({
@@ -40,8 +38,8 @@ export const chooseOpenProjects = formAction({
         ...project,
         open: openToMembers ?? false,
       })),
-      organizations: await listOrganizations(),
-      ownOrgId: user.orgId,
+      filter,
+      own: user.organization,
     };
   },
   // Only non-billable projects are listed, so a ticked billable one is never opened.
@@ -60,7 +58,7 @@ export const chooseOpenProjects = formAction({
         if (!open) await removeUnneededParticipation(transaction, ids);
       }
     });
-    return { redirect: `${openProjectsPath(organization.slug)}?saved` };
+    return { redirect: withSaved(openProjectsPath(organization.slug)) };
   },
   view: ChooseOpenProjectsFormPage,
 });

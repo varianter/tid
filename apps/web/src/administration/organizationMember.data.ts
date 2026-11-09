@@ -1,17 +1,41 @@
-import { users } from "@tid/db/schema";
-import { and, eq } from "drizzle-orm";
-import { findOrganizationBySlug } from "../domain/organizations/organization.data";
+import { todayInOslo } from "@tid/calendar/osloClock";
+import { organizations, userRoles, users } from "@tid/db/schema";
+import { and, eq, exists, gte, isNull, or } from "drizzle-orm";
 import { database } from "../framework/database";
+import { idParam } from "../framework/pageUrl";
 
-/** The user, as long as they belong to the organization. */
-export async function findOrganizationMember(slug: string, userIdParam: string) {
-  const userId = Number(userIdParam);
-  if (!Number.isSafeInteger(userId)) return undefined;
-  const organization = await findOrganizationBySlug(slug);
-  if (!organization) return undefined;
-  const [member] = await database
-    .select({ id: users.id })
+/** Which organization the user belongs to. */
+export async function findMembership(userIdParam: string) {
+  const userId = idParam.safeParse(userIdParam);
+  if (!userId.success) return undefined;
+  const [membership] = await database
+    .select({ userId: users.id, organization: { slug: organizations.slug } })
     .from(users)
-    .where(and(eq(users.id, userId), eq(users.orgId, organization.id)));
-  return member && { organization, userId: member.id };
+    .innerJoin(organizations, eq(organizations.id, users.orgId))
+    .where(eq(users.id, userId.data));
+  return membership;
 }
+
+/** The organization's people by name. Those who have left only when `includeLeft`. */
+export const listOrganizationMembers = (orgId: number, { includeLeft = false } = {}) =>
+  database
+    .select({
+      id: users.id,
+      name: users.name,
+      email: users.email,
+      endsOn: users.endsOn,
+      isManager: exists(
+        database
+          .select()
+          .from(userRoles)
+          .where(and(eq(userRoles.userId, users.id), eq(userRoles.role, "manager"))),
+      ).mapWith(Boolean),
+    })
+    .from(users)
+    .where(
+      and(
+        eq(users.orgId, orgId),
+        includeLeft ? undefined : or(isNull(users.endsOn), gte(users.endsOn, todayInOslo())),
+      ),
+    )
+    .orderBy(users.name);

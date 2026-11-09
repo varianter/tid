@@ -38,44 +38,64 @@ beforeAll(async () => {
   ]);
 });
 
-test("administration opens on the user's own organization", async () => {
-  const response = await requestAs(manager, "/administration");
-  expect(response.headers.get("Location")).toBe("/administration/trondheim");
+test("administration's pages open on the manager's own organization", async () => {
+  expect((await requestAs(manager, "/administration")).status).toBe(200);
+  const response = await requestAs(manager, "/administration/managers");
+  expect(response.headers.get("Location")).toBe("/administration/managers?organization=trondheim");
 });
 
-test("any manager administers any organization", async () => {
-  const response = await requestAs(manager, "/administration/trondheim");
-  expect(await response.text()).toContain("Organization details");
-  expect((await requestAs(member, "/administration/trondheim")).status).toBe(403);
-  expect((await requestAs(osloManager, "/administration/trondheim")).status).toBe(200);
-  expect((await requestAs(manager, "/administration/nowhere")).status).toBe(404);
+test("any manager administers any organization, one at a time", async () => {
+  const path = "/administration/managers?organization=trondheim";
+  expect(await (await requestAs(osloManager, path)).text()).toContain("Managers in Trondheim");
+  expect((await requestAs(member, path)).status).toBe(403);
+  expect((await requestAs(member, "/administration")).status).toBe(403);
+  expect((await requestAs(manager, "/administration/managers?organization=nowhere")).status).toBe(
+    404,
+  );
+  // A whole country isn't one organization to change.
+  expect((await requestAs(manager, "/administration/managers?organization=no")).status).toBe(404);
 });
 
 test("administering another organization says so, with a way back", async () => {
   const notice = "You are currently in the Administration of";
-  expect(await (await requestAs(manager, "/administration/trondheim")).text()).not.toContain(
-    notice,
-  );
-  const page = await (await requestAs(osloManager, "/administration/trondheim/managers")).text();
+  const own = await (
+    await requestAs(manager, "/administration/managers?organization=trondheim")
+  ).text();
+  expect(own).not.toContain(notice);
+  const page = await (
+    await requestAs(osloManager, "/administration/managers?organization=trondheim")
+  ).text();
   expect(page).toContain(notice);
-  expect(page).toContain('href="/administration/oslo"');
+  expect(page).toContain('href="/administration/managers?organization=oslo"');
 });
 
 test("managers make an organization's members managers, and remove the role again", async () => {
-  const path = `/administration/trondheim/managers/${member.id}`;
+  const path = `/administration/managers/${member.id}`;
   expect((await requestAs(member, path, "POST")).status).toBe(403);
   expect(await managerIds()).toEqual([manager.id, osloManager.id].sort());
 
   const response = await requestAs(osloManager, path, "POST");
-  expect(response.headers.get("location")).toBe("/administration/trondheim/managers");
+  expect(response.headers.get("location")).toBe("/administration/managers?organization=trondheim");
   expect(await managerIds()).toEqual([manager.id, member.id, osloManager.id].sort());
 
   await requestAs(manager, `${path}/delete`, "POST");
   expect(await managerIds()).toEqual([manager.id, osloManager.id].sort());
+  expect((await requestAs(manager, "/administration/managers/0", "POST")).status).toBe(404);
 });
 
-test("managers can't change the role of someone outside the organization in the URL", async () => {
-  const path = `/administration/trondheim/managers/${osloManager.id}/delete`;
-  expect((await requestAs(manager, path, "POST")).status).toBe(404);
-  expect(await managerIds()).toContain(osloManager.id);
+test("the consultant picker hands the chosen consultant on to where it was asked from", async () => {
+  const returnTo = "/administration/change-consultant-organization";
+  const query = new URLSearchParams({ organization: "trondheim", returnTo });
+  const page = await (await requestAs(manager, `/administration/consultants/pick?${query}`)).text();
+  expect(page).toContain(`href="${returnTo}?userId=${member.id}"`);
+  expect(page).not.toContain(osloManager.name);
+  // Switching organization keeps where to go next.
+  expect(page).toContain(`name="returnTo" value="${returnTo}"`);
+});
+
+test("the consultant picker goes nowhere it isn't told to, nor off this site", async () => {
+  expect((await requestAs(manager, "/administration/consultants/pick")).status).toBe(404);
+  const offSite = `/administration/consultants/pick?returnTo=${encodeURIComponent("//evil.example")}`;
+  expect((await requestAs(manager, offSite)).status).toBe(404);
+  expect((await requestAs(member, "/administration/consultants/pick?returnTo=/")).status).toBe(403);
 });

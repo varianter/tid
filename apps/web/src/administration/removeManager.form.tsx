@@ -1,17 +1,9 @@
 import { Button } from "@tid/ui";
-import { managersPath } from "./administration.url";
+import { managerRolePath } from "./administration.url";
 
-export function RemoveManagerForm({
-  organizationSlug,
-  userId,
-  name,
-}: {
-  organizationSlug: string;
-  userId: number;
-  name: string;
-}) {
+export function RemoveManagerForm({ userId, name }: { userId: number; name: string }) {
   return (
-    <form method="post" action={`${managersPath(organizationSlug)}/${userId}/delete`}>
+    <form method="post" action={`${managerRolePath(userId)}/delete`}>
       <Button
         type="submit"
         data-variant="plain"

@@ -41,6 +41,8 @@ export function createDatabase(url: string) {
 
 export type Database = ReturnType<typeof createDatabase>;
 
+export type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0];
+
 export function migrateDatabase(database: Database) {
   return migrate(database, { migrationsFolder: `${import.meta.dir}/../migrations` });
 }

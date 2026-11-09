@@ -97,7 +97,7 @@ function navigationFor(user: User | undefined): NavigationSection[] {
         },
         {
           section: "/administration",
-          href: organization && administrationPath(organization),
+          href: administrationPath,
           label: "Administration",
           icon: "settings",
         },

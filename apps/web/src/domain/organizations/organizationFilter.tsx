@@ -19,6 +19,8 @@ type Organization = typeof organizations.$inferSelect;
 export type OrganizationOption = {
   /** The `organization` query parameter: an organization's slug, or a lowercase country code. */
   value: string;
+  /** Every organization in the country, rather than one. */
+  wholeCountry: boolean;
   name: string;
   country: Country;
   currency: string;
@@ -42,8 +44,14 @@ export function listOrganizationOptions(organizations: Organization[]): Organiza
     const collision = members.find((organization) => organization.slug === value);
     if (collision) throw new Error(`${collision.name}'s slug is taken by its country`);
 
-    const optionOf = (name: string, value: string, organizations: Organization[]) => ({
+    const optionOf = (
+      name: string,
+      value: string,
+      wholeCountry: boolean,
+      organizations: Organization[],
+    ) => ({
       value,
+      wholeCountry,
       name,
       country,
       currency: first.currency,
@@ -51,9 +59,9 @@ export function listOrganizationOptions(organizations: Organization[]): Organiza
       organizations,
     });
     return [
-      optionOf(`All of ${countryNames[country]}`, value, members),
+      optionOf(`All of ${countryNames[country]}`, value, true, members),
       ...members.map((organization) =>
-        optionOf(organization.name, organization.slug, [organization]),
+        optionOf(organization.name, organization.slug, false, [organization]),
       ),
     ];
   });
@@ -74,9 +82,10 @@ export type OrganizationFilter = { selected: OrganizationOption; options: Organi
  */
 export async function resolveOrganizationFilter(
   c: Context<UserEnv>,
+  choices?: OrganizationChoices,
 ): Promise<OrganizationFilter | Response> {
   const value = c.req.query(field);
-  const filter = await findOrganizationFilter(c.get("user"), value);
+  const filter = await findOrganizationFilter(c.get("user"), value, choices);
   if (!filter) return c.notFound();
   if (!value) {
     const url = new URL(c.req.url);
@@ -86,6 +95,9 @@ export async function resolveOrganizationFilter(
   return filter;
 }
 
+/** Pages that work on one organization at a time, like administration, leave out whole countries. */
+type OrganizationChoices = { wholeCountries: boolean };
+
 /**
  * The options the user may pick, with the one `value` names selected, or their own organization
  * when it names none. Undefined when that isn't one they may pick.
@@ -93,14 +105,15 @@ export async function resolveOrganizationFilter(
 export async function findOrganizationFilter(
   user: User,
   value: string | undefined,
+  { wholeCountries }: OrganizationChoices = { wholeCountries: true },
 ): Promise<OrganizationFilter | undefined> {
   const canViewCountry = countryVisibility(user);
   const allOrganizations = await database
     .select()
     .from(organizations)
     .orderBy(organizations.country, organizations.name);
-  const options = listOrganizationOptions(allOrganizations).filter((option) =>
-    canViewCountry(option.country),
+  const options = listOrganizationOptions(allOrganizations).filter(
+    (option) => canViewCountry(option.country) && (wholeCountries || !option.wholeCountry),
   );
   const selected = options.find((option) =>
     value

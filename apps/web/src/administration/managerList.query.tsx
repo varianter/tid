@@ -1,113 +1,75 @@
-import { formatDate } from "@tid/calendar/dateDisplay";
-import { userRoles, users } from "@tid/db/schema";
 import { Badge, DataGrid, Page } from "@tid/ui";
-import { and, eq, exists } from "drizzle-orm";
 import type { Context } from "hono";
 import { consultantPath } from "../consultants/consultants.url";
-import type { OrganizationOption } from "../domain/organizations/organization";
 import {
-  findOrganizationBySlug,
-  listOrganizations,
-} from "../domain/organizations/organization.data";
-import type { UserEnv } from "../domain/users/user";
-import { database } from "../framework/database";
-import { administrationPath } from "./administration.url";
+  type OrganizationFilter,
+  OrganizationSelect,
+} from "../domain/organizations/organizationFilter";
+import type { User, UserEnv } from "../domain/users/user";
+import { Filtered } from "../framework/filter";
+import { resolveAdministeredOrganization } from "./administeredOrganization.data";
+import { administrationPath, managersPath } from "./administration.url";
 import { MakeManagerForm } from "./makeManager.form";
-import { OtherOrganizationNotice } from "./organizationSwitch";
+import { type OrganizationMember, OrganizationMemberTitle } from "./organizationMember";
+import { listOrganizationMembers } from "./organizationMember.data";
+import { OtherOrganizationNotice } from "./otherOrganizationNotice";
 import { RemoveManagerForm } from "./removeManager.form";
 
 export const managerList = async (c: Context<UserEnv>) => {
-  const organization = await findOrganizationBySlug(c.req.param("organization") ?? "");
-  if (!organization) return c.notFound();
+  const administered = await resolveAdministeredOrganization(c);
+  if (administered instanceof Response) return administered;
+  const { organization, filter } = administered;
 
-  const members = await database
-    .select({
-      id: users.id,
-      name: users.name,
-      email: users.email,
-      endsOn: users.endsOn,
-      isManager: exists(
-        database
-          .select()
-          .from(userRoles)
-          .where(and(eq(userRoles.userId, users.id), eq(userRoles.role, "manager"))),
-      ).mapWith(Boolean),
-    })
-    .from(users)
-    .where(eq(users.orgId, organization.id))
-    .orderBy(users.name);
+  const members = await listOrganizationMembers(organization.id, { includeLeft: true });
   return c.render(
     <ManagerListPage
       organization={organization}
+      filter={filter}
       members={members}
-      organizations={await listOrganizations()}
-      ownOrgId={c.get("user").orgId}
+      own={c.get("user").organization}
     />,
   );
 };
 
-type MemberRow = {
-  id: number;
-  name: string;
-  email: string;
-  endsOn: string | null;
-  isManager: boolean;
-};
+type MemberRow = OrganizationMember & { isManager: boolean };
 
 function ManagerListPage({
   organization,
+  filter,
   members,
-  organizations,
-  ownOrgId,
+  own,
 }: {
-  organization: { slug: string; name: string };
+  organization: User["organization"];
+  filter: OrganizationFilter;
   members: MemberRow[];
-  organizations: OrganizationOption[];
-  ownOrgId: number;
+  own: User["organization"];
 }) {
   return (
     <Page
       title={`Managers in ${organization.name}`}
       layer="drawer"
-      back={{ href: administrationPath(organization.slug), label: "Administration" }}
+      back={{ href: administrationPath, label: "Administration" }}
     >
-      <OtherOrganizationNotice
-        organizations={organizations}
-        current={organization}
-        ownOrgId={ownOrgId}
-      />
-      <DataGrid columns={[{ label: "Name" }, { kind: "action" }]}>
-        {members.map((member) => (
-          <DataGrid.Row>
-            <DataGrid.Title
-              secondary={[
-                member.email,
-                member.endsOn && `Left Variant ${formatDate(member.endsOn)}`,
-              ]
-                .filter(Boolean)
-                .join(" · ")}
-            >
-              <span class="stack-h gap-xs items-center">
-                <a href={consultantPath(member.id)}>{member.name}</a>
-                {member.isManager && <Badge>Manager</Badge>}
-              </span>
-            </DataGrid.Title>
-            {member.isManager ? (
-              <RemoveManagerForm
-                organizationSlug={organization.slug}
-                userId={member.id}
-                name={member.name}
-              />
-            ) : (
-              <MakeManagerForm
-                organizationSlug={organization.slug}
-                userId={member.id}
-                name={member.name}
-              />
-            )}
-          </DataGrid.Row>
-        ))}
-      </DataGrid>
+      <Filtered by={<OrganizationSelect {...filter} />}>
+        <OtherOrganizationNotice current={organization} own={own} back={managersPath(own.slug)} />
+        <DataGrid columns={[{ label: "Name" }, { kind: "action" }]}>
+          {members.map((member) => (
+            <DataGrid.Row>
+              <OrganizationMemberTitle member={member}>
+                <span class="stack-h gap-xs items-center">
+                  <a href={consultantPath(member.id)}>{member.name}</a>
+                  {member.isManager && <Badge>Manager</Badge>}
+                </span>
+              </OrganizationMemberTitle>
+              {member.isManager ? (
+                <RemoveManagerForm userId={member.id} name={member.name} />
+              ) : (
+                <MakeManagerForm userId={member.id} name={member.name} />
+              )}
+            </DataGrid.Row>
+          ))}
+        </DataGrid>
+      </Filtered>
     </Page>
   );
 }
