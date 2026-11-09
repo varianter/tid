@@ -10,6 +10,11 @@ type FormPageProps = PropsWithChildren<{
   title: string;
   /** A line under the title about what the form changes. */
   description?: Child;
+  /**
+   * Controls that change what the form is about, like which organization. They sit above the form,
+   * since a form can't hold another.
+   */
+  filters?: Child;
   /** The page the form was opened from. Cancelling goes back to it, or closes its layer. */
   cancel?: string;
   /** The submit button's label. Without one there's nothing to submit, and the page only shows its content. */
@@ -36,6 +41,7 @@ type FormPageProps = PropsWithChildren<{
 export function FormPage({
   title,
   description,
+  filters,
   cancel,
   submit,
   form,
@@ -64,6 +70,7 @@ export function FormPage({
           <h1 class="fs-m fw-medium">{title}</h1>
           {description && <p class="ink-subtle">{description}</p>}
         </header>
+        {filters && <div class="mb-s">{filters}</div>}
         {form.saved && (
           <ColorMode palette="green" role="status" class="mb-s">
             <div class="surface-dyed py-4xs px-xs b-all bc-subtle br-l">

@@ -16,7 +16,7 @@ const pages = [
   { path: "/month-close", heading: "Month close" },
   { path: "/consultants", heading: "Consultants" },
   { path: "/office-summary", heading: "Office summary" },
-  { path: "/administration", heading: "Administration of" },
+  { path: "/administration", heading: "Administration" },
 ];
 
 test("a manager can open every page without a script error", async () => {

@@ -18,9 +18,14 @@ export type FormState<S extends z.ZodType> = {
   fieldErrors: FieldErrors<S>;
   /** What's wrong with the form as a whole, rather than with one field. */
   formError?: string;
-  /** The last submission went through, and redirected back here with `?saved`. */
+  /** The last submission went through, and redirected back here with `withSaved`. */
   saved?: boolean;
 };
+
+/** Where `onSubmit` redirects to show its form again with what was saved. */
+export function withSaved(path: string) {
+  return `${path}${path.includes("?") ? "&" : "?"}saved`;
+}
 
 /**
  * One form on one URL: GET renders it, POST validates and submits, then

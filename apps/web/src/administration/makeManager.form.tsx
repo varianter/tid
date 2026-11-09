@@ -1,17 +1,9 @@
 import { Button } from "@tid/ui";
-import { managersPath } from "./administration.url";
+import { managerRolePath } from "./administration.url";
 
-export function MakeManagerForm({
-  organizationSlug,
-  userId,
-  name,
-}: {
-  organizationSlug: string;
-  userId: number;
-  name: string;
-}) {
+export function MakeManagerForm({ userId, name }: { userId: number; name: string }) {
   return (
-    <form method="post" action={`${managersPath(organizationSlug)}/${userId}`}>
+    <form method="post" action={managerRolePath(userId)}>
       <Button
         type="submit"
         data-variant="plain"

@@ -4,14 +4,13 @@ import type { UserEnv } from "../domain/users/user";
 import { chooseOpenProjects } from "./chooseOpenProjects.command";
 import { makeManager } from "./makeManager.command";
 import { managerList } from "./managerList.query";
-import { organizationOverview, organizationOverviewRedirect } from "./organizationOverview.query";
+import { organizationOverview } from "./organizationOverview.query";
 import { removeManager } from "./removeManager.command";
 
 export const administration = new Hono<UserEnv>()
-  .get("/", organizationOverviewRedirect)
-  .use("/:organization/*", managersOnly)
-  .get("/:organization", organizationOverview)
-  .on(["GET", "POST"], "/:organization/projects", chooseOpenProjects)
-  .get("/:organization/managers", managerList)
-  .post("/:organization/managers/:userId", makeManager)
-  .post("/:organization/managers/:userId/delete", removeManager);
+  .use(managersOnly)
+  .get("/", organizationOverview)
+  .on(["GET", "POST"], "/projects", chooseOpenProjects)
+  .get("/managers", managerList)
+  .post("/managers/:userId", makeManager)
+  .post("/managers/:userId/delete", removeManager);

@@ -62,20 +62,22 @@ beforeAll(async () => {
     .returning({ id: projects.id })) as [{ id: number }, { id: number }];
 });
 
-const path = "/administration/oslo/projects";
+const path = "/administration/projects?organization=oslo";
 
 test("only managers choose open projects", async () => {
   expect((await requestAs(member, path, { projectId: String(internalId) })).status).toBe(403);
   expect(await osloParticipation()).toEqual([]);
 
   expect((await requestAs(member, path)).status).toBe(403);
-  expect((await requestAs(manager, "/administration/nowhere/projects")).status).toBe(404);
+  expect((await requestAs(manager, "/administration/projects?organization=nowhere")).status).toBe(
+    404,
+  );
 });
 
 test("managers of any organization open a non-billable project, and close it again", async () => {
   const opened = await requestAs(bergenManager, path, { projectId: String(internalId) });
-  expect(opened.headers.get("location")).toBe(`${path}?saved`);
-  expect(await (await requestAs(manager, `${path}?saved`)).text()).toContain(
+  expect(opened.headers.get("location")).toBe(`${path}&saved`);
+  expect(await (await requestAs(manager, `${path}&saved`)).text()).toContain(
     "Your changes have been saved.",
   );
   expect(await osloParticipation()).toEqual([{ projectId: internalId, openToMembers: true }]);

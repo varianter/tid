@@ -1,10 +1,15 @@
 import { Checkbox, DataGrid, EmptyState, FormPage } from "@tid/ui";
 import { z } from "zod";
-import type { OrganizationOption } from "../domain/organizations/organization";
+import {
+  type OrganizationFilter,
+  OrganizationSelect,
+} from "../domain/organizations/organizationFilter";
+import type { User } from "../domain/users/user";
+import { Filtered } from "../framework/filter";
 import type { FormState } from "../framework/formAction";
 import { checkboxArray } from "../framework/formValues";
-import { administrationPath } from "./administration.url";
-import { OtherOrganizationNotice } from "./organizationSwitch";
+import { administrationPath, openProjectsPath } from "./administration.url";
+import { OtherOrganizationNotice } from "./otherOrganizationNotice";
 
 export const chooseOpenProjectsForm = z.object({
   projectId: z.preprocess(checkboxArray, z.array(z.coerce.number().int())),
@@ -19,34 +24,38 @@ export type OpenableProject = {
 };
 
 type ChooseOpenProjectsFormPageProps = {
-  organization: { slug: string; name: string };
+  organization: User["organization"];
   projects: OpenableProject[];
-  organizations: OrganizationOption[];
-  ownOrgId: number;
+  filter: OrganizationFilter;
+  own: User["organization"];
   form: FormState<typeof chooseOpenProjectsForm>;
 };
 
 export function ChooseOpenProjectsFormPage({
   organization,
   projects,
-  organizations,
-  ownOrgId,
+  filter,
+  own,
   form,
 }: ChooseOpenProjectsFormPageProps) {
   const clients = Map.groupBy(projects, (project) => project.client);
   return (
     <FormPage
       title={`Projects open to everyone in ${organization.name}`}
-      cancel={administrationPath(organization.slug)}
+      filters={
+        <Filtered by={<OrganizationSelect {...filter} />}>
+          <OtherOrganizationNotice
+            current={organization}
+            own={own}
+            back={openProjectsPath(own.slug)}
+          />
+        </Filtered>
+      }
+      cancel={administrationPath}
       submit={projects.length === 0 ? undefined : "Save"}
       form={form}
       layer="drawer"
     >
-      <OtherOrganizationNotice
-        organizations={organizations}
-        current={organization}
-        ownOrgId={ownOrgId}
-      />
       {projects.length === 0 ? (
         <EmptyState emoji="🔓" title="No non-billable projects">
           Only non-billable projects can be open to everyone.
