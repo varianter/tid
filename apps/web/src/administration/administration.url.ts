@@ -17,3 +17,9 @@ export const managersPath = (organizationSlug?: string) =>
 
 /** Where a member's manager role is given, or taken away under `/delete`. */
 export const managerRolePath = (userId: number) => `${administrationPath}/managers/${userId}`;
+
+/** Lists an organization's consultants, each linking to `returnTo` with their `userId` added. */
+export const consultantPickerPath = (returnTo: string, organizationSlug?: string) =>
+  withQuery(forOrganization(`${administrationPath}/consultants/pick`, organizationSlug), {
+    returnTo,
+  });

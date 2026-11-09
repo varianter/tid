@@ -1,6 +1,7 @@
 import { ActionList, ActionListItem, Button, Page } from "@tid/ui";
 import { attributes } from "@tid/via/attributes";
 import type { Context } from "hono";
+import { changeConsultantOrganizationPath } from "../changeConsultantOrganization/changeConsultantOrganization.url";
 import type { UserEnv } from "../domain/users/user";
 import { managersPath, openProjectsPath } from "./administration.url";
 
@@ -31,12 +32,17 @@ function OrganizationOverviewPage({ ownSlug }: { ownSlug: string }) {
           description="Who administers the organization"
           action={<ManageLink href={managersPath(ownSlug)} />}
         />
+        <ActionListItem
+          title="Consultant's organization"
+          description="Move someone who chose the wrong organization at sign-up"
+          action={<ManageLink href={changeConsultantOrganizationPath()}>Change</ManageLink>}
+        />
       </ActionList>
     </Page>
   );
 }
 
-function ManageLink({ href }: { href: string }) {
+function ManageLink({ href, children = "Manage" }: { href: string; children?: string }) {
   return (
     <Button
       as="a"
@@ -45,7 +51,7 @@ function ManageLink({ href }: { href: string }) {
       data-variant="plain"
       {...{ [attributes.layer]: true }}
     >
-      Manage
+      {children}
     </Button>
   );
 }

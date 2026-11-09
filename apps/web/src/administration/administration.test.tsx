@@ -82,3 +82,20 @@ test("managers make an organization's members managers, and remove the role agai
   expect(await managerIds()).toEqual([manager.id, osloManager.id].sort());
   expect((await requestAs(manager, "/administration/managers/0", "POST")).status).toBe(404);
 });
+
+test("the consultant picker hands the chosen consultant on to where it was asked from", async () => {
+  const returnTo = "/administration/change-consultant-organization";
+  const query = new URLSearchParams({ organization: "trondheim", returnTo });
+  const page = await (await requestAs(manager, `/administration/consultants/pick?${query}`)).text();
+  expect(page).toContain(`href="${returnTo}?userId=${member.id}"`);
+  expect(page).not.toContain(osloManager.name);
+  // Switching organization keeps where to go next.
+  expect(page).toContain(`name="returnTo" value="${returnTo}"`);
+});
+
+test("the consultant picker goes nowhere it isn't told to, nor off this site", async () => {
+  expect((await requestAs(manager, "/administration/consultants/pick")).status).toBe(404);
+  const offSite = `/administration/consultants/pick?returnTo=${encodeURIComponent("//evil.example")}`;
+  expect((await requestAs(manager, offSite)).status).toBe(404);
+  expect((await requestAs(member, "/administration/consultants/pick?returnTo=/")).status).toBe(403);
+});

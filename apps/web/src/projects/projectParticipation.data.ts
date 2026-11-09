@@ -1,8 +1,7 @@
-import type { Database } from "@tid/db/client";
+import type { Database, Transaction } from "@tid/db/client";
 import { projectAssignments, projectOrganizations, type projects } from "@tid/db/schema";
 import { and, eq, not, notExists } from "drizzle-orm";
 
-type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0];
 type Participation = { projectId: number; orgId: number };
 
 // Takes a project column too, so a query can match each project row.

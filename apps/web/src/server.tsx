@@ -8,6 +8,7 @@ import { jsxRenderer } from "hono/jsx-renderer";
 import { secureHeaders } from "hono/secure-headers";
 import { timing } from "hono/timing";
 import { administration } from "./administration/administration.routes";
+import { changeConsultantOrganizationRoutes } from "./changeConsultantOrganization/changeConsultantOrganization.routes";
 import { clients } from "./clients/clients.routes";
 import { consultants } from "./consultants/consultants.routes";
 import { dev, devLogoutUrl, devTenantId, readDevIdentity, requireDevUser } from "./dev/dev.routes";
@@ -157,6 +158,7 @@ app.route("/invoice-data", invoiceData);
 app.route("/month-close", monthClose);
 app.route("/consultants", consultants);
 app.route("/administration", administration);
+app.route("/administration/change-consultant-organization", changeConsultantOrganizationRoutes);
 app.route("/office-summary", officeSummary);
 
 // Dev login lets anyone act as any user, so it must not be reachable from the network.
