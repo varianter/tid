@@ -108,10 +108,7 @@ function dismiss(event: NavigateEvent, source: Element) {
   layer.hidePopover();
 }
 
-/**
- * A form is busy until its submission has loaded, and a second press doesn't post it twice.
- * One with `via-leave-layer` ends on a page of its own, which replaces the whole page.
- */
+/** A form is busy until its submission has loaded, and a second press doesn't post it twice. */
 function submitFromLayer(
   layer: HTMLElement,
   url: string,
@@ -120,8 +117,7 @@ function submitFromLayer(
 ) {
   if (form?.getAttribute("aria-busy") === "true") return;
   form?.setAttribute("aria-busy", "true");
-  const leavesLayer = Boolean(form?.hasAttribute(attributes.leaveLayer));
-  loadIntoLayer(layer, url, { method: "POST", body }, { leavesLayer })
+  loadIntoLayer(layer, url, { method: "POST", body })
     // ponytail: a failed submission shows nothing; a visible error needs a design for the layer.
     .catch((error) => console.error(error))
     .finally(() => form?.removeAttribute("aria-busy"));

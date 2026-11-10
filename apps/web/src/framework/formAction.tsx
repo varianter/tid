@@ -29,8 +29,8 @@ export function withSaved(path: string) {
 
 /**
  * One form on one URL: GET renders it, POST validates and submits, then
- * redirects (303) or re-renders the form with errors (422). The view renders the whole page, as a
- * `FormPage` given the `form` state.
+ * redirects (303) or re-renders the form with errors (422). The view renders the whole page: a
+ * `FormPage` holding a `Form` given the `form` state.
  */
 export function formAction<S extends z.ZodType, P extends object>(opts: {
   /** Validates the POST body. Failures re-render with field errors. */

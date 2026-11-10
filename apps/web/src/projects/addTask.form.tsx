@@ -1,4 +1,4 @@
-import { FormField, FormPage } from "@tid/ui";
+import { Form, FormField, FormPage } from "@tid/ui";
 import { z } from "zod";
 import type { FormState } from "../framework/formAction";
 
@@ -11,20 +11,16 @@ type AddTaskFormPageProps = {
 
 export function AddTaskFormPage({ project, form }: AddTaskFormPageProps) {
   return (
-    <FormPage
-      title={`New task on ${project.name}`}
-      cancel={`/projects/${project.id}`}
-      submit="Add task"
-      form={form}
-      layer="tooltip"
-    >
-      <FormField
-        name="name"
-        label="Task name"
-        value={form.values?.name}
-        errors={form.fieldErrors.name}
-        required
-      />
+    <FormPage title={`New task on ${project.name}`} layer="tooltip">
+      <Form cancel={`/projects/${project.id}`} submit="Add task" state={form}>
+        <FormField
+          name="name"
+          label="Task name"
+          value={form.values?.name}
+          errors={form.fieldErrors.name}
+          required
+        />
+      </Form>
     </FormPage>
   );
 }

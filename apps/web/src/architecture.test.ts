@@ -128,8 +128,8 @@ test("a feature's URLs live in <feature>.url.ts", () => {
   expect([...urlFiles.filter((file) => !isFeatureUrlFile(file)), ...strayUrls]).toEqual([]);
 });
 
-// A form page is what an action opens, so it's a `FormPage`: a `Page` couldn't tell the browser,
-// or a layer, that it's a form.
+// A form page is what an action opens, so it's a `FormPage`. A `Page` is for reading: its header
+// leads to forms, and a form page's never does.
 test("forms render a FormPage, not a Page", () => {
   expect(filesContaining(/<Page\b/).filter((file) => file.endsWith(".form.tsx"))).toEqual([]);
 });
@@ -144,8 +144,9 @@ test("only forms render a form page", () => {
 // ponytail: the timesheet's cell is a form outside a `.form.tsx` until logHours splits it out.
 const postingFiles = ["timesheet/timesheetCell.tsx"];
 
+// A `Form` from @tid/ui posts too, so rendering one counts.
 test("only forms post", () => {
-  const stray = filesContaining(/method="post"/).filter(
+  const stray = filesContaining(/method="post"|<Form[\s>]/).filter(
     (file) => !file.endsWith(".form.tsx") && !isDevTooling(file) && !postingFiles.includes(file),
   );
   expect(stray).toEqual([]);

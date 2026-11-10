@@ -1,5 +1,5 @@
 import type { CompanyLookup } from "@tid/lookup-nordic-company";
-import { FormPage, SummaryList } from "@tid/ui";
+import { Form, FormPage, ReturnLink, SummaryList } from "@tid/ui";
 import { z } from "zod";
 import type { FormState } from "../framework/formAction";
 import type { Client } from "./client";
@@ -30,42 +30,40 @@ export function ConfirmOrganizationNumberFormPage({
   const title = `Review organization number for ${client.name}`;
   if (lookup.outcome === "found")
     return (
-      <FormPage
-        form={form}
-        layer="tooltip"
-        title={title}
-        cancel={done}
-        submit="Looks good, use this"
-      >
-        <div>
-          <p class="mb-xs">This is what we found:</p>
-          <SummaryList
-            rows={[
-              { label: "Number", values: [formatted] },
-              { label: "Legal name", values: [lookup.company.name] },
-              lookup.company.registeredAddress.length > 0 && {
-                label: "Address",
-                values: lookup.company.registeredAddress,
-              },
-            ]}
-          />
-        </div>
+      <FormPage layer="tooltip" title={title}>
+        <Form state={form} cancel={done} submit="Looks good, use this">
+          <div>
+            <p class="mb-xs">This is what we found:</p>
+            <SummaryList
+              rows={[
+                { label: "Number", values: [formatted] },
+                { label: "Legal name", values: [lookup.company.name] },
+                lookup.company.registeredAddress.length > 0 && {
+                  label: "Address",
+                  values: lookup.company.registeredAddress,
+                },
+              ]}
+            />
+          </div>
+        </Form>
       </FormPage>
     );
 
   if (lookup.outcome === "notFound")
     return (
-      <FormPage form={form} layer="tooltip" title={title} cancel={enterAgain}>
+      <FormPage layer="tooltip" title={title}>
         <p>No company in the register has the number {formatted}.</p>
+        <ReturnLink href={enterAgain}>Back</ReturnLink>
       </FormPage>
     );
 
   return (
-    <FormPage form={form} layer="tooltip" title={title} cancel={done}>
+    <FormPage layer="tooltip" title={title}>
       <p>
         The company register can't be reached right now, so {formatted} can't be checked. Try again
         later.
       </p>
+      <ReturnLink href={done}>Back</ReturnLink>
     </FormPage>
   );
 }

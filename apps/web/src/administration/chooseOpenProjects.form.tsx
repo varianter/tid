@@ -1,4 +1,4 @@
-import { Checkbox, DataGrid, EmptyState, FormPage } from "@tid/ui";
+import { Checkbox, DataGrid, EmptyState, Form, FormPage, ReturnLink } from "@tid/ui";
 import { z } from "zod";
 import {
   type OrganizationFilter,
@@ -40,46 +40,43 @@ export function ChooseOpenProjectsFormPage({
 }: ChooseOpenProjectsFormPageProps) {
   const clients = Map.groupBy(projects, (project) => project.client);
   return (
-    <FormPage
-      title={`Projects open to everyone in ${organization.name}`}
-      filters={
-        <Filtered by={<OrganizationSelect {...filter} />}>
-          <OtherOrganizationNotice
-            current={organization}
-            own={own}
-            back={openProjectsPath(own.slug)}
-          />
-        </Filtered>
-      }
-      cancel={administrationPath}
-      submit={projects.length === 0 ? undefined : "Save"}
-      form={form}
-      layer="drawer"
-    >
-      {projects.length === 0 ? (
-        <EmptyState emoji="🔓" title="No non-billable projects">
-          Only non-billable projects can be open to everyone.
-        </EmptyState>
-      ) : (
-        <DataGrid columns={[{ kind: "fit" }, { label: "Project" }]}>
-          {[...clients].map(([client, clientProjects]) => (
-            <>
-              <DataGrid.Group>{client}</DataGrid.Group>
-              {clientProjects.map((project) => (
-                <DataGrid.Row for={`project-${project.id}`}>
-                  <Checkbox
-                    id={`project-${project.id}`}
-                    name="projectId"
-                    value={String(project.id)}
-                    checked={project.open}
-                  />
-                  <DataGrid.Title secondary={project.code}>{project.name}</DataGrid.Title>
-                </DataGrid.Row>
+    <FormPage title={`Projects open to everyone in ${organization.name}`} layer="drawer">
+      <Filtered by={<OrganizationSelect {...filter} />}>
+        <OtherOrganizationNotice
+          current={organization}
+          own={own}
+          back={openProjectsPath(own.slug)}
+        />
+        {projects.length === 0 ? (
+          <>
+            <EmptyState emoji="🔓" title="No non-billable projects">
+              Only non-billable projects can be open to everyone.
+            </EmptyState>
+            <ReturnLink href={administrationPath}>Back</ReturnLink>
+          </>
+        ) : (
+          <Form state={form} submit="Save" cancel={administrationPath}>
+            <DataGrid columns={[{ kind: "fit" }, { label: "Project" }]}>
+              {[...clients].map(([client, clientProjects]) => (
+                <>
+                  <DataGrid.Group>{client}</DataGrid.Group>
+                  {clientProjects.map((project) => (
+                    <DataGrid.Row for={`project-${project.id}`}>
+                      <Checkbox
+                        id={`project-${project.id}`}
+                        name="projectId"
+                        value={String(project.id)}
+                        checked={project.open}
+                      />
+                      <DataGrid.Title secondary={project.code}>{project.name}</DataGrid.Title>
+                    </DataGrid.Row>
+                  ))}
+                </>
               ))}
-            </>
-          ))}
-        </DataGrid>
-      )}
+            </DataGrid>
+          </Form>
+        )}
+      </Filtered>
     </FormPage>
   );
 }

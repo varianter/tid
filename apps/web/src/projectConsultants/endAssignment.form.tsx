@@ -1,5 +1,5 @@
 import { isIsoDate } from "@tid/calendar/isoDate";
-import { FormField, FormPage } from "@tid/ui";
+import { Form, FormField, FormPage } from "@tid/ui";
 import { z } from "zod";
 import type { FormState } from "../framework/formAction";
 import type { ProjectConsultantIds } from "./projectConsultant";
@@ -25,25 +25,25 @@ export function EndAssignmentFormPage({
   form,
 }: EndAssignmentFormPageProps) {
   return (
-    <FormPage
-      title={`End ${name}'s assignment`}
-      cancel={`/projects/${ids.projectId}`}
-      submit={hasLoggedTime ? "End assignment" : "Remove from project"}
-      form={form}
-      layer="tooltip"
-    >
-      {hasLoggedTime ? (
-        <FormField
-          name="endsOn"
-          label="Last day on the project"
-          type="date"
-          value={form.values?.endsOn ?? today}
-          errors={form.fieldErrors.endsOn}
-          required
-        />
-      ) : (
-        <p>{name} has no hours logged and can be safely removed from the project.</p>
-      )}
+    <FormPage title={`End ${name}'s assignment`} layer="tooltip">
+      <Form
+        cancel={`/projects/${ids.projectId}`}
+        submit={hasLoggedTime ? "End assignment" : "Remove from project"}
+        state={form}
+      >
+        {hasLoggedTime ? (
+          <FormField
+            name="endsOn"
+            label="Last day on the project"
+            type="date"
+            value={form.values?.endsOn ?? today}
+            errors={form.fieldErrors.endsOn}
+            required
+          />
+        ) : (
+          <p>{name} has no hours logged and can be safely removed from the project.</p>
+        )}
+      </Form>
     </FormPage>
   );
 }

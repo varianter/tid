@@ -1,4 +1,4 @@
-import { Checkbox, DataGrid, FormError, FormPage } from "@tid/ui";
+import { Checkbox, DataGrid, Form, FormError, FormPage } from "@tid/ui";
 import { z } from "zod";
 import type { FormState } from "../framework/formAction";
 import { checkboxArray } from "../framework/formValues";
@@ -32,34 +32,33 @@ export function ChooseAccountManagersFormPage({
     <FormPage
       title={`Account managers for ${client.name}`}
       description="The people who hold the relationship and the agreements with the Client."
-      cancel={`/clients/${client.id}`}
-      submit="Save"
-      form={form}
       layer="drawer"
     >
-      <div class="w-full">
-        {form.fieldErrors.userId && (
-          <FormError id="userId-error" errors={form.fieldErrors.userId} />
-        )}
-        <DataGrid columns={[{ kind: "fit" }, { label: "Person" }]}>
-          {[...organizations].map(([orgName, orgPeople]) => (
-            <>
-              <DataGrid.Group>{orgName}</DataGrid.Group>
-              {orgPeople.map((person) => (
-                <DataGrid.Row for={`person-${person.id}`}>
-                  <Checkbox
-                    id={`person-${person.id}`}
-                    name="userId"
-                    value={String(person.id)}
-                    checked={person.chosen}
-                  />
-                  <DataGrid.Title>{person.name}</DataGrid.Title>
-                </DataGrid.Row>
-              ))}
-            </>
-          ))}
-        </DataGrid>
-      </div>
+      <Form cancel={`/clients/${client.id}`} submit="Save" state={form}>
+        <div class="w-full">
+          {form.fieldErrors.userId && (
+            <FormError id="userId-error" errors={form.fieldErrors.userId} />
+          )}
+          <DataGrid columns={[{ kind: "fit" }, { label: "Person" }]}>
+            {[...organizations].map(([orgName, orgPeople]) => (
+              <>
+                <DataGrid.Group>{orgName}</DataGrid.Group>
+                {orgPeople.map((person) => (
+                  <DataGrid.Row for={`person-${person.id}`}>
+                    <Checkbox
+                      id={`person-${person.id}`}
+                      name="userId"
+                      value={String(person.id)}
+                      checked={person.chosen}
+                    />
+                    <DataGrid.Title>{person.name}</DataGrid.Title>
+                  </DataGrid.Row>
+                ))}
+              </>
+            ))}
+          </DataGrid>
+        </div>
+      </Form>
     </FormPage>
   );
 }

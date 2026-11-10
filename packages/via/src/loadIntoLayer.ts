@@ -5,12 +5,7 @@ import { type LoadedPage, showPageInLayer } from "./layerContent";
 import { layerSelector, openerOf, openNextLayer } from "./layerStack";
 import { outcomeOfLoad } from "./loadOutcome";
 
-export async function loadIntoLayer(
-  layer: HTMLElement,
-  url: string,
-  init: RequestInit,
-  { leavesLayer = false } = {},
-) {
+export async function loadIntoLayer(layer: HTMLElement, url: string, init: RequestInit) {
   const page = await fetchPage(url, init).catch((error) => {
     // Loading a submission's URL afresh would drop it and what was typed, so the layer stays
     // for another try.
@@ -26,7 +21,8 @@ export async function loadIntoLayer(
     shownUrl: shownUrl ? new URL(shownUrl) : null,
     belowUrl: new URL(below?.getAttribute(attributes.layerUrl) ?? location.href),
     closed: !isOpen,
-    leavesLayer,
+    submitted: init.method === "POST",
+    landedOnForm: Boolean(page.main?.hasAttribute(attributes.formPage)),
   });
   if (outcome === "ignore") return;
   // A submission refused by something other than the app, like a proxy during a deploy. Loading

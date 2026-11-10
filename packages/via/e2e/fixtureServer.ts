@@ -7,7 +7,8 @@ const [script] = build.outputs;
 if (!build.success || !script) throw new AggregateError(build.logs, "Bundling via failed");
 const scriptCode = await script.text();
 
-function page(title: string, content: string, status = 200) {
+/** A page; `form` marks it as a form, which a submission that ends on it stays layered for. */
+function page(title: string, content: string, { status = 200, form = false } = {}) {
   const html = `<!doctype html>
 <html>
   <head>
@@ -15,7 +16,7 @@ function page(title: string, content: string, status = 200) {
     <script type="module" src="/via.js"></script>
   </head>
   <body>
-    <main>${content}</main>
+    <main ${form ? attributes.formPage : ""}>${content}</main>
     <template id="${layerTemplateId}">
       <div popover role="dialog" tabindex="-1"><div ${attributes.layerContent}></div></div>
     </template>
@@ -31,7 +32,7 @@ function homePage(request: Request) {
     `<h1>Home</h1>
     ${saved ? "<p>Saved</p>" : ""}
     <a ${attributes.layer} href="/form">Open the form</a>
-    <a ${attributes.layer} href="/leave">Open a form that leaves its layer</a>`,
+    <a ${attributes.layer} href="/leave">Open a form that ends on a page to read</a>`,
   );
 }
 
@@ -52,7 +53,7 @@ function formPage(request: Request, failed = false) {
       <a ${attributes.layer} href="/nested">Add a choice</a>
       <a ${attributes.dismiss} href="/">Cancel</a>
     </form>`,
-    failed ? 422 : 200,
+    { status: failed ? 422 : 200, form: true },
   );
 }
 
@@ -74,7 +75,7 @@ export const server = Bun.serve({
       },
     },
     "/next": { POST: () => Response.redirect("/step", 303) },
-    "/step": () => page("Step", "<h1>Step</h1>"),
+    "/step": () => page("Step", "<h1>Step</h1>", { form: true }),
     "/proxy-error": {
       POST: () =>
         new Response("Bad gateway", { status: 502, headers: { "Content-Type": "text/plain" } }),
@@ -89,13 +90,20 @@ export const server = Bun.serve({
     },
     // Opened from the form's layer, and arrives back on the form.
     "/nested": {
-      GET: () => page("Nested", `<h1>Nested</h1><form method="post"><button>Add</button></form>`),
+      GET: () =>
+        page("Nested", `<h1>Nested</h1><form method="post"><button>Add</button></form>`, {
+          form: true,
+        }),
       POST: () => Response.redirect("/form?added", 303),
     },
-    "/leave": () =>
-      page(
-        "Leave",
-        `<h1>Leave</h1><form method="post" action="/next" ${attributes.leaveLayer}><button>Go</button></form>`,
-      ),
+    // Ends on a page to read that isn't the one below, like what it created.
+    "/leave": {
+      GET: () =>
+        page("Leave", `<h1>Leave</h1><form method="post"><button>Go</button></form>`, {
+          form: true,
+        }),
+      POST: () => Response.redirect("/created", 303),
+    },
+    "/created": () => page("Created", "<h1>Created</h1>"),
   },
 });

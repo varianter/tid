@@ -1,5 +1,5 @@
 import { formatDate } from "@tid/calendar/dateDisplay";
-import { Checkbox, DataGrid, FormError, FormPage } from "@tid/ui";
+import { Checkbox, DataGrid, Form, FormError, FormPage, ReturnLink } from "@tid/ui";
 import { z } from "zod";
 import type { FormState } from "../framework/formAction";
 import { checkboxArray } from "../framework/formValues";
@@ -32,46 +32,46 @@ export function AssignConsultantsFormPage({
   form,
 }: AssignConsultantsFormPageProps) {
   const organizations = Map.groupBy(people, (person) => person.orgName);
+  const projectPath = `/projects/${project.id}`;
   return (
-    <FormPage
-      title={`Assign consultants to ${project.name}`}
-      cancel={`/projects/${project.id}`}
-      submit={people.length === 0 ? undefined : "Assign"}
-      form={form}
-      layer="drawer"
-    >
+    <FormPage title={`Assign consultants to ${project.name}`} layer="drawer">
       {people.length === 0 ? (
-        <p class="ink-subtle">Everyone is assigned already.</p>
+        <>
+          <p class="ink-subtle">Everyone is assigned already.</p>
+          <ReturnLink href={projectPath}>Back</ReturnLink>
+        </>
       ) : (
-        <div class="w-full">
-          {form.fieldErrors.userId && (
-            <FormError id="userId-error" errors={form.fieldErrors.userId} />
-          )}
-          <DataGrid columns={[{ kind: "fit" }, { label: "Consultant" }]}>
-            {[...organizations].map(([orgName, orgPeople]) => (
-              <>
-                <DataGrid.Group>{orgName}</DataGrid.Group>
-                {orgPeople.map((person) => (
-                  <DataGrid.Row for={`consultant-${person.id}`}>
-                    <Checkbox
-                      id={`consultant-${person.id}`}
-                      name="userId"
-                      value={String(person.id)}
-                    />
-                    <DataGrid.Title
-                      secondary={
-                        person.leftProjectOn &&
-                        `Left project ${formatDate(person.leftProjectOn, "numeric")}`
-                      }
-                    >
-                      {person.name}
-                    </DataGrid.Title>
-                  </DataGrid.Row>
-                ))}
-              </>
-            ))}
-          </DataGrid>
-        </div>
+        <Form state={form} submit="Assign" cancel={projectPath}>
+          <div class="w-full">
+            {form.fieldErrors.userId && (
+              <FormError id="userId-error" errors={form.fieldErrors.userId} />
+            )}
+            <DataGrid columns={[{ kind: "fit" }, { label: "Consultant" }]}>
+              {[...organizations].map(([orgName, orgPeople]) => (
+                <>
+                  <DataGrid.Group>{orgName}</DataGrid.Group>
+                  {orgPeople.map((person) => (
+                    <DataGrid.Row for={`consultant-${person.id}`}>
+                      <Checkbox
+                        id={`consultant-${person.id}`}
+                        name="userId"
+                        value={String(person.id)}
+                      />
+                      <DataGrid.Title
+                        secondary={
+                          person.leftProjectOn &&
+                          `Left project ${formatDate(person.leftProjectOn, "numeric")}`
+                        }
+                      >
+                        {person.name}
+                      </DataGrid.Title>
+                    </DataGrid.Row>
+                  ))}
+                </>
+              ))}
+            </DataGrid>
+          </div>
+        </Form>
       )}
     </FormPage>
   );
