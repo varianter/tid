@@ -104,10 +104,10 @@ test("a nested layer that arrives back on its parent's page is accepted into the
   expect(await sameDocument()).toBe(true);
 });
 
-test("a form that leaves its layer loads the page it ends on as the whole page", async () => {
+test("a submission that ends on a page to read loads it as the whole page", async () => {
   await openLayerFrom("/leave", "Leave");
   await view.click(`${layer} button`);
-  await waitUntil("the step as the page", () => view.url.endsWith("/step"));
+  await waitUntil("the created page as the page", () => view.url.endsWith("/created"));
   expect(await layerCount()).toBe(0);
   expect(await sameDocument()).toBe(false);
 });

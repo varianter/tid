@@ -7,8 +7,10 @@ export type LoadFacts = {
   /** What the layer below shows, or the page itself. */
   belowUrl: URL;
   closed: boolean;
-  /** A form with `via-leave-layer` was submitted. */
-  leavesLayer: boolean;
+  /** A form was posted, rather than a link followed. */
+  submitted: boolean;
+  /** The page it landed on has `via-form-page`. */
+  landedOnForm: boolean;
 };
 
 /**
@@ -21,11 +23,12 @@ export type LoadOutcome = "stay" | "openNext" | "accept" | "reload" | "ignore";
 export function outcomeOfLoad(facts: LoadFacts): LoadOutcome {
   // Closed while it loaded, so what it loaded is no longer wanted.
   if (facts.shownUrl && facts.closed) return "ignore";
+  if (isAccepted(facts.url, facts.belowUrl)) return "accept";
   // A failed submission comes back to its own page, and stays in its layer.
   const samePage = facts.shownUrl?.pathname === facts.url.pathname;
-  // The submission went through. Only a page load puts the page it ends on in the address bar.
-  if (facts.leavesLayer && !samePage) return "reload";
-  if (isAccepted(facts.url, facts.belowUrl)) return "accept";
+  // A submission that went through to a page to read, like what it created, has ended. Only a page
+  // load puts that page in the address bar.
+  if (facts.submitted && !samePage && !facts.landedOnForm) return "reload";
   return facts.shownUrl && !samePage ? "openNext" : "stay";
 }
 

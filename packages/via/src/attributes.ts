@@ -9,8 +9,11 @@ export const attributes = {
   layerAlign: "via-layer-align",
   /** On a link in a layer: closes the layer and loads nothing. */
   dismiss: "via-dismiss",
-  /** On a form in a layer: once it goes through, the page it ends on replaces the whole page. */
-  leaveLayer: "via-leave-layer",
+  /**
+   * On a page's `main`: the page is a form. A submission that ends on it stays in a layer, as the
+   * next step. One that ends on any other page, other than the one below, leaves for it.
+   */
+  formPage: "via-form-page",
   /** On the box directly inside a page's `main`: the Varde popover type its layer takes. */
   layerType: "via-layer-type",
   /** In the layer template: the element each loaded page goes into. */

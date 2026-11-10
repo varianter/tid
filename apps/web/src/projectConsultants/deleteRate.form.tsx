@@ -1,5 +1,5 @@
 import { formatDate } from "@tid/calendar/dateDisplay";
-import { FormPage } from "@tid/ui";
+import { Form, FormPage } from "@tid/ui";
 import { z } from "zod";
 import { formatAmount } from "../domain/amount/amount";
 import type { FormState } from "../framework/formAction";
@@ -30,26 +30,29 @@ export function DeleteRateFormPage({
   return (
     <FormPage
       title={`Delete the rate for ${consultant.name} from ${formatDate(validFrom)}`}
-      cancel={projectRatesPath(consultant.projectId)}
-      submit={entries.length === 0 ? "Delete rate" : "Delete rate and reprice"}
-      form={form}
       // The entries it reprices can run long.
       layer={entries.length === 0 ? undefined : "drawer"}
       width={entries.length === 0 ? undefined : 6}
     >
-      {entries.length === 0 ? (
-        <p>No logged hours change.</p>
-      ) : (
-        <>
-          <p>
-            {price
-              ? `Deleting it reprices ${logged} at ${formatAmount(price.rate / 100, price.currency, "exact")}, the rate before it`
-              : `Deleting it leaves ${logged} without a rate`}
-            , locked months included.
-          </p>
-          <RepricedEntries entries={entries} price={price} currency={consultant.currency} />
-        </>
-      )}
+      <Form
+        state={form}
+        submit={entries.length === 0 ? "Delete rate" : "Delete rate and reprice"}
+        cancel={projectRatesPath(consultant.projectId)}
+      >
+        {entries.length === 0 ? (
+          <p>No logged hours change.</p>
+        ) : (
+          <>
+            <p>
+              {price
+                ? `Deleting it reprices ${logged} at ${formatAmount(price.rate / 100, price.currency, "exact")}, the rate before it`
+                : `Deleting it leaves ${logged} without a rate`}
+              , locked months included.
+            </p>
+            <RepricedEntries entries={entries} price={price} currency={consultant.currency} />
+          </>
+        )}
+      </Form>
     </FormPage>
   );
 }

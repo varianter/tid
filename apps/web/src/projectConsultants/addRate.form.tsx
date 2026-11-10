@@ -1,5 +1,5 @@
 import { isIsoDate } from "@tid/calendar/isoDate";
-import { FormField, FormPage } from "@tid/ui";
+import { Form, FormField, FormPage } from "@tid/ui";
 import { z } from "zod";
 import type { FormState } from "../framework/formAction";
 import type { Consultant } from "./projectConsultant";
@@ -25,32 +25,27 @@ type AddRateFormPageProps = {
 
 export function AddRateFormPage({ consultant, today, form }: AddRateFormPageProps) {
   return (
-    <FormPage
-      title={`New rate for ${consultant.name}`}
-      cancel={projectRatesPath(consultant.projectId)}
-      submit="Add rate"
-      form={form}
-      layer="tooltip"
-      width={3}
-    >
-      <FormField
-        name="rate"
-        label={`Hourly rate (${consultant.currency})`}
-        type="number"
-        min="0"
-        step="0.01"
-        value={form.values?.rate}
-        errors={form.fieldErrors.rate}
-        required
-      />
-      <FormField
-        name="validFrom"
-        label="Start date"
-        type="date"
-        value={form.values?.validFrom ?? today}
-        errors={form.fieldErrors.validFrom}
-        required
-      />
+    <FormPage title={`New rate for ${consultant.name}`} layer="tooltip" width={3}>
+      <Form cancel={projectRatesPath(consultant.projectId)} submit="Add rate" state={form}>
+        <FormField
+          name="rate"
+          label={`Hourly rate (${consultant.currency})`}
+          type="number"
+          min="0"
+          step="0.01"
+          value={form.values?.rate}
+          errors={form.fieldErrors.rate}
+          required
+        />
+        <FormField
+          name="validFrom"
+          label="Start date"
+          type="date"
+          value={form.values?.validFrom ?? today}
+          errors={form.fieldErrors.validFrom}
+          required
+        />
+      </Form>
     </FormPage>
   );
 }

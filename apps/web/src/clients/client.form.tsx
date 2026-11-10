@@ -1,4 +1,4 @@
-import { FormField, FormPage } from "@tid/ui";
+import { Form, FormField, FormPage } from "@tid/ui";
 import { z } from "zod";
 import type { FormState } from "../framework/formAction";
 import type { Client } from "./client";
@@ -22,27 +22,28 @@ type ClientFormPageProps = {
 export function ClientFormPage({ client, returnTo, form }: ClientFormPageProps) {
   const { values, fieldErrors } = form;
   return (
-    <FormPage
-      form={form}
-      layer="tooltip"
-      {...(client
-        ? { title: `Edit ${client.name}`, cancel: `/clients/${client.id}`, submit: "Save changes" }
-        : { title: "New client", cancel: returnTo ?? "/clients", submit: "Create client" })}
-    >
-      <FormField
-        name="name"
-        label="Name"
-        value={values?.name ?? client?.name}
-        errors={fieldErrors.name}
-        required
-      />
-      {!client && (
-        <OrganizationNumberField
-          value={values?.organizationNumber ?? ""}
-          errors={fieldErrors.organizationNumber}
-          hint="Optional. Norwegian or Swedish, looked up in the company register next."
+    <FormPage layer="tooltip" title={client ? `Edit ${client.name}` : "New client"}>
+      <Form
+        state={form}
+        {...(client
+          ? { cancel: `/clients/${client.id}`, submit: "Save changes" }
+          : { cancel: returnTo ?? "/clients", submit: "Create client" })}
+      >
+        <FormField
+          name="name"
+          label="Name"
+          value={values?.name ?? client?.name}
+          errors={fieldErrors.name}
+          required
         />
-      )}
+        {!client && (
+          <OrganizationNumberField
+            value={values?.organizationNumber ?? ""}
+            errors={fieldErrors.organizationNumber}
+            hint="Optional. Norwegian or Swedish, looked up in the company register next."
+          />
+        )}
+      </Form>
     </FormPage>
   );
 }

@@ -6,9 +6,11 @@ export { Detail } from "./compositions/Detail";
 export { DetailsList, DetailsListItem } from "./compositions/DetailsList";
 export { EmptyState } from "./compositions/EmptyState";
 export { Field, fieldErrorAttributes } from "./compositions/forms/Field";
+export { Form } from "./compositions/forms/Form";
 export { FormError } from "./compositions/forms/FormError";
 export { FormField } from "./compositions/forms/FormField";
 export { FormPage } from "./compositions/forms/FormPage";
+export { ReturnLink } from "./compositions/forms/ReturnLink";
 export { ListSummary } from "./compositions/ListSummary";
 export { Page } from "./compositions/Page";
 export {

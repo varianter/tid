@@ -10,9 +10,11 @@ const facts = (overrides: Partial<LoadFacts>): LoadFacts => ({
   shownUrl: null,
   belowUrl: rates,
   closed: false,
-  leavesLayer: false,
+  submitted: false,
+  landedOnForm: false,
   ...overrides,
 });
+const submission = { submitted: true, landedOnForm: true };
 
 test("a layer's first page shows in it", () => {
   expect(outcomeOfLoad(facts({}))).toBe("stay");
@@ -23,20 +25,37 @@ test("a layer closed while it loaded ignores what it loaded", () => {
 });
 
 test("a failed submission stays in its layer", () => {
-  expect(outcomeOfLoad(facts({ shownUrl: reprice }))).toBe("stay");
-  expect(outcomeOfLoad(facts({ shownUrl: reprice, leavesLayer: true }))).toBe("stay");
+  expect(outcomeOfLoad(facts({ ...submission, shownUrl: reprice }))).toBe("stay");
 });
 
-test("a form that leaves its layer loads the page it ends on as the whole page", () => {
-  expect(outcomeOfLoad(facts({ shownUrl: at("/form"), leavesLayer: true }))).toBe("reload");
+test("a submission saved back to its own page stays in its layer", () => {
+  const saved = at("/projects/1/consultants/4/rates/reprice?saved");
+  expect(outcomeOfLoad(facts({ ...submission, shownUrl: reprice, url: saved }))).toBe("stay");
 });
 
-test("a step to another page opens the next layer", () => {
+test("a submission that ends on a page to read loads it as the whole page", () => {
+  const project = at("/projects/2");
+  expect(
+    outcomeOfLoad(facts({ submitted: true, shownUrl: at("/projects/new"), url: project })),
+  ).toBe("reload");
+});
+
+test("a submission that ends on another form opens it as the next step", () => {
+  expect(outcomeOfLoad(facts({ ...submission, shownUrl: at("/form") }))).toBe("openNext");
+});
+
+test("a link to a page to read opens the next layer", () => {
   expect(outcomeOfLoad(facts({ shownUrl: at("/form") }))).toBe("openNext");
 });
 
 test("a layer that arrives back where the layer below is is accepted", () => {
   expect(outcomeOfLoad(facts({ shownUrl: at("/form"), url: rates }))).toBe("accept");
+});
+
+test("a submission that arrives back on the page to read below is accepted", () => {
+  expect(outcomeOfLoad(facts({ submitted: true, shownUrl: at("/form"), url: rates }))).toBe(
+    "accept",
+  );
 });
 
 test("a query added on the way back doesn't stop a layer from being accepted", () => {

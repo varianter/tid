@@ -1,4 +1,4 @@
-import { Field, FormPage, fieldErrorAttributes, Select } from "@tid/ui";
+import { Field, Form, FormPage, fieldErrorAttributes, ReturnLink, Select } from "@tid/ui";
 import { z } from "zod";
 import { administrationPath } from "../administration/administration.url";
 import type { OrganizationOption } from "../domain/organizations/organization";
@@ -31,9 +31,6 @@ export function ChangeConsultantOrganizationFormPage({
     <FormPage
       title={`Change ${consultant.name}'s organization`}
       description={blocked ? undefined : `Now in ${organization.name}.`}
-      cancel={administrationPath}
-      submit={blocked ? undefined : "Change organization"}
-      form={form}
     >
       {blocked ? (
         <>
@@ -46,23 +43,30 @@ export function ChangeConsultantOrganizationFormPage({
               <li>{blocker}</li>
             ))}
           </ul>
+          <ReturnLink href={administrationPath}>Back</ReturnLink>
         </>
       ) : (
-        <Field name="organizationId" label="Organization" errors={form.fieldErrors.organizationId}>
-          <Select
-            id="organizationId"
+        <Form state={form} submit="Change organization" cancel={administrationPath}>
+          <Field
             name="organizationId"
-            required
-            selected={form.values?.organizationId}
-            options={destinations.map((destination) => ({
-              value: destination.id,
-              label: destination.name,
-            }))}
-            {...fieldErrorAttributes("organizationId", form.fieldErrors.organizationId)}
+            label="Organization"
+            errors={form.fieldErrors.organizationId}
           >
-            <option value="">Choose an organization</option>
-          </Select>
-        </Field>
+            <Select
+              id="organizationId"
+              name="organizationId"
+              required
+              selected={form.values?.organizationId}
+              options={destinations.map((destination) => ({
+                value: destination.id,
+                label: destination.name,
+              }))}
+              {...fieldErrorAttributes("organizationId", form.fieldErrors.organizationId)}
+            >
+              <option value="">Choose an organization</option>
+            </Select>
+          </Field>
+        </Form>
       )}
     </FormPage>
   );
