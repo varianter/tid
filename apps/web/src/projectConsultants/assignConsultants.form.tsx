@@ -34,7 +34,7 @@ export function AssignConsultantsFormPage({
   const organizations = Map.groupBy(people, (person) => person.orgName);
   const projectPath = `/projects/${project.id}`;
   return (
-    <FormPage title={`Assign consultants to ${project.name}`} layer="drawer">
+    <FormPage title={`Assign consultants to ${project.name}`}>
       {people.length === 0 ? (
         <>
           <p class="ink-subtle">Everyone is assigned already.</p>

@@ -7,7 +7,7 @@ type FormPageProps = PropsWithChildren<{
   title: string;
   /** A line under the title about what the form changes. */
   description?: Child;
-  /** How the page is shown when it's opened in a layer. Without one, `@tid/via` shows a dialog. */
+  /** How the page is shown when it's opened in a layer. Without one, `@tid/via` shows a drawer. */
   layer?: PopoverType;
   /** The widest the page gets, as a step on Varde's width scale. */
   width?: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;

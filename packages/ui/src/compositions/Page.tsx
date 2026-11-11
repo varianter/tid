@@ -12,7 +12,7 @@ type PageProps = PropsWithChildren<{
   back?: { href: string; label: string };
   /** Links to forms, the only thing in the header. Filters sit with the data they narrow. */
   actions?: (Action | false)[];
-  /** How the page is shown when it's opened in a layer. Without one, `@tid/via` shows a dialog. */
+  /** How the page is shown when it's opened in a layer. Without one, `@tid/via` shows a drawer. */
   layer?: PopoverType;
 }>;
 

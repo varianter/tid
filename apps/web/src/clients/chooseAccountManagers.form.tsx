@@ -32,7 +32,6 @@ export function ChooseAccountManagersFormPage({
     <FormPage
       title={`Account managers for ${client.name}`}
       description="The people who hold the relationship and the agreements with the Client."
-      layer="drawer"
     >
       <Form cancel={`/clients/${client.id}`} submit="Save" state={form}>
         <div class="w-full">

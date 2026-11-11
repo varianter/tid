@@ -40,7 +40,7 @@ export function ChooseOpenProjectsFormPage({
 }: ChooseOpenProjectsFormPageProps) {
   const clients = Map.groupBy(projects, (project) => project.client);
   return (
-    <FormPage title={`Projects open to everyone in ${organization.name}`} layer="drawer">
+    <FormPage title={`Projects open to everyone in ${organization.name}`}>
       <Filtered by={<OrganizationSelect {...filter} />}>
         <OtherOrganizationNotice
           current={organization}

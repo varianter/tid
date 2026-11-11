@@ -56,11 +56,7 @@ function ConsultantPickerPage({
   backToOwn: string;
 }) {
   return (
-    <Page
-      title="Choose a consultant"
-      layer="drawer"
-      back={{ href: administrationPath, label: "Administration" }}
-    >
+    <Page title="Choose a consultant" back={{ href: administrationPath, label: "Administration" }}>
       <Filtered by={<OrganizationSelect {...filter} />}>
         <OtherOrganizationNotice current={organization} own={own} back={backToOwn} />
         {members.length === 0 ? (

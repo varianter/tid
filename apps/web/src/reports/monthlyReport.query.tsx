@@ -247,7 +247,7 @@ function ReportPage({
   const consultantHref = (userId: number) => consultantPath(userId, month);
   const table = reportTable(report, total, currency, projectHref, consultantHref);
   return (
-    <Page title="Reports" layer="drawer">
+    <Page title="Reports">
       <Filtered
         by={
           <>

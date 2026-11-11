@@ -6,7 +6,7 @@ type PageFrameProps = PropsWithChildren<{
   /** Which page composition this frames, for `composite-component`. */
   component: string;
   title: string;
-  /** How the page is shown when it's opened in a layer. Without one, `@tid/via` shows a dialog. */
+  /** How the page is shown when it's opened in a layer. Without one, `@tid/via` shows a drawer. */
   layer?: PopoverType;
   /** The page is a form, so a submission that ends on it is a next step and stays in a layer. */
   form?: boolean;
