@@ -23,6 +23,7 @@ export const listOrganizationMembers = (orgId: number, { includeLeft = false } =
       id: users.id,
       name: users.name,
       email: users.email,
+      firstDay: users.firstDay,
       lastDay: users.lastDay,
       isManager: exists(
         database

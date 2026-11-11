@@ -24,6 +24,7 @@ export const consultantList = async (c: Context<UserEnv>) => {
       id: users.id,
       name: users.name,
       email: users.email,
+      firstDay: users.firstDay,
       lastDay: users.lastDay,
       orgId: users.orgId,
       isManager: exists(
@@ -57,6 +58,7 @@ export const consultantList = async (c: Context<UserEnv>) => {
       consultants={rows.map((row) => ({
         ...row,
         officeName: officeNames.get(row.orgId) ?? "",
+        hasStarted: row.firstDay === null || row.firstDay <= today,
         hasLeft: row.lastDay !== null && row.lastDay < today,
         projectNames: (projectsByUser.get(row.id) ?? []).map((project) => project.name),
       }))}
@@ -69,9 +71,11 @@ type ConsultantRow = {
   id: number;
   name: string;
   email: string;
+  firstDay: string | null;
   lastDay: string | null;
   isManager: boolean;
   officeName: string;
+  hasStarted: boolean;
   hasLeft: boolean;
   projectNames: string[];
 };
@@ -104,6 +108,7 @@ function ConsultantListPage({
                   <DataGrid.Title
                     secondary={[
                       consultant.email,
+                      consultant.firstDay && `First day ${formatDate(consultant.firstDay)}`,
                       consultant.lastDay && `Left Variant ${formatDate(consultant.lastDay)}`,
                     ]
                       .filter(Boolean)
@@ -126,7 +131,7 @@ function ConsultantListPage({
   );
 }
 
-/** How many consultants each office has now; those who have left are counted apart. */
+/** How many consultants each office has now; those who have left or not yet started are counted apart. */
 function OfficeHeadcounts({
   offices,
   consultants,
@@ -140,11 +145,16 @@ function OfficeHeadcounts({
       {offices.map((office) => {
         const members = byOffice.get(office) ?? [];
         const leftCount = members.filter((consultant) => consultant.hasLeft).length;
+        const startingCount = members.filter((consultant) => !consultant.hasStarted).length;
+        const notes = [
+          leftCount > 0 && `${leftCount} have left`,
+          startingCount > 0 && `${startingCount} starting`,
+        ].filter(Boolean);
         return (
           <Stat
             label={office}
-            value={String(members.length - leftCount)}
-            note={leftCount > 0 ? `${leftCount} have left` : undefined}
+            value={String(members.length - leftCount - startingCount)}
+            note={notes.length > 0 ? notes.join(" · ") : undefined}
           />
         );
       })}

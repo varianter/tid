@@ -6,10 +6,11 @@ export type OrganizationMember = {
   id: number;
   name: string;
   email: string;
+  firstDay: string | null;
   lastDay: string | null;
 };
 
-/** A member's row title: their name, or what's given instead, over their email and leaving date. */
+/** A member's row title: their name, or what's given instead, over their email and first and last days. */
 export function OrganizationMemberTitle({
   member,
   children,
@@ -19,7 +20,11 @@ export function OrganizationMemberTitle({
 }) {
   return (
     <DataGrid.Title
-      secondary={[member.email, member.lastDay && `Left Variant ${formatDate(member.lastDay)}`]
+      secondary={[
+        member.email,
+        member.firstDay && `First day ${formatDate(member.firstDay)}`,
+        member.lastDay && `Left Variant ${formatDate(member.lastDay)}`,
+      ]
         .filter(Boolean)
         .join(" · ")}
     >
