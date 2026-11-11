@@ -32,6 +32,7 @@ import {
   projectRatesPath,
 } from "../projectConsultants/projectConsultants.url";
 import { billingLabels } from "./billing";
+import { hasLoggedTime } from "./loggedTime.data";
 import { type ProjectSummary, projectSummary } from "./projectSummary";
 import { projectReportUrl } from "./projects.url";
 
@@ -58,7 +59,11 @@ export const projectDetails = async (c: Context<UserEnv>) => {
   const id = Number(c.req.param("id"));
   if (!Number.isSafeInteger(id)) return c.notFound();
   const [project] = await database
-    .select({ ...projectSummary, invoicingLead: users.name })
+    .select({
+      ...projectSummary,
+      invoicingLead: users.name,
+      hasLoggedTime: hasLoggedTime(projects.id),
+    })
     .from(projects)
     .innerJoin(clients, eq(clients.id, projects.clientId))
     .leftJoin(users, eq(users.id, projects.invoicingLeadId))
@@ -180,7 +185,7 @@ type Participation = {
 };
 
 type ProjectDetailsPageProps = {
-  project: ProjectSummary & { invoicingLead: string | null };
+  project: ProjectSummary & { invoicingLead: string | null; hasLoggedTime: boolean };
   hours: HoursSpent;
   tasks: TaskTotal[];
   /** On the project first, then those who rolled off, then those who left the company. */
@@ -224,6 +229,12 @@ function ProjectDetailsPage({
           icon: "settings",
           [attributes.layer]: true,
         },
+        canManageProject &&
+          !project.hasLoggedTime && {
+            label: "Delete",
+            href: `/projects/${project.id}/delete`,
+            [attributes.layer]: true,
+          },
       ]}
     >
       <nav aria-label="About the project" class="stack-h gap-xs">

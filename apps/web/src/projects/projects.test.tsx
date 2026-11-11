@@ -384,3 +384,36 @@ test("editing a project sets and clears its invoicing lead, who may have left si
   expect((await edit(undefined)).status).toBe(303);
   expect(await invoicingLeadId()).toBeNull();
 });
+
+test("a project without logged time is deleted with its tasks, consultants and rates", async () => {
+  const projectId = await startNonBillable("ACME-14");
+  await requestAs(manager, `/projects/${projectId}/consultants/new`, {
+    userId: String(member.id),
+  });
+  await database
+    .insert(assignmentRates)
+    .values({ projectId, userId: member.id, validFrom: "2026-01-01", rate: 100000 });
+  const deletePath = `/projects/${projectId}/delete`;
+  expect(await (await requestAs(manager, `/projects/${projectId}`)).text()).toContain(deletePath);
+
+  expect((await requestAs(member, deletePath, {})).status).toBe(403);
+  const deleted = await requestAs(manager, deletePath, {});
+  expect(deleted.status).toBe(303);
+  expect(await database.$count(projectsTable, eq(projectsTable.id, projectId))).toBe(0);
+  expect(await database.$count(tasks, eq(tasks.projectId, projectId))).toBe(0);
+});
+
+test("a project with logged time can't be deleted, even if the hours are zero", async () => {
+  const projectId = await startNonBillable("ACME-15");
+  const task = onlyRow(await database.select().from(tasks).where(eq(tasks.projectId, projectId)));
+  await database
+    .insert(timeEntries)
+    .values({ userId: member.id, taskId: task.id, spentOn: "2026-01-05", minutes: 0 });
+  const deletePath = `/projects/${projectId}/delete`;
+
+  expect(await (await requestAs(manager, `/projects/${projectId}`)).text()).not.toContain(
+    deletePath,
+  );
+  expect((await requestAs(manager, deletePath, {})).status).toBe(403);
+  expect(await database.$count(projectsTable, eq(projectsTable.id, projectId))).toBe(1);
+});
