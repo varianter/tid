@@ -7,16 +7,18 @@ export const dayLabelLayout = css`
 `;
 
 /**
- * What stays put fades out at its edge, so cells slide under it rather than cut off. The stops ease
- * in and out, since a linear fade shows a visible edge where it starts and ends.
+ * What stays put fades out at its edge, so cells slide under it rather than cut off. The curved
+ * stops stay readable through the middle, then fall away quickly without a hard transparent edge.
  */
 const stickyFade = `linear-gradient(
   to right in oklch,
   var(--fade-color, var(--surface-base)),
-  oklch(from var(--fade-color, var(--surface-base)) l c h / 0.9) 20%,
-  oklch(from var(--fade-color, var(--surface-base)) l c h / 0.65) 40%,
-  oklch(from var(--fade-color, var(--surface-base)) l c h / 0.35) 60%,
-  oklch(from var(--fade-color, var(--surface-base)) l c h / 0.05) 80%,
+  oklch(from var(--fade-color, var(--surface-base)) l c h / calc(pow(1 - pow(0.4, 4), 3))) 40%,
+  oklch(from var(--fade-color, var(--surface-base)) l c h / calc(pow(1 - pow(0.6, 4), 3))) 60%,
+  oklch(from var(--fade-color, var(--surface-base)) l c h / calc(pow(1 - pow(0.75, 4), 3))) 75%,
+  oklch(from var(--fade-color, var(--surface-base)) l c h / calc(pow(1 - pow(0.85, 4), 3))) 85%,
+  oklch(from var(--fade-color, var(--surface-base)) l c h / calc(pow(1 - pow(0.92, 4), 3))) 92%,
+  oklch(from var(--fade-color, var(--surface-base)) l c h / calc(pow(1 - pow(0.97, 4), 3))) 97%,
   oklch(from var(--fade-color, var(--surface-base)) l c h / 0)
 )`;
 
@@ -33,11 +35,11 @@ export const sheetLayout = css`
   /* Focusing a cell scrolls it into view at the scrollport's edge, under the sticky task
      column. Padding the scrollport by that column keeps the first day's cells in sight. The
      task column takes its 1fr share only while everything fits, so when the sheet scrolls at
-     all, the column is at its 20ch minimum. */
-  scroll-padding-inline-start: 20ch;
-  grid-template-columns: minmax(20ch, 1fr) repeat(var(--days), max-content);
+     all, the column is at its minimum. */
+  scroll-padding-inline-start: 24ch;
+  grid-template-columns: minmax(24ch, 1fr) repeat(var(--days), max-content);
   & [data-week-start] {
-    margin-inline-start: var(--spacing-xs);
+    margin-inline-start: var(--spacing-s);
   }
   & [data-task] {
     --fade-color: var(--surface-base);

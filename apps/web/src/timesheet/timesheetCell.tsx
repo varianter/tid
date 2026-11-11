@@ -59,7 +59,7 @@ export function TimesheetCell({
       type="text"
       value={error ? error.typed : formatHours(minutes)}
       class="ta-right w-min-0 w-full h-full"
-      data-size="large"
+      data-size="medium"
       inputmode="decimal"
       autocomplete="false"
       aria-label={`${task.projectName}, ${task.name}, ${formatDate(day)}`}
@@ -75,7 +75,7 @@ export function TimesheetCell({
       action={action}
       class="d-block"
       // The one fixed width in the sheet: day columns take theirs from it in every layout.
-      style="height: 100%; inline-size: 14ch;"
+      style="height: 100%; inline-size: 10ch;"
       data-cell={`${task.id}:${day}`}
       data-project={task.projectId}
       data-day={day}

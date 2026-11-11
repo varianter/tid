@@ -1,10 +1,10 @@
 import { formatHours } from "@tid/elements/hours";
 import { Section } from "@tid/ui";
-import type { Task } from "./loggableTasks";
+import { projectLabel, type Task } from "./loggableTasks";
 
 type LoggedMinutes = { taskId: number; minutes: number };
 
-/** The month's hours per project, against what the consultant should log. */
+/** The month's hours per project, in the order of the rows, against what the consultant should log. */
 export function ProjectTotals({
   rows,
   sumMinutes,
@@ -22,7 +22,7 @@ export function ProjectTotals({
           const taskIds = tasks.map((task) => task.id);
           return (
             <div class="stack-h justify-between gap-s py-2xs b-b bc-subtle">
-              <a href={`/projects/${projectId}`}>{tasks[0]?.projectName}</a>
+              <a href={`/projects/${projectId}`}>{tasks[0] && projectLabel(tasks[0])}</a>
               <span data-project-total={projectId}>
                 {formatHours(sumMinutes((entry) => taskIds.includes(entry.taskId)))}
               </span>

@@ -8,7 +8,7 @@ import { Button, ColorMode, EmptyState, Select } from "@tid/ui";
 import { cx } from "hono/css";
 import type { PropsWithChildren } from "hono/jsx";
 import { usePageSearch } from "../framework/filter";
-import type { Task } from "./loggableTasks";
+import { projectLabel, type Task } from "./loggableTasks";
 import { ProjectTotals } from "./projectTotals";
 import { dayLabelLayout, sheetLayout } from "./sheetLayout";
 import { type CellError, TimesheetCell } from "./timesheetCell";
@@ -69,8 +69,8 @@ export function TimesheetGrid({
         assignedTaskIds.includes(task.id) ||
         entries.some((entry) => entry.taskId === task.id),
     )
-    .sort(byProjectThenName);
-  const addableTasks = tasks.filter((task) => !rows.includes(task)).sort(byProjectThenName);
+    .sort(byClientProjectAndName);
+  const addableTasks = tasks.filter((task) => !rows.includes(task)).sort(byClientProjectAndName);
   const addable = !locked && addableTasks.length > 0;
   if (rows.length === 0) return <NoRows locked={locked} addableTasks={addableTasks} />;
   return (
@@ -108,7 +108,7 @@ export function TimesheetGrid({
             <div data-task class={`py-2xs self-stretch stack-v justify-center ${stickyStart}`}>
               <a href={`/projects/${task.projectId}`} class="stack-v">
                 <span class="fs-s fw-medium lh-snug">{task.name}</span>
-                <span class="fs-xs ink-subtle">{task.projectName}</span>
+                <span class="fs-xs ink-subtle">{projectLabel(task)}</span>
               </a>
             </div>
             {days.map((day, index) => (
@@ -188,7 +188,7 @@ function AddTaskForm({ addableTasks, class: className }: { addableTasks: Task[];
           options={addableTasks.toSorted(billableFirst).map((task) => ({
             value: task.id,
             label: task.name,
-            group: task.projectName,
+            group: projectLabel(task),
             section: task.billing === "non_billable" ? "non-billable" : "billable",
           }))}
         >
@@ -211,8 +211,13 @@ function billableFirst(a: Task, b: Task) {
   return Number(a.billing === "non_billable") - Number(b.billing === "non_billable");
 }
 
-function byProjectThenName(a: Task, b: Task) {
-  return a.projectName.localeCompare(b.projectName, "nb") || a.name.localeCompare(b.name, "nb");
+// Sorting by client puts each client's projects next to each other, so rows group without headers.
+function byClientProjectAndName(a: Task, b: Task) {
+  return (
+    a.clientName.localeCompare(b.clientName, "nb") ||
+    a.projectName.localeCompare(b.projectName, "nb") ||
+    a.name.localeCompare(b.name, "nb")
+  );
 }
 
 type DayTintKind = "today" | "holiday";

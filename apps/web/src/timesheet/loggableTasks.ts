@@ -1,4 +1,5 @@
 import {
+  clients,
   projectAssignments,
   projectOrganizations,
   projects,
@@ -15,8 +16,16 @@ export type Task = {
   name: string;
   projectId: number;
   projectName: string;
+  clientName: string;
   billing: Billing;
 };
+
+/**
+ * Names the task's project with its client. Non-billable work is internal, where the client is
+ * always Variant and says nothing.
+ */
+export const projectLabel = (task: Pick<Task, "clientName" | "projectName" | "billing">) =>
+  task.billing === "non_billable" ? task.projectName : `${task.clientName} · ${task.projectName}`;
 
 const openToOrganizationOf = (userId: number) =>
   exists(
@@ -94,7 +103,9 @@ export const userTasks = () =>
       name: tasks.name,
       projectId: projects.id,
       projectName: projects.name,
+      clientName: clients.name,
       billing: projects.billing,
     })
     .from(tasks)
-    .innerJoin(projects, eq(projects.id, tasks.projectId));
+    .innerJoin(projects, eq(projects.id, tasks.projectId))
+    .innerJoin(clients, eq(clients.id, projects.clientId));
