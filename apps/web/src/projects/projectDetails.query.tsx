@@ -99,7 +99,7 @@ export const projectDetails = async (c: Context<UserEnv>) => {
       name: users.name,
       rate: currentRate(assignmentRates.rate),
       endsOn: projectAssignments.endsOn,
-      leftOn: users.endsOn,
+      lastDay: users.lastDay,
       ...hoursSpent(today),
     })
     .from(projectAssignments)
@@ -169,7 +169,7 @@ type Consultant = Person &
     rate: number | null;
     endsOn: string | null;
     /** The day they left the company. */
-    leftOn: string | null;
+    lastDay: string | null;
     state: AssignmentState;
   };
 

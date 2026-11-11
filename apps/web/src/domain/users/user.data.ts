@@ -13,6 +13,10 @@ export const listCurrentPeople = (alreadyChosen: number[]) =>
     .from(users)
     .innerJoin(organizations, eq(organizations.id, users.orgId))
     .where(
-      or(isNull(users.endsOn), gte(users.endsOn, todayInOslo()), inArray(users.id, alreadyChosen)),
+      or(
+        isNull(users.lastDay),
+        gte(users.lastDay, todayInOslo()),
+        inArray(users.id, alreadyChosen),
+      ),
     )
     .orderBy(organizations.name, users.name);

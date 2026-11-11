@@ -24,6 +24,7 @@ import { monthClose } from "./monthClose/monthClose.routes";
 import { officeSummary } from "./officeSummary/officeSummary.routes";
 import { projectConsultants } from "./projectConsultants/projectConsultants.routes";
 import { projects } from "./projects/projects.routes";
+import { registerConsultantRoutes } from "./registerConsultant/registerConsultant.routes";
 import { reports } from "./reports/reports.routes";
 import { ErrorPage } from "./shell/errorPage";
 import { Layout, themeScriptSource, vardeStylesheet } from "./shell/layout";
@@ -159,6 +160,7 @@ app.route("/month-close", monthClose);
 app.route("/consultants", consultants);
 app.route("/administration", administration);
 app.route("/administration/change-consultant-organization", changeConsultantOrganizationRoutes);
+app.route("/administration/register-consultant", registerConsultantRoutes);
 app.route("/office-summary", officeSummary);
 
 // Dev login lets anyone act as any user, so it must not be reachable from the network.

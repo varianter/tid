@@ -81,7 +81,7 @@ export function seedDatabase(
           createdAt: new Date(
             dayOf(now, Math.max(startWeek, person.joinedWeek ?? startWeek), Weekday.Monday),
           ),
-          endsOn:
+          lastDay:
             person.leftWeek === undefined ? null : dayOf(now, person.leftWeek, Weekday.Friday),
         })),
       )

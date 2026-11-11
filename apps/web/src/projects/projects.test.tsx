@@ -285,7 +285,7 @@ test("consultants who have left can't be assigned", async () => {
   const projectId = await startNonBillable("ACME-11");
   const [leaver] = await database
     .insert(users)
-    .values({ name: "Liv", email: "liv@variant.no", orgId: oslo, endsOn: "2026-01-31" })
+    .values({ name: "Liv", email: "liv@variant.no", orgId: oslo, lastDay: "2026-01-31" })
     .returning();
   if (!leaver) throw new Error("Expected a user");
   const assign = await requestAs(manager, `/projects/${projectId}/consultants/new`, {
@@ -364,8 +364,8 @@ test("editing a project sets and clears its invoicing lead, who may have left si
   const [leftBefore, leftAfter] = (await database
     .insert(users)
     .values([
-      { name: "Åse", email: "ase@variant.no", orgId: oslo, endsOn: "2026-01-31" },
-      { name: "Tor", email: "tor@variant.no", orgId: oslo, endsOn: "2026-01-31" },
+      { name: "Åse", email: "ase@variant.no", orgId: oslo, lastDay: "2026-01-31" },
+      { name: "Tor", email: "tor@variant.no", orgId: oslo, lastDay: "2026-01-31" },
     ])
     .returning()) as [UserRow, UserRow];
 

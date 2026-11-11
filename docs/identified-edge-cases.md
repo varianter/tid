@@ -8,7 +8,7 @@ Assignments, projects, tasks and users all have optional start and end dates. Sh
 
 - Before an assignment's `starts_on` or after its `ends_on`
 - After a project's or task's `ends_on`
-- After the user's own `ends_on`
+- After the user's own `last_day`
 
 **Leaning:** allow it, so hours can always be logged. We're not sure yet.
 

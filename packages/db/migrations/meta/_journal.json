@@ -71,6 +71,13 @@
       "when": 1793606455675,
       "tag": "0009_invoicing_lead_account_managers_and_company_details",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1794384356431,
+      "tag": "0010_user_first_and_last_day",
+      "breakpoints": true
     }
   ]
 }

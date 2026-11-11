@@ -38,7 +38,7 @@ export const assignConsultants = formAction({
       .where(
         and(
           canManageProject ? undefined : eq(users.orgId, user.orgId),
-          or(isNull(users.endsOn), gte(users.endsOn, today)),
+          or(isNull(users.lastDay), gte(users.lastDay, today)),
           // Someone whose assignment ended is assigned again the same way.
           or(isNull(projectAssignments.userId), lt(projectAssignments.endsOn, today)),
         ),

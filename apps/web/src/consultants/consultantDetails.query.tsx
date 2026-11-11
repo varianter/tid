@@ -42,7 +42,8 @@ export const consultantDetails = queryPage({
         id: users.id,
         name: users.name,
         email: users.email,
-        endsOn: users.endsOn,
+        firstDay: users.firstDay,
+        lastDay: users.lastDay,
         organizationSlug: organizations.slug,
         country: organizations.country,
         fullDayMinutes: organizations.fullDayMinutes,
@@ -93,7 +94,7 @@ export const consultantDetails = queryPage({
       currentBillableProjects,
       minutes: monthTotals?.minutes ?? 0,
       billableMinutes: monthTotals?.billableMinutes ?? 0,
-      monthCapacityMinutes: capacityMinutes(month, user.country, user.fullDayMinutes, user.endsOn),
+      monthCapacityMinutes: capacityMinutes(month, user.country, user.fullDayMinutes, user.lastDay),
       entries,
     };
   },
@@ -111,7 +112,13 @@ function ConsultantDetailsPage({
   query: { month },
   href,
 }: {
-  user: { name: string; email: string; endsOn: string | null; organizationSlug: string };
+  user: {
+    name: string;
+    email: string;
+    firstDay: string | null;
+    lastDay: string | null;
+    organizationSlug: string;
+  };
   viewerIsManager: boolean;
   currentBillableProjects: CurrentProject[];
   minutes: number;
@@ -125,7 +132,8 @@ function ConsultantDetailsPage({
       description={
         <>
           {user.email}
-          {user.endsOn && <Badge>Left Variant {formatDate(user.endsOn)}</Badge>}
+          {user.firstDay && <Badge>First day {formatDate(user.firstDay)}</Badge>}
+          {user.lastDay && <Badge>Left Variant {formatDate(user.lastDay)}</Badge>}
         </>
       }
       back={

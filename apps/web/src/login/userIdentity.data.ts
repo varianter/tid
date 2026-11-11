@@ -42,7 +42,7 @@ export async function findUserByEmail(email: string): Promise<User | undefined> 
   return user;
 }
 
-// Imported users have no identity until their first login, so they are matched on email.
+// Registered users have no identity until their first login, so they are matched on email.
 export async function linkIdentity(tenantId: string, subject: string, user: User) {
   const [identity] = await database
     .insert(userIdentities)

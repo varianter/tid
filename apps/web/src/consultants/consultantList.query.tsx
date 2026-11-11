@@ -24,7 +24,7 @@ export const consultantList = async (c: Context<UserEnv>) => {
       id: users.id,
       name: users.name,
       email: users.email,
-      endsOn: users.endsOn,
+      lastDay: users.lastDay,
       orgId: users.orgId,
       isManager: exists(
         database
@@ -57,7 +57,7 @@ export const consultantList = async (c: Context<UserEnv>) => {
       consultants={rows.map((row) => ({
         ...row,
         officeName: officeNames.get(row.orgId) ?? "",
-        hasLeft: row.endsOn !== null && row.endsOn < today,
+        hasLeft: row.lastDay !== null && row.lastDay < today,
         projectNames: (projectsByUser.get(row.id) ?? []).map((project) => project.name),
       }))}
       {...organizationFilter}
@@ -69,7 +69,7 @@ type ConsultantRow = {
   id: number;
   name: string;
   email: string;
-  endsOn: string | null;
+  lastDay: string | null;
   isManager: boolean;
   officeName: string;
   hasLeft: boolean;
@@ -104,7 +104,7 @@ function ConsultantListPage({
                   <DataGrid.Title
                     secondary={[
                       consultant.email,
-                      consultant.endsOn && `Left Variant ${formatDate(consultant.endsOn)}`,
+                      consultant.lastDay && `Left Variant ${formatDate(consultant.lastDay)}`,
                     ]
                       .filter(Boolean)
                       .join(" · ")}

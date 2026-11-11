@@ -30,7 +30,7 @@ export async function loadConsultantHours(
     .select({
       id: users.id,
       name: users.name,
-      endsOn: users.endsOn,
+      lastDay: users.lastDay,
       minutes: sql`coalesce(sum(${timeEntries.minutes}), 0)`.mapWith(Number),
       billableMinutes:
         sql`coalesce(sum(${timeEntries.minutes}) filter (where ${projects.billing} <> 'non_billable'), 0)`.mapWith(
@@ -48,14 +48,14 @@ export async function loadConsultantHours(
     .leftJoin(tasks, eq(tasks.id, timeEntries.taskId))
     .leftJoin(projects, eq(projects.id, tasks.projectId))
     .where(
-      and(eq(users.orgId, organization.id), or(isNull(users.endsOn), gte(users.endsOn, first))),
+      and(eq(users.orgId, organization.id), or(isNull(users.lastDay), gte(users.lastDay, first))),
     )
     .groupBy(users.id)
     .orderBy(users.name);
 
   return consultants.map((consultant) => {
     // Hours not yet due don't count as missing, so the current month only checks up to today.
-    const until = consultant.endsOn && consultant.endsOn < today ? consultant.endsOn : today;
+    const until = consultant.lastDay && consultant.lastDay < today ? consultant.lastDay : today;
     const expectedMinutes = capacityMinutes(
       month,
       organization.country,
