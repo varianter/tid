@@ -33,10 +33,10 @@ export type AssignmentState = (typeof stateOrder)[number];
 
 // Leaving the company ends every assignment, so it wins over the assignment's own end.
 export function assignmentState(
-  { endsOn, leftOn }: { endsOn: string | null; leftOn: string | null },
+  { endsOn, lastDay }: { endsOn: string | null; lastDay: string | null },
   today: string,
 ): AssignmentState {
-  if (leftOn && leftOn < today) return "leftCompany";
+  if (lastDay && lastDay < today) return "leftCompany";
   if (endsOn && endsOn < today) return "offProject";
   return "onProject";
 }

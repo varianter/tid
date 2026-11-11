@@ -6,7 +6,7 @@ export type OrganizationMember = {
   id: number;
   name: string;
   email: string;
-  endsOn: string | null;
+  lastDay: string | null;
 };
 
 /** A member's row title: their name, or what's given instead, over their email and leaving date. */
@@ -19,7 +19,7 @@ export function OrganizationMemberTitle({
 }) {
   return (
     <DataGrid.Title
-      secondary={[member.email, member.endsOn && `Left Variant ${formatDate(member.endsOn)}`]
+      secondary={[member.email, member.lastDay && `Left Variant ${formatDate(member.lastDay)}`]
         .filter(Boolean)
         .join(" · ")}
     >

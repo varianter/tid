@@ -102,7 +102,7 @@ export const monthlyReport = queryPage({
                 id: users.id,
                 email: view.userEmail,
                 name: view.userName,
-                endsOn: users.endsOn,
+                lastDay: users.lastDay,
                 ...totals,
               })
               .from(view)
@@ -114,10 +114,10 @@ export const monthlyReport = queryPage({
           );
           return {
             tab,
-            rows: rows.map(({ endsOn, ...row }) => ({
+            rows: rows.map(({ lastDay, ...row }) => ({
               ...row,
               capacityHours:
-                capacityMinutes(month, selected.country, selected.fullDayMinutes, endsOn) / 60,
+                capacityMinutes(month, selected.country, selected.fullDayMinutes, lastDay) / 60,
             })),
           };
         }
@@ -149,7 +149,7 @@ export const monthlyReport = queryPage({
     };
     // Everyone employed in the month, including those who logged nothing.
     const employed = await database
-      .select({ endsOn: users.endsOn })
+      .select({ lastDay: users.lastDay })
       .from(users)
       .where(
         and(
@@ -157,13 +157,13 @@ export const monthlyReport = queryPage({
             users.orgId,
             selected.organizations.map((organization) => organization.id),
           ),
-          or(isNull(users.endsOn), gte(users.endsOn, firstDayOfMonth(month))),
+          or(isNull(users.lastDay), gte(users.lastDay, firstDayOfMonth(month))),
         ),
       );
     const capacityHours =
       employed.reduce(
-        (sum, { endsOn }) =>
-          sum + capacityMinutes(month, selected.country, selected.fullDayMinutes, endsOn),
+        (sum, { lastDay }) =>
+          sum + capacityMinutes(month, selected.country, selected.fullDayMinutes, lastDay),
         0,
       ) / 60;
     return { organizationFilter, report, total, capacityHours, currency };

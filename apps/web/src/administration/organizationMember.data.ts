@@ -23,7 +23,7 @@ export const listOrganizationMembers = (orgId: number, { includeLeft = false } =
       id: users.id,
       name: users.name,
       email: users.email,
-      endsOn: users.endsOn,
+      lastDay: users.lastDay,
       isManager: exists(
         database
           .select()
@@ -35,7 +35,7 @@ export const listOrganizationMembers = (orgId: number, { includeLeft = false } =
     .where(
       and(
         eq(users.orgId, orgId),
-        includeLeft ? undefined : or(isNull(users.endsOn), gte(users.endsOn, todayInOslo())),
+        includeLeft ? undefined : or(isNull(users.lastDay), gte(users.lastDay, todayInOslo())),
       ),
     )
     .orderBy(users.name);

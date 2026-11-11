@@ -8,7 +8,7 @@ type Office = { legalName: string; country: Country; fullDayMinutes: number };
 export type LoggedTime = {
   office: string;
   userId: number;
-  endsOn: string | null;
+  lastDay: string | null;
   month: string;
   currency: string | null;
   hours: number;
@@ -67,7 +67,7 @@ export function summarizeOffices(offices: Office[], logged: LoggedTime[]) {
     if (!consultantMonths.has(consultantMonth)) {
       consultantMonths.add(consultantMonth);
       sum.capacityHours +=
-        capacityMinutes(time.month, office.country, office.fullDayMinutes, time.endsOn) / 60;
+        capacityMinutes(time.month, office.country, office.fullDayMinutes, time.lastDay) / 60;
     }
   }
   for (const [name, people] of consultants) {

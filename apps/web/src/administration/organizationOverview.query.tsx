@@ -3,6 +3,7 @@ import { attributes } from "@tid/via/attributes";
 import type { Context } from "hono";
 import { changeConsultantOrganizationPath } from "../changeConsultantOrganization/changeConsultantOrganization.url";
 import type { UserEnv } from "../domain/users/user";
+import { registerConsultantPath } from "../registerConsultant/registerConsultant.url";
 import { managersPath, openProjectsPath } from "./administration.url";
 
 export const organizationOverview = async (c: Context<UserEnv>) =>
@@ -31,6 +32,11 @@ function OrganizationOverviewPage({ ownSlug }: { ownSlug: string }) {
           title="Managers"
           description="Who administers the organization"
           action={<ManageLink href={managersPath(ownSlug)} />}
+        />
+        <ActionListItem
+          title="New consultants"
+          description="Register someone before their first day, so they can skip sign-up"
+          action={<ManageLink href={registerConsultantPath}>Register</ManageLink>}
         />
         <ActionListItem
           title="Consultant's organization"

@@ -41,7 +41,7 @@ dev.get("/login", async (c) => {
       name: users.name,
       email: users.email,
       organization: organizations.name,
-      endsOn: users.endsOn,
+      lastDay: users.lastDay,
       isManager: exists(
         database
           .select()
@@ -65,7 +65,7 @@ dev.get("/login", async (c) => {
               person.organization,
               person.email,
               person.isManager && "Manager",
-              person.endsOn && `Left ${person.endsOn}`,
+              person.lastDay && `Left ${person.lastDay}`,
             ]
               .filter(Boolean)
               .join(" · ")}

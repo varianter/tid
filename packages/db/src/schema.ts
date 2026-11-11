@@ -58,7 +58,9 @@ export const users = pgTable(
     name: text().notNull(),
     email: text().notNull(),
     orgId: reference().references(() => organizations.id),
-    endsOn: date(),
+    // Only set for people registered before their first day.
+    firstDay: date(),
+    lastDay: date(),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
