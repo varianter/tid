@@ -74,8 +74,6 @@ export function TimesheetCell({
       method="post"
       action={action}
       class="d-block"
-      // The one fixed width in the sheet: day columns take theirs from it in every layout.
-      style="height: 100%; inline-size: 10ch;"
       data-cell={`${task.id}:${day}`}
       data-project={task.projectId}
       data-day={day}

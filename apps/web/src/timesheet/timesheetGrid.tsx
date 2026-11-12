@@ -1,6 +1,6 @@
 import type { Calendar } from "@tid/calendar";
 import { formatDate } from "@tid/calendar/dateDisplay";
-import { mondayOf } from "@tid/calendar/isoDate";
+import { isoWeek, mondayOf } from "@tid/calendar/isoDate";
 import { todayInOslo } from "@tid/calendar/osloClock";
 import type { SpecialDay } from "@tid/calendar/publicHolidays";
 import { formatHours } from "@tid/elements/hours";
@@ -10,7 +10,7 @@ import type { PropsWithChildren } from "hono/jsx";
 import { usePageSearch } from "../framework/filter";
 import { projectLabel, type Task } from "./loggableTasks";
 import { ProjectTotals } from "./projectTotals";
-import { dayLabelLayout, sheetLayout } from "./sheetLayout";
+import { dayLabelLayout, sheetFrame, sheetLayout } from "./sheetLayout";
 import { type CellError, TimesheetCell } from "./timesheetCell";
 
 type TimeEntry = { taskId: number; spentOn: string; minutes: number };
@@ -54,8 +54,7 @@ export function TimesheetGrid({
   const startsWeek = days.map(
     (day, index) => index > 0 && mondayOf(day) !== mondayOf(days[index - 1] ?? day),
   );
-  // Task stays put while the days scroll beneath it; the background hides what's under.
-  const stickyStart = "pos-sticky left-0 surface-base mr-xs pr-2xs";
+  const weeks = [...Map.groupBy(days, mondayOf).values()];
   const minutesOn = (taskId: number, day: string) =>
     entries.find((entry) => entry.taskId === taskId && entry.spentOn === day)?.minutes ?? 0;
   const sumMinutes = (predicate: (entry: (typeof entries)[number]) => boolean) =>
@@ -77,75 +76,102 @@ export function TimesheetGrid({
     <>
       {addable && <AddTaskForm addableTasks={addableTasks} class="mt-s mb-m" />}
       <div
-        class={cx("d-grid t-tabular my-s gap-column-3xs pr-m pb-l", sheetLayout)}
-        style={`--days: ${days.length}; --task-columns: ${rows.length};`}
+        class={cx("my-s t-tabular", sheetFrame)}
+        style={`--day-tracks: ${days.length + weeks.length - 1}; --task-columns: ${rows.length};`}
       >
-        <div class="grid-subgrid grid-all-columns fs-s">
-          <div
-            data-task
-            class={`py-xs ink-subtle  ${stickyStart}`}
-            style="
-            align-content: end;
-        "
-          >
-            Task
-          </div>
-          {days.map((day, index) => (
-            <DayTint
-              id={day === today ? "today" : undefined}
-              tint={tints[index]}
-              weekStart={startsWeek[index]}
-              class={`ta-right fs-s py-xs px-3xs stack-v justify-end items-end br-m br-bl-none br-br-none${tints[index] ? "" : " surface-base"}`}
-            >
-              <DayLabel isToday={day === today} holiday={holidays[index]} />
-              {formatDate(day, "day")}
-            </DayTint>
-          ))}
-        </div>
-
-        {rows.map((task) => (
-          <div class="grid-subgrid grid-all-columns items-center">
-            <div data-task class={`py-2xs self-stretch stack-v justify-center ${stickyStart}`}>
-              <a href={`/projects/${task.projectId}`} class="stack-v">
-                <span class="fs-s fw-medium lh-snug">{task.name}</span>
-                <span class="fs-xs ink-subtle">{projectLabel(task)}</span>
-              </a>
-            </div>
-            {days.map((day, index) => (
-              <DayTint
-                tint={tints[index]}
-                weekStart={startsWeek[index]}
-                class="py-3xs px-3xs stack-v justify-center items-end"
-              >
-                <TimesheetCell
-                  task={task}
-                  day={day}
-                  minutes={minutesOn(task.id, day)}
-                  action={cellsAction}
-                  error={error?.taskId === task.id && error.day === day ? error : undefined}
-                  locked={locked}
-                />
-              </DayTint>
-            ))}
-          </div>
-        ))}
-
-        {rows.length > 0 && (
-          <div data-totals class="grid-subgrid grid-all-columns fw-medium ta-right py-s fs-s">
-            <div class={`ta-left ${stickyStart}`} style="align-content: end;">
-              Total
-            </div>
-            {days.map((day, index) => (
-              <div
-                class="px-xs self-stretch stack-v justify-center surface-base"
-                data-week-start={startsWeek[index] || undefined}
-                data-day-total={day}
-              >
-                {formatHours(sumMinutes((entry) => entry.spentOn === day))}
+        <div data-task-names>
+          <div data-task-name-track>
+            {rows.map((task) => (
+              <div class="py-2xs pr-xs px-3xs">
+                <TaskName task={task} />
               </div>
             ))}
           </div>
-        )}
+        </div>
+        <div class={cx("d-grid pr-m pb-l", sheetLayout)}>
+          <div data-row data-weeks class="grid-subgrid grid-all-columns fs-xs fw-medium ink-subtle">
+            <div data-task />
+            {weeks.map((weekDays, index) => (
+              <>
+                {index > 0 && <WeekGap />}
+                <div
+                  data-week
+                  class="surface-tinted br-m px-xs py-3xs mb-3xs fs-xs lh-snug"
+                  style={`--week-days: ${weekDays.length};`}
+                >
+                  Week {isoWeek(weekDays[0] ?? "")}
+                </div>
+              </>
+            ))}
+          </div>
+          <div data-row data-days class="grid-subgrid grid-all-columns fs-s">
+            <div data-task class="py-xs ink-subtle" style="align-content: end;">
+              Task
+            </div>
+            {days.map((day, index) => (
+              <>
+                {startsWeek[index] && <WeekGap />}
+                <DayTint
+                  id={day === today ? "today" : undefined}
+                  tint={tints[index]}
+                  class={`ta-right fs-s py-xs px-3xs stack-v justify-end items-end br-m br-bl-none br-br-none${tints[index] ? "" : " surface-base"}`}
+                >
+                  <DayLabel isToday={day === today} holiday={holidays[index]} />
+                  {formatDate(day, "day")}
+                </DayTint>
+              </>
+            ))}
+          </div>
+
+          {rows.map((task) => (
+            <div data-row class="grid-subgrid grid-all-columns items-center">
+              <div data-task class="py-2xs self-stretch stack-v justify-center">
+                <TaskName task={task} />
+              </div>
+              {days.map((day, index) => (
+                <>
+                  {startsWeek[index] && <WeekGap />}
+                  <DayTint
+                    tint={tints[index]}
+                    class="py-3xs px-3xs stack-v justify-center items-end"
+                  >
+                    <TimesheetCell
+                      task={task}
+                      day={day}
+                      minutes={minutesOn(task.id, day)}
+                      action={cellsAction}
+                      error={error?.taskId === task.id && error.day === day ? error : undefined}
+                      locked={locked}
+                    />
+                  </DayTint>
+                </>
+              ))}
+            </div>
+          ))}
+
+          {rows.length > 0 && (
+            <div
+              data-row
+              data-totals
+              class="grid-subgrid grid-all-columns fw-medium ta-right py-s fs-s"
+            >
+              <div data-task class="ta-left" style="align-content: end;">
+                Total
+              </div>
+              {days.map((day, index) => (
+                <>
+                  {startsWeek[index] && <WeekGap />}
+                  <div
+                    class="px-xs self-stretch stack-v justify-center surface-base"
+                    data-day-total={day}
+                  >
+                    {formatHours(sumMinutes((entry) => entry.spentOn === day))}
+                  </div>
+                </>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
       <ProjectTotals rows={rows} sumMinutes={sumMinutes} expectedMinutes={expectedMinutes} />
     </>
@@ -226,27 +252,34 @@ const tintPalettes = { today: "blue", holiday: "orange" } as const;
 function DayTint({
   id,
   tint,
-  weekStart,
   class: className,
   children,
-}: PropsWithChildren<{ id?: string; tint?: DayTintKind; weekStart?: boolean; class: string }>) {
-  const weekStartMark = weekStart || undefined;
+}: PropsWithChildren<{ id?: string; tint?: DayTintKind; class: string }>) {
   if (!tint)
     return (
-      <div id={id} class={className} data-week-start={weekStartMark}>
+      <div id={id} class={className}>
         {children}
       </div>
     );
   return (
-    <ColorMode
-      id={id}
-      palette={tintPalettes[tint]}
-      class={`surface-tinted ${className}`}
-      data-week-start={weekStartMark}
-    >
+    <ColorMode id={id} palette={tintPalettes[tint]} class={`surface-tinted ${className}`}>
       {children}
     </ColorMode>
   );
+}
+
+function TaskName({ task }: { task: Task }) {
+  return (
+    <a href={`/projects/${task.projectId}`} class="stack-v">
+      <span class="fs-s fw-medium lh-snug">{task.name}</span>
+      <span class="fs-xs ink-subtle">{projectLabel(task)}</span>
+    </a>
+  );
+}
+
+/** Sits between weeks in every row, so the gap is a track of its own that rows share. */
+function WeekGap() {
+  return <div data-week-gap />;
 }
 
 function DayLabel({ isToday, holiday }: { isToday: boolean; holiday?: SpecialDay }) {

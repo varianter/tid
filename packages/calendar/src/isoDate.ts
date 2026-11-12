@@ -26,6 +26,14 @@ export function mondayOf(isoDate: string) {
   return addDays(isoDate, -daysSinceMonday);
 }
 
+/** ISO 8601 week number. A week belongs to the year its Thursday falls in, so late December can be week 1. */
+export function isoWeek(isoDate: string) {
+  const thursday = addDays(mondayOf(isoDate), 3);
+  const newYear = parseIsoDate(`${thursday.slice(0, 4)}-01-01`);
+  const daysIntoYear = (parseIsoDate(thursday).getTime() - newYear.getTime()) / dayInMilliseconds;
+  return Math.floor(daysIntoYear / 7) + 1;
+}
+
 export function isWeekend(isoDate: string) {
   const weekday = parseIsoDate(isoDate).getUTCDay();
   return weekday === 0 || weekday === 6;

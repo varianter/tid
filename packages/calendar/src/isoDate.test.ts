@@ -1,11 +1,28 @@
 import { expect, test } from "bun:test";
-import { addMonths, daysOfMonth, isIsoDate, isWeekend, lastDayOfMonth, mondayOf } from "./isoDate";
+import {
+  addMonths,
+  daysOfMonth,
+  isIsoDate,
+  isoWeek,
+  isWeekend,
+  lastDayOfMonth,
+  mondayOf,
+} from "./isoDate";
 
 test("mondayOf snaps any day, Sunday included, to the Monday before it", () => {
   expect(mondayOf("2026-09-28")).toBe("2026-09-28");
   expect(mondayOf("2026-09-30")).toBe("2026-09-28");
   expect(mondayOf("2026-10-04")).toBe("2026-09-28");
   expect(mondayOf("2027-01-01")).toBe("2026-12-28");
+});
+
+test("isoWeek counts weeks by the year their Thursday falls in", () => {
+  expect(isoWeek("2026-11-11")).toBe(46);
+  expect(isoWeek("2026-01-01")).toBe(1);
+  expect(isoWeek("2026-12-31")).toBe(53);
+  expect(isoWeek("2027-01-03")).toBe(53);
+  expect(isoWeek("2027-01-04")).toBe(1);
+  expect(isoWeek("2024-12-30")).toBe(1);
 });
 
 test("isIsoDate rejects malformed and impossible dates", () => {
