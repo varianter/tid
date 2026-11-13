@@ -13,7 +13,7 @@ import {
   users,
 } from "@tid/db/schema";
 import { formatTotalHours } from "@tid/elements/hours";
-import { Badge, Button, DataGrid, Detail, Icon, Page, Section, Stat, StatList } from "@tid/ui";
+import { Badge, Button, DataGrid, Detail, Icon, Page, Section } from "@tid/ui";
 import { attributes } from "@tid/via/attributes";
 import { and, desc, eq, lte, type SQL, sql } from "drizzle-orm";
 import type { Context } from "hono";
@@ -71,12 +71,6 @@ export const projectDetails = async (c: Context<UserEnv>) => {
   if (!project) return c.notFound();
 
   const today = todayInOslo();
-  const [projectHours] = await database
-    .select(hoursSpent(today))
-    .from(timeEntries)
-    .innerJoin(tasks, eq(tasks.id, timeEntries.taskId))
-    .where(eq(tasks.projectId, id));
-
   const projectTasks = await database
     .select({
       id: tasks.id,
@@ -133,7 +127,6 @@ export const projectDetails = async (c: Context<UserEnv>) => {
   return c.render(
     <ProjectDetailsPage
       project={project}
-      hours={projectHours ?? { total: 0, lastMonth: 0, thisMonth: 0 }}
       tasks={projectTasks}
       assignedPeople={assignedPeople
         .map((person) => ({ ...person, state: assignmentState(person, today) }))
@@ -187,7 +180,6 @@ type Participation = {
 
 type ProjectDetailsPageProps = {
   project: ProjectSummary & { invoicingLead: string | null; hasLoggedTime: boolean };
-  hours: HoursSpent;
   tasks: TaskTotal[];
   /** On the project first, then those who rolled off, then those who left the company. */
   assignedPeople: Consultant[];
@@ -203,7 +195,6 @@ type ProjectDetailsPageProps = {
 
 function ProjectDetailsPage({
   project,
-  hours,
   tasks,
   assignedPeople,
   participations,
@@ -280,11 +271,6 @@ function ProjectDetailsPage({
           )}
         </Detail>
       </dl>
-      <StatList>
-        <Stat label="Total hours" value={formatTotalHours(hours.total)} />
-        <Stat label="Last month" value={formatTotalHours(hours.lastMonth)} />
-        <Stat label="This month so far" value={formatTotalHours(hours.thisMonth)} />
-      </StatList>
       <Section
         title="Consultants"
         actions={[
