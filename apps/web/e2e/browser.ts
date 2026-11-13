@@ -56,6 +56,48 @@ export async function navigateAndWait(view: Bun.WebView, url: string) {
   });
 }
 
+/**
+ * A phone's narrow screen and touch, so the page takes its coarse-pointer layout. CDP needs a
+ * navigation first. The page is loaded again, as a page shrunk in place can keep the wider
+ * viewport it had, and then a touch misses what it aims at.
+ */
+export async function emulatePhone(view: Bun.WebView) {
+  await view.cdp("Emulation.setDeviceMetricsOverride", {
+    width: 390,
+    height: 844,
+    deviceScaleFactor: 3,
+    mobile: true,
+  });
+  await view.cdp("Emulation.setTouchEmulationEnabled", { enabled: true, maxTouchPoints: 5 });
+  await navigateAndWait(view, view.url);
+}
+
+/**
+ * Taps the target's centre with a touch, as a finger would. A touch moves focus and fires
+ * pointer events differently from a click. Unlike a click, a touch lands wherever it's sent, so
+ * it waits for scrolling, snapping included, to settle on the target first.
+ */
+export async function scrollToAndTap(view: Bun.WebView, selector: string) {
+  await view.scrollTo(selector, { timeout: giveUpAfter });
+  const centre = async () =>
+    JSON.stringify(
+      await view.evaluate(
+        `(({ left, top, width, height }) => ({ x: left + width / 2, y: top + height / 2 }))(document.querySelector(${JSON.stringify(selector)}).getBoundingClientRect())`,
+      ),
+    );
+  let previous = "";
+  const settled = await waitUntil(`${selector} to stop moving`, async () => {
+    const current = await centre();
+    if (current === previous) return current;
+    previous = current;
+    await Bun.sleep(100);
+    return undefined;
+  });
+  const { x, y } = JSON.parse(settled) as { x: number; y: number };
+  await view.cdp("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x, y }] });
+  await view.cdp("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+}
+
 /** Polls for what the page or database does a moment after an action. */
 export async function waitUntil<Value>(
   description: string,

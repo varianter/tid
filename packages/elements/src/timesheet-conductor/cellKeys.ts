@@ -1,4 +1,6 @@
-import { formatHours, parseHours } from "../hours";
+import { parseHours } from "../hours";
+import { fillDay } from "./dayFill";
+import { hoursInputOf, typeHours } from "./hoursInput";
 
 const halfHour = 30;
 const wholeDay = 24 * 60;
@@ -10,11 +12,6 @@ export function stepHalfHour(minutes: number, direction: 1 | -1) {
       ? Math.floor(minutes / halfHour) * halfHour + halfHour
       : Math.ceil(minutes / halfHour) * halfHour - halfHour;
   return Math.min(Math.max(stepped, 0), wholeDay);
-}
-
-/** What's left of the day after the other cells, never below zero. */
-export function remainingMinutes(fullDay: number, others: number[]) {
-  return Math.max(fullDay - others.reduce((total, minutes) => total + minutes, 0), 0);
 }
 
 /**
@@ -59,14 +56,10 @@ export class CellKeys {
         case "ArrowRight":
           return !event.shiftKey && caretAtEnd(input) && this.#moveToward(form, "right");
         case "f":
-        case "F": {
-          const fullDay = Number(this.#grid.getAttribute("full-day-minutes"));
-          if (!fullDay) return false;
-          const remaining = remainingMinutes(fullDay, this.#otherMinutesOnDay(form));
-          // A full day is left alone rather than wiped. Still handled, so no "f" gets typed.
-          if (remaining > 0) typeHours(input, remaining);
+        case "F":
+          // Handled even when the day is full, so no "f" gets typed.
+          fillDay(this.#grid, input);
           return true;
-        }
         case "t":
         case "T":
           // Handled even when today isn't on the sheet, so no "t" gets typed.
@@ -107,19 +100,6 @@ export class CellKeys {
     );
   }
 
-  /**
-   * Read from the inputs rather than `data-minutes`, since a cell you just left may still be saving.
-   * Text that isn't hours counts as nothing.
-   */
-  #otherMinutesOnDay(form: HTMLFormElement) {
-    return [...this.#grid.querySelectorAll<HTMLFormElement>(`form[data-day="${form.dataset.day}"]`)]
-      .filter((cell) => cell !== form)
-      .map(
-        (cell) =>
-          parseHours(cell.querySelector<HTMLInputElement>('input[name="hours"]')?.value ?? "") ?? 0,
-      );
-  }
-
   /** The cells before and after this one among those matching. */
   #neighboursOf(form: HTMLFormElement, selector: string) {
     const cells = [...this.#grid.querySelectorAll<HTMLFormElement>(selector)];
@@ -130,7 +110,7 @@ export class CellKeys {
 
 /** Selects the cell's text, so typing replaces it. */
 function focusCell(form: HTMLFormElement | null | undefined) {
-  const input = form?.querySelector<HTMLInputElement>('input[name="hours"]');
+  const input = form && hoursInputOf(form);
   if (!input) return false;
   input.focus();
   input.select();
@@ -167,12 +147,6 @@ function stepHours(input: HTMLInputElement, direction: 1 | -1) {
   if (minutes === undefined) return false;
   typeHours(input, stepHalfHour(minutes, direction));
   return true;
-}
-
-/** Fires `input`, so listeners see the change as they would typed text. */
-function typeHours(input: HTMLInputElement, minutes: number) {
-  input.value = formatHours(minutes);
-  input.dispatchEvent(new Event("input", { bubbles: true }));
 }
 
 // A cell's whole text selected counts as being at either edge, so arrows keep moving after landing.

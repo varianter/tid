@@ -1,7 +1,7 @@
 import { formatDate } from "@tid/calendar/dateDisplay";
 import { isIsoDate } from "@tid/calendar/isoDate";
 import { formatHours } from "@tid/elements/hours";
-import { ColorMode, Icon, Input, Popover } from "@tid/ui";
+import { Button, ColorMode, Icon, Input, Popover } from "@tid/ui";
 import { z } from "zod";
 import type { Task } from "./loggableTasks";
 
@@ -53,7 +53,7 @@ export function TimesheetCell({
   locked?: boolean;
 }) {
   const errorId = `cell-error-${task.id}-${day}`;
-  const input = (
+  const hoursInput = (
     <Input
       name="hours"
       type="text"
@@ -69,6 +69,25 @@ export function TimesheetCell({
       disabled={locked}
     />
   );
+  const hoursControl = locked ? (
+    hoursInput
+  ) : (
+    <div class="pile w-full h-full">
+      {hoursInput}
+      <Button
+        type="button"
+        // Out of the tab order, since keyboards have F.
+        tabindex={-1}
+        aria-label="Fill the rest of the day"
+        data-variant="tinted"
+        data-size="small"
+        class="justify-self-start ml-3xs"
+        data-fill-day
+      >
+        Fill
+      </Button>
+    </div>
+  );
   return (
     <form
       method="post"
@@ -83,7 +102,7 @@ export function TimesheetCell({
       <input type="hidden" name="date" value={day} />
       {error ? (
         <ColorMode palette="coral" class="pos-relative stack-h flex-nowrap items-center gap-3xs">
-          {input}
+          {hoursControl}
           <button
             type="button"
             popovertarget={errorId}
@@ -99,7 +118,7 @@ export function TimesheetCell({
           </Popover>
         </ColorMode>
       ) : (
-        input
+        hoursControl
       )}
     </form>
   );

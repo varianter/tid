@@ -118,6 +118,17 @@ export const sheetLayout = css`
     }
   }
 
+  /* Fill shows only while its cell has focus, so the hours stay readable everywhere else. */
+  & [data-cell]:not(:focus-within) [data-fill-day] {
+    display: none;
+  }
+  /* Fill stands in for the F shortcut on phones, which have no keys to press. */
+  @media (width >= 40rem), not (pointer: coarse) {
+    & [data-fill-day] {
+      display: none;
+    }
+  }
+
   @media (width < 40rem) {
     grid-auto-flow: column;
     grid-template-rows: repeat(var(--day-tracks), auto);

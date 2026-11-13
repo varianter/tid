@@ -6,3 +6,14 @@ export async function findEmptyCell(view: Bun.WebView) {
   )) as { taskId: number; projectId: number; day: string };
   return { taskId, projectId, day, input: `${selector} input[name=hours]` };
 }
+
+/** An empty cell the user can log on, on a day with no hours yet, so the whole day is left. */
+export async function findCellOnEmptyDay(view: Bun.WebView) {
+  const day = (await view.evaluate(
+    `[...document.querySelectorAll("form[data-cell]:has(input:not([disabled]))")].map((cell) => cell.dataset.day).find((day) => [...document.querySelectorAll(\`form[data-day="\${day}"]\`)].every((cell) => cell.dataset.minutes === "0"))`,
+  )) as string;
+  return {
+    day,
+    input: `form[data-cell][data-day="${day}"]:has(input:not([disabled])) input[name=hours]`,
+  };
+}
