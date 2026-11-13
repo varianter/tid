@@ -1,5 +1,5 @@
 // The server renders hours with the same function, so a total reads the same before and after a reload.
-import { formatHours, parseHours } from "../hours";
+import { formatHours, formatTotalHours, parseHours } from "../hours";
 import { CellKeys } from "./cellKeys";
 import { FillDayButtons } from "./fillDayButtons";
 
@@ -127,7 +127,19 @@ class TimesheetConductor extends HTMLElement {
     };
     show(`[data-project-total="${project}"]`, minutesIn(`form[data-project="${project}"]`));
     show(`[data-day-total="${day}"]`, minutesIn(`form[data-day="${day}"]`));
-    show("[data-grand-total]", minutesIn("form[data-minutes]"));
+    const loggedMinutes = minutesIn("form[data-minutes]");
+    show("[data-grand-total]", loggedMinutes);
+    this.#updateLoggedHours(loggedMinutes);
+  }
+
+  #updateLoggedHours(loggedMinutes: number) {
+    const logged = this.querySelector("[data-logged-hours]");
+    if (logged) logged.textContent = formatTotalHours(loggedMinutes);
+    const overtime = this.querySelector<HTMLElement>("[data-overtime]");
+    if (!overtime) return;
+    const overtimeMinutes = loggedMinutes - Number(overtime.dataset.expectedMinutes);
+    overtime.hidden = overtimeMinutes <= 0;
+    overtime.textContent = `+${formatTotalHours(Math.max(0, overtimeMinutes))}`;
   }
 }
 

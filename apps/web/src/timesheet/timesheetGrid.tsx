@@ -9,7 +9,7 @@ import { cx } from "hono/css";
 import type { PropsWithChildren } from "hono/jsx";
 import { usePageSearch } from "../framework/filter";
 import { projectLabel, type Task } from "./loggableTasks";
-import { ProjectTotals } from "./projectTotals";
+import { LoggedHours } from "./loggedHours";
 import { dayLabelLayout, sheetFrame, sheetLayout } from "./sheetLayout";
 import { type CellError, TimesheetCell } from "./timesheetCell";
 
@@ -173,7 +173,7 @@ export function TimesheetGrid({
           )}
         </div>
       </div>
-      <ProjectTotals rows={rows} sumMinutes={sumMinutes} expectedMinutes={expectedMinutes} />
+      <LoggedHours rows={rows} sumMinutes={sumMinutes} expectedMinutes={expectedMinutes} />
     </>
   );
 }
