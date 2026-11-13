@@ -179,16 +179,15 @@ export function TimesheetGrid({
 }
 
 function NoRows({ locked, addableTasks }: { locked: boolean; addableTasks: Task[] }) {
-  if (locked) return <EmptyState emoji="🔒" title="This month has left the building" />;
+  if (locked) return <EmptyState title="This month has left the building" />;
   if (addableTasks.length === 0)
     return (
-      <EmptyState emoji="🏝️" title="Technically, you're on a desert island">
+      <EmptyState title="Technically, you're on a desert island">
         Nowhere to put your hours – yet. Yell, DM or smoke signal someone who can make that happend.
       </EmptyState>
     );
   return (
     <EmptyState
-      emoji="🦗🦗🦗"
       title="Pick a task, log some hours"
       action={<AddTaskForm addableTasks={addableTasks} />}
     >

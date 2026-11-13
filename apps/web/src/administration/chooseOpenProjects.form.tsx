@@ -49,7 +49,7 @@ export function ChooseOpenProjectsFormPage({
         />
         {projects.length === 0 ? (
           <>
-            <EmptyState emoji="🔓" title="No non-billable projects">
+            <EmptyState title="No non-billable projects">
               Only non-billable projects can be open to everyone.
             </EmptyState>
             <ReturnLink href={administrationPath}>Back</ReturnLink>

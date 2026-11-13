@@ -134,7 +134,7 @@ function ConsultantHoursListPage({
         <SidebarLayout
           sidebar={
             rows.length === 0 ? (
-              <EmptyState emoji="👥" title="No consultants yet" />
+              <EmptyState title="No consultants yet" />
             ) : (
               <StatList orientation="vertical">
                 <Stat

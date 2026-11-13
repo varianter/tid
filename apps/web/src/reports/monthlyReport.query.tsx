@@ -259,7 +259,7 @@ function ReportPage({
           </Tabs>
           <div class="b-all bc-subtle br-l p-m mt-s">
             {table.rows.length === 0 ? (
-              <EmptyState emoji="🗓️" title="No hours logged">
+              <EmptyState title="No hours logged">
                 No time was logged in {formatDate(month, "month")}.
               </EmptyState>
             ) : (

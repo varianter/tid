@@ -85,7 +85,7 @@ function ConsultantListPage({
     <Page title="Consultants">
       <Filtered by={<OrganizationSelect selected={selected} options={options} />}>
         {consultants.length === 0 ? (
-          <EmptyState emoji="👥" title="No consultants yet" />
+          <EmptyState title="No consultants yet" />
         ) : (
           <div class="stack-v gap-m">
             <OfficeHeadcounts

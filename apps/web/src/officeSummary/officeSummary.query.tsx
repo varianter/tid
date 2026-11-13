@@ -194,7 +194,7 @@ function OfficeSummaryPage({
       )}
       <div class="b-all bc-subtle br-l p-m">
         {total.hours === 0 ? (
-          <EmptyState emoji="🍎" title="No hours logged">
+          <EmptyState title="No hours logged">
             No time was logged in {formatPeriod(period)}.
           </EmptyState>
         ) : (

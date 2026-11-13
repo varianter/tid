@@ -71,7 +71,7 @@ function InvoiceDataListPage({
       />
       <Filtered by={<FixedPriceCheckbox />}>
         {projects.length === 0 ? (
-          <EmptyState emoji="🧾" title="Nothing to invoice">
+          <EmptyState title="Nothing to invoice">
             No billable hours were logged in {formatDate(month, "month")}.
           </EmptyState>
         ) : (

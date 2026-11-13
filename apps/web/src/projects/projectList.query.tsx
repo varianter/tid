@@ -58,7 +58,6 @@ function ProjectListPage({
       <Filtered by={<OrganizationSelect selected={selected} options={options} />}>
         {projects.length === 0 ? (
           <EmptyState
-            emoji="📁"
             title="No projects yet"
             action={canStartProjects && <Actions actions={[newProject]} />}
           />
