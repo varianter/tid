@@ -42,7 +42,7 @@ export const sheetFrame = css`
   /* Fixed on phones, so the names above the sheet line up with its columns. */
   --week-column: var(--spacing-l);
   --day-column: calc(6ch + 2 * var(--spacing-3xs));
-  --task-column: calc(20ch + 2 * var(--spacing-3xs));
+  --task-column: calc(18ch + 2 * var(--spacing-3xs));
 
   & > [data-task-names] {
     display: none;
@@ -79,6 +79,10 @@ export const sheetFrame = css`
 export const sheetLayout = css`
   overflow-x: scroll;
   scroll-timeline: --sheet x;
+  /* Scrolling settles on a whole week, centred beside the task names. A page that lets the sheet
+     bleed past its edge sets --sheet-bleed, so the centre is measured to the page's edge instead. */
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline-end: var(--sheet-bleed, 0px);
   @media (prefers-reduced-motion: no-preference) {
     scroll-behavior: smooth;
   }
@@ -93,6 +97,7 @@ export const sheetLayout = css`
   }
   & [data-week] {
     grid-column: span var(--week-days);
+    scroll-snap-align: center;
   }
   /* The one fixed width in the sheet: day columns take theirs from it in every layout. */
   & [data-cell] {
@@ -139,23 +144,29 @@ export const sheetLayout = css`
       );
     & [data-week-gap] {
       inline-size: auto;
-      block-size: var(--spacing-xs);
+      block-size: var(--spacing-m);
     }
+    /* Phones settle on a whole task instead, its column just right of the days. */
+    scroll-padding-inline-start: calc(var(--week-column) + var(--day-column));
+    & [data-cell] {
+      inline-size: 18ch;
+      scroll-snap-align: start;
+    }
+    /* Writing vertically turns logical sides, so the gap to the days is set as a physical
+       margin, and inline padding runs along the bar like a desktop week's. */
     & [data-week] {
+      scroll-snap-align: none;
       grid-column: auto;
       grid-row: span var(--week-days);
-      margin-block-end: 0;
-      margin-inline-end: var(--spacing-3xs);
-      padding-inline: var(--spacing-3xs);
+      margin: 0;
+      margin-right: var(--spacing-3xs);
+      padding-inline: var(--spacing-xs);
       writing-mode: vertical-rl;
       rotate: 180deg;
       text-align: end;
     }
     & > [data-row] {
       display: contents;
-    }
-    & [data-cell] {
-      inline-size: 20ch;
     }
     /* The task names sit above the sheet instead, with nothing left for the corners to label. */
     & [data-task] {
@@ -169,16 +180,14 @@ export const sheetLayout = css`
     & > [data-totals] {
       display: none;
     }
-    /* Weeks and days stay put while wide sheets scroll sideways. */
     & > [data-weeks] > *,
     & > [data-days] > * {
-      /* position: sticky;
-      left: 0; */
       z-index: var(--layer-header);
     }
+    /* Days stay put while wide sheets scroll sideways. */
     & > [data-days] > * {
-    position: sticky;
-      left: var(--week-column);
+      --fade-color: var(--surface-base);
+      position: sticky;
       left: 0;
       background: ${stickyFade};
     }

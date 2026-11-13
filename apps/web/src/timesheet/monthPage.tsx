@@ -77,6 +77,7 @@ export function MonthPage({
           )}
           <timesheet-conductor
             class="-mr-s-m"
+            style="--sheet-bleed: var(--spacing-s-m)"
             cell-action={`/timesheet/month/${month}/cell${search}`}
             full-day-minutes={fullDayMinutes}
             today={todayInOslo()}
