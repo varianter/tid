@@ -17,7 +17,7 @@ beforeAll(async () => {
 test("a report has every hour, and leaves out fixed price only among billable hours", async () => {
   const page = async (filters: string) =>
     (
-      await requestAs(member, `/reports?organization=oslo&month=2026-10&tab=projects${filters}`)
+      await requestAs(member, `/reports?organization=oslo&month=2026-10&tab=overview${filters}`)
     ).text();
 
   const all = await page("");

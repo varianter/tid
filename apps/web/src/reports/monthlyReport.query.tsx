@@ -59,18 +59,13 @@ export const monthlyReport = queryPage({
       // Grouped by currency as well, then merged by mergeCurrencies.
       currency: projects.currency,
       amount: sql`coalesce(sum(${view.amount}), 0)`.mapWith(Number),
-      // Fixed fee time has no amount by design, so only hourly time can be missing a rate.
-      unratedHours: sql`coalesce(sum(${view.billableHours}) filter (
-      where ${view.amount} is null
-        and ${view.projectCode} in (select ${projects.code} from ${projects} where ${projects.billing} = 'hourly')
-    ), 0)`.mapWith(Number),
     };
     // Shown as the amount when nothing was billed, since there's no currency to show it in.
     const currency = selected.currency;
 
     const report = await (async (): Promise<ReportRows> => {
       switch (tab) {
-        case "projects":
+        case "overview":
           return {
             tab,
             rows: mergeCurrencies(
@@ -121,31 +116,17 @@ export const monthlyReport = queryPage({
             })),
           };
         }
-        case "tasks":
-          return {
-            tab,
-            rows: mergeCurrencies(
-              await database
-                .select({ name: view.taskName, ...totals })
-                .from(view)
-                .innerJoin(projects, eq(projects.code, view.projectCode))
-                .where(inReport)
-                .groupBy(view.taskName, projects.currency)
-                .orderBy(view.taskName),
-            ),
-          };
       }
     })();
 
     // Every tab groups the same entries, so its rows add up to the whole report.
     const rows: Totals[] = report.rows;
-    const sumOf = (field: "hours" | "billableHours" | "unratedHours") =>
+    const sumOf = (field: "hours" | "billableHours") =>
       rows.reduce((total, row) => total + row[field], 0);
     const total: Totals = {
       hours: sumOf("hours"),
       billableHours: sumOf("billableHours"),
       amounts: rows.reduce<Amounts>((total, row) => addAmounts(total, row.amounts), {}),
-      unratedHours: sumOf("unratedHours"),
     };
     // Everyone employed in the month, including those who logged nothing.
     const employed = await database
@@ -171,7 +152,7 @@ export const monthlyReport = queryPage({
   view: ReportPage,
 });
 
-type Totals = { hours: number; billableHours: number; amounts: Amounts; unratedHours: number };
+type Totals = { hours: number; billableHours: number; amounts: Amounts };
 
 // Non-billable projects have no currency, but no amount either.
 type CurrencyTotals = Omit<Totals, "amounts"> & { currency: string | null; amount: number };
@@ -185,17 +166,16 @@ type Merged<Row> = Omit<Row, "currency" | "amount"> & Totals;
 export function mergeCurrencies<Row extends CurrencyTotals>(rows: Row[]): Merged<Row>[] {
   const merged: Merged<Row>[] = [];
   let previousKey: string | undefined;
-  for (const { currency, amount, hours, billableHours, unratedHours, ...dimension } of rows) {
+  for (const { currency, amount, hours, billableHours, ...dimension } of rows) {
     const key = JSON.stringify(dimension);
     const amounts = amount === 0 || currency === null ? {} : { [currency]: amount };
     const last = merged.at(-1);
     if (last && key === previousKey) {
       last.hours += hours;
       last.billableHours += billableHours;
-      last.unratedHours += unratedHours;
       last.amounts = addAmounts(last.amounts, amounts);
     } else {
-      merged.push({ ...dimension, hours, billableHours, unratedHours, amounts } as Merged<Row>);
+      merged.push({ ...dimension, hours, billableHours, amounts } as Merged<Row>);
     }
     previousKey = key;
   }
@@ -205,14 +185,13 @@ export function mergeCurrencies<Row extends CurrencyTotals>(rows: Row[]): Merged
 /** One tab's rows, each grouping the report's entries by that tab's dimension. */
 export type ReportRows =
   | {
-      tab: "projects";
+      tab: "overview";
       rows: (Totals & { id: number; code: string; name: string; client: string })[];
     }
   | {
       tab: "consultants";
       rows: (Totals & { id: number; email: string; name: string; capacityHours: number })[];
-    }
-  | { tab: "tasks"; rows: (Totals & { name: string })[] };
+    };
 
 type ReportTable = {
   columns: DataGridColumn[];
@@ -221,9 +200,8 @@ type ReportTable = {
 };
 
 const tabLabels: Record<Tab, string> = {
-  projects: "Projects",
+  overview: "Overview",
   consultants: "Consultants",
-  tasks: "Tasks",
 };
 
 function ReportPage({
@@ -307,7 +285,7 @@ function reportTable(
   consultantHref: (userId: number) => string,
 ): ReportTable {
   switch (report.tab) {
-    case "projects":
+    case "overview":
       return {
         columns: [
           { label: "Name" },
@@ -368,26 +346,6 @@ function reportTable(
           formatAmounts(total.amounts, currency),
         ],
       };
-    case "tasks":
-      return {
-        columns: [
-          { label: "Name" },
-          { label: "Billable hours", kind: "number" },
-          { label: "Billable amount", kind: "number" },
-        ],
-        rows: report.rows.map((row) => ({
-          cells: [
-            <DataGrid.Title>{row.name}</DataGrid.Title>,
-            formatTotalHours(row.billableHours * 60),
-            formatAmounts(row.amounts, currency),
-          ],
-        })),
-        footer: [
-          "Total",
-          formatTotalHours(total.billableHours * 60),
-          formatAmounts(total.amounts, currency),
-        ],
-      };
   }
 }
 
@@ -395,7 +353,6 @@ function Summary({
   hours,
   billableHours,
   amounts,
-  unratedHours,
   capacityHours,
   currency,
 }: Totals & { capacityHours: number; currency: string }) {
@@ -424,11 +381,6 @@ function Summary({
         />
       </Stat>
       <Stat label="Billable amount" value={formatAmounts(amounts, currency)} />
-      <Stat
-        label="Without a rate"
-        value={formatTotalHours(unratedHours * 60)}
-        note={unratedHours > 0 ? "Hourly time that bills nothing" : "Everyone has a rate"}
-      />
     </StatList>
   );
 }

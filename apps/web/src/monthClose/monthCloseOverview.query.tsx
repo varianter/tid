@@ -66,7 +66,7 @@ async function loadOrganizationsToClose(
           ? reportUrl.path({
               organization: organization.slug,
               month,
-              tab: "projects",
+              tab: "overview",
               billable: true,
               fixedPrice,
             })

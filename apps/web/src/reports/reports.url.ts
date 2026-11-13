@@ -5,7 +5,7 @@ import { pageUrl } from "../framework/pageUrl";
 import { fixedPriceField } from "../projects/fixedPriceFilter";
 import { billableField } from "./billableFilter";
 
-export const tabs = ["projects", "consultants", "tasks"] as const;
+export const tabs = ["overview", "consultants"] as const;
 export type Tab = (typeof tabs)[number];
 
 export const reportUrl = pageUrl(
