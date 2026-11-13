@@ -31,6 +31,24 @@ test("a user logs in and logs hours on the timesheet", async () => {
   expect(minutes).toBe(390);
 });
 
+test("leaving a cell saves it in place, without reloading the page", async () => {
+  await logInAs(view, employeeEmail);
+  const { taskId, day, input } = await findEmptyCell(view);
+  // A reload starts a fresh window, which loses this.
+  await view.evaluate("window.samePage = true");
+  await scrollToAndClick(view, input);
+  await view.type("2");
+  await view.press("Tab");
+
+  // The cell shows what's stored once the save has answered, whether swapped in or reloaded.
+  await waitUntil("the saved cell to show", () =>
+    view.evaluate(
+      `document.querySelector('form[data-cell="${taskId}:${day}"]')?.dataset.minutes === "120"`,
+    ),
+  );
+  expect(await view.evaluate("window.samePage === true")).toBe(true);
+});
+
 test("hours typed in a cell are saved when the user leaves the page from it", async () => {
   await logInAs(view, employeeEmail);
   const { taskId, day, input } = await findEmptyCell(view);
