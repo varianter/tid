@@ -1,5 +1,6 @@
 import type { Child, PropsWithChildren } from "hono/jsx";
-import { Icon, type IconName } from "../primitives/Icon";
+import { Icon } from "../primitives/Icon";
+import type { IconName } from "../primitives/iconNames";
 
 /** A bordered list of rows that each offer one action. Put `ActionListItem`s inside. */
 export function ActionList({ children }: PropsWithChildren) {

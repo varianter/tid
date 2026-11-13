@@ -1,5 +1,5 @@
 import { rm } from "node:fs/promises";
-import { iconNames } from "../src/primitives/Icon";
+import { iconNames } from "../src/primitives/iconNames";
 
 const iconsDirectory = `${import.meta.dir}/../icons`;
 
@@ -7,7 +7,7 @@ const iconsDirectory = `${import.meta.dir}/../icons`;
 await rm(iconsDirectory, { recursive: true, force: true });
 
 for (const name of iconNames) {
-  const url = `https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/${name}/fill1/24px.svg`;
+  const url = `https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/${name}/default/24px.svg`;
   const response = await fetch(url);
   if (!response.ok) throw new Error(`No Material Symbol named "${name}" (${response.status})`);
   await Bun.write(`${iconsDirectory}/${name}.svg`, response);

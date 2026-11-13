@@ -53,7 +53,7 @@ function navigationFor(user: User | undefined): NavigationSection[] {
           section: "/reports",
           href: organization && reportUrl.path({ organization, month, tab: "projects" }),
           label: "Reports",
-          icon: "bar_chart",
+          icon: "analytics",
         },
         {
           section: "/month-close",
@@ -73,7 +73,7 @@ function navigationFor(user: User | undefined): NavigationSection[] {
           label: "Projects",
           icon: "folder",
         },
-        { section: "/clients", label: "Clients", icon: "domain" },
+        { section: "/clients", label: "Clients", icon: "handshake" },
       ],
     },
   ];
@@ -99,7 +99,7 @@ function navigationFor(user: User | undefined): NavigationSection[] {
           section: "/administration",
           href: administrationPath,
           label: "Administration",
-          icon: "settings",
+          icon: "admin_panel_settings",
         },
       ],
     },
