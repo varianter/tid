@@ -79,6 +79,7 @@ export const projectDetails = async (c: Context<UserEnv>) => {
 
   const projectTasks = await database
     .select({
+      id: tasks.id,
       name: tasks.name,
       spentMinutes: sql`coalesce(sum(${timeEntries.minutes}), 0)`.mapWith(Number),
     })
@@ -164,7 +165,7 @@ function rateCell({ rate, state }: Pick<Consultant, "rate" | "state">, currency:
   return <Badge palette="coral">No rate</Badge>;
 }
 
-type TaskTotal = { name: string; spentMinutes: number };
+type TaskTotal = { id: number; name: string; spentMinutes: number };
 
 type Person = { id: number; name: string };
 
@@ -361,7 +362,18 @@ function ProjectDetailsPage({
           <DataGrid columns={[{ label: "Name" }, { label: "Spent", kind: "number" }]}>
             {tasks.map((task) => (
               <DataGrid.Row>
-                <DataGrid.Title>{task.name}</DataGrid.Title>
+                <DataGrid.Title>
+                  {canManageProject ? (
+                    <a
+                      href={`/projects/${project.id}/tasks/${task.id}/edit`}
+                      {...{ [attributes.layer]: true }}
+                    >
+                      {task.name}
+                    </a>
+                  ) : (
+                    task.name
+                  )}
+                </DataGrid.Title>
                 {formatTotalHours(task.spentMinutes)}
               </DataGrid.Row>
             ))}

@@ -2,10 +2,10 @@ import { projects, tasks } from "@tid/db/schema";
 import { eq } from "drizzle-orm";
 import { database } from "../framework/database";
 import { formAction } from "../framework/formAction";
-import { AddTaskFormPage, addTaskForm } from "./addTask.form";
+import { TaskFormPage, taskFields } from "./task.form";
 
 export const addTask = formAction({
-  schema: addTaskForm,
+  schema: taskFields,
   loader: async (c) => {
     const id = Number(c.req.param("id"));
     if (!Number.isSafeInteger(id)) return c.notFound();
@@ -20,5 +20,5 @@ export const addTask = formAction({
     await database.insert(tasks).values({ projectId: project.id, name }).onConflictDoNothing();
     return { redirect: `/projects/${project.id}` };
   },
-  view: AddTaskFormPage,
+  view: TaskFormPage,
 });

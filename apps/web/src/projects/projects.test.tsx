@@ -11,7 +11,7 @@ import {
   userRoles,
   users,
 } from "@tid/db/schema";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import type { Hono } from "hono";
 import type { UserEnv } from "../domain/users/user";
 import { database } from "../framework/database";
@@ -416,4 +416,39 @@ test("a project with logged time can't be deleted, even if the hours are zero", 
   );
   expect((await requestAs(manager, deletePath, {})).status).toBe(403);
   expect(await database.$count(projectsTable, eq(projectsTable.id, projectId))).toBe(1);
+});
+
+test("a project's managers rename its tasks, but not to a name another of its tasks has", async () => {
+  const started = await requestAs(manager, "/projects/new/non_billable", {
+    name: "Rebrand",
+    code: "ACME-20",
+    billing: "non_billable",
+    contractOwnerId: "",
+    clientId: String(clientId),
+    firstTask: "Utvikling",
+  });
+  const projectId = Number(started.headers.get("location")?.split("/").at(-1));
+  await requestAs(manager, `/projects/${projectId}/tasks/new`, { name: "Design" });
+  const taskNamed = async (name: string) =>
+    onlyRow(
+      await database
+        .select()
+        .from(tasks)
+        .where(and(eq(tasks.projectId, projectId), eq(tasks.name, name))),
+    );
+  const task = await taskNamed("Utvikling");
+  const rename = (
+    user: UserRow,
+    name: string,
+    path = `/projects/${projectId}/tasks/${task.id}/edit`,
+  ) => requestAs(user, path, { name });
+
+  expect((await rename(member, "Development")).status).toBe(403);
+  expect((await rename(manager, "Design")).status).toBe(422);
+  expect((await rename(manager, "Development")).status).toBe(303);
+  expect((await taskNamed("Development")).id).toBe(task.id);
+
+  const otherProjectId = await startNonBillable("ACME-21");
+  const elsewhere = `/projects/${otherProjectId}/tasks/${task.id}/edit`;
+  expect((await rename(manager, "Moved", elsewhere)).status).toBe(404);
 });
