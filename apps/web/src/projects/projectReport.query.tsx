@@ -50,23 +50,19 @@ function ProjectReportPage({
       title={project.name}
       description={`Report for ${period}`}
       back={{ href: `/projects/${project.id}`, label: "Back to project" }}
+      period={
+        <PeriodNavigation
+          previousHref={href({ month: addMonths(query.month, -1) })}
+          nextHref={href({ month: addMonths(query.month, 1) })}
+          previousLabel="Previous month"
+          nextLabel="Next month"
+          years={yearsAround(query.month, href)}
+        >
+          {period}
+        </PeriodNavigation>
+      }
     >
-      <Filtered
-        by={
-          <>
-            <OrganizationSelect {...organizationFilter} />
-            <PeriodNavigation
-              previousHref={href({ month: addMonths(query.month, -1) })}
-              nextHref={href({ month: addMonths(query.month, 1) })}
-              previousLabel="Previous month"
-              nextLabel="Next month"
-              years={yearsAround(query.month, href)}
-            >
-              {period}
-            </PeriodNavigation>
-          </>
-        }
-      >
+      <Filtered by={<OrganizationSelect {...organizationFilter} />}>
         <dl class="stack-h items-start gap-xl gap-row-s b-all bc-default br-l p-m">
           <Detail label="Client">
             <a href={`/clients/${project.clientId}`}>{project.client}</a>

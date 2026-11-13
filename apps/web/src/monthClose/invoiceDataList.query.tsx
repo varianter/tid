@@ -48,29 +48,28 @@ function InvoiceDataListPage({
   const { month } = query;
   const unlocked = locks.organizations - locks.locked;
   return (
-    <Page title="Month close" description="Hours on billable projects, to support invoicing">
+    <Page
+      title="Month close"
+      description="Hours on billable projects, to support invoicing"
+      period={
+        <PeriodNavigation
+          previousHref={href({ month: addMonths(month, -1) })}
+          nextHref={href({ month: addMonths(month, 1) })}
+          previousLabel="Previous month"
+          nextLabel="Next month"
+          years={yearsAround(month, href)}
+        >
+          {formatDate(month, "month")}
+        </PeriodNavigation>
+      }
+    >
       <MonthCloseTabs
         active="invoiceData"
         month={month}
         organization={ownOrganization}
         fixedPrice={query.fixedPrice}
       />
-      <Filtered
-        by={
-          <>
-            <FixedPriceCheckbox />
-            <PeriodNavigation
-              previousHref={href({ month: addMonths(month, -1) })}
-              nextHref={href({ month: addMonths(month, 1) })}
-              previousLabel="Previous month"
-              nextLabel="Next month"
-              years={yearsAround(month, href)}
-            >
-              {formatDate(month, "month")}
-            </PeriodNavigation>
-          </>
-        }
-      >
+      <Filtered by={<FixedPriceCheckbox />}>
         {projects.length === 0 ? (
           <EmptyState emoji="🧾" title="Nothing to invoice">
             No billable hours were logged in {formatDate(month, "month")}.

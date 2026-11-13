@@ -114,24 +114,23 @@ function ConsultantHoursListPage({
       ? "ready to lock"
       : "open";
   return (
-    <Page title="Month close" description="Whether every consultant has logged their hours">
+    <Page
+      title="Month close"
+      description="Whether every consultant has logged their hours"
+      period={
+        <PeriodNavigation
+          previousHref={href({ month: addMonths(month, -1) })}
+          nextHref={href({ month: addMonths(month, 1) })}
+          previousLabel="Previous month"
+          nextLabel="Next month"
+          years={yearsAround(month, href)}
+        >
+          {formatDate(month, "month")}
+        </PeriodNavigation>
+      }
+    >
       <MonthCloseTabs active="consultants" month={month} organization={organizationSlug} />
-      <Filtered
-        by={
-          <>
-            <OrganizationSelect {...organizationFilter} />
-            <PeriodNavigation
-              previousHref={href({ month: addMonths(month, -1) })}
-              nextHref={href({ month: addMonths(month, 1) })}
-              previousLabel="Previous month"
-              nextLabel="Next month"
-              years={yearsAround(month, href)}
-            >
-              {formatDate(month, "month")}
-            </PeriodNavigation>
-          </>
-        }
-      >
+      <Filtered by={<OrganizationSelect {...organizationFilter} />}>
         <SidebarLayout
           sidebar={
             rows.length === 0 ? (

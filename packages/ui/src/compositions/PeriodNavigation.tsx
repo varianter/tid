@@ -4,12 +4,12 @@ import { Icon } from "../primitives/Icon";
 import { Popover } from "../primitives/Popover";
 import { DetailsList, DetailsListItem } from "./DetailsList";
 
-/** A month the picker offers. */
-export type MonthChoice = {
-  /** Like "October". */
+/** A month or year the picker links to. */
+export type PeriodChoice = {
+  /** Like "October" or "2026". */
   label: string;
   href: string;
-  /** The month the page shows now. */
+  /** The period the page shows now. */
   current?: boolean;
 };
 
@@ -19,7 +19,7 @@ export type YearChoice = {
   label: string;
   /** Expanded when the picker opens. */
   open?: boolean;
-  months: MonthChoice[];
+  months: PeriodChoice[];
 };
 
 /** One per page: its picker has a fixed id. */
@@ -35,13 +35,16 @@ export function PeriodNavigation({
   nextHref: string;
   previousLabel: string;
   nextLabel: string;
-  /** The years to pick from, each with its months. Without any, the label is plain text. */
-  years?: YearChoice[];
+  /**
+   * What the picker offers: years with their months to pick a month, or plain years to pick a
+   * year. Without any, the label is plain text.
+   */
+  years?: YearChoice[] | PeriodChoice[];
 }>) {
   return (
     <nav
       composite-component="PeriodNavigation"
-      class="stack-h flex-nowrap br-l p-4xs justify-between ml-auto gap-3xs"
+      class="stack-h flex-nowrap br-l p-4xs justify-between gap-3xs"
       style="width: 30ch; min-width: max-content;"
     >
       <Button
@@ -64,41 +67,30 @@ export function PeriodNavigation({
             class="gap-2xs flex-1 fs-m"
           >
             <Icon class="fs-xs" name="calendar_today" />
-            <span class="fw-regular">{children}</span>
+            <span class="fw-regular fs-s">{children}</span>
           </Button>
           <Popover
             id="period-picker"
             class="my-2xs w-full"
             data-type="tooltip"
             data-side="bottom"
-            data-align="right"
+            data-align="left"
             style="max-width: min(var(--width-5), 90svw);"
           >
-            <nav aria-label="Months" class="surface-base br-m shadow-mid">
-              <DetailsList>
-                {years.map((year) => (
-                  <DetailsListItem title={year.label} open={year.open}>
-                    <div
-                      class="d-grid gap-3xs w-full"
-                      style="grid-template-columns: repeat(3, 1fr);"
-                    >
-                      {year.months.map((month) => (
-                        <a
-                          href={month.href}
-                          aria-current={month.current ? "page" : undefined}
-                          class={`ta-center fs-s px-2xs py-2xs br-m ${
-                            month.current
-                              ? "surface-tinted ink-prominent"
-                              : "ink-subtle bg-wash:hover"
-                          }`}
-                        >
-                          {month.label}
-                        </a>
-                      ))}
-                    </div>
-                  </DetailsListItem>
-                ))}
-              </DetailsList>
+            <nav aria-label="Periods" class="surface-base br-m shadow-mid w-max-3">
+              {areYearsWithMonths(years) ? (
+                <DetailsList>
+                  {years.map((year) => (
+                    <DetailsListItem title={year.label} open={year.open}>
+                      <ChoiceGrid choices={year.months} />
+                    </DetailsListItem>
+                  ))}
+                </DetailsList>
+              ) : (
+                <div class="b-all bc-subtle br-m p-s">
+                  <ChoiceGrid choices={years} />
+                </div>
+              )}
             </nav>
           </Popover>
         </>
@@ -119,5 +111,26 @@ export function PeriodNavigation({
         <Icon name="chevron_right" />
       </Button>
     </nav>
+  );
+}
+
+const areYearsWithMonths = (years: YearChoice[] | PeriodChoice[]): years is YearChoice[] =>
+  years.every((year) => "months" in year);
+
+function ChoiceGrid({ choices }: { choices: PeriodChoice[] }) {
+  return (
+    <div class="d-grid gap-3xs w-full" style="grid-template-columns: repeat(3, 1fr);">
+      {choices.map((choice) => (
+        <a
+          href={choice.href}
+          aria-current={choice.current ? "page" : undefined}
+          class={`ta-center fs-s px-2xs py-2xs br-m ${
+            choice.current ? "surface-tinted ink-prominent" : "ink-subtle bg-wash:hover"
+          }`}
+        >
+          {choice.label}
+        </a>
+      ))}
+    </div>
   );
 }

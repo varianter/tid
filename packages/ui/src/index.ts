@@ -14,7 +14,7 @@ export { ReturnLink } from "./compositions/forms/ReturnLink";
 export { ListSummary } from "./compositions/ListSummary";
 export { Page } from "./compositions/Page";
 export {
-  type MonthChoice,
+  type PeriodChoice,
   PeriodNavigation,
   type YearChoice,
 } from "./compositions/PeriodNavigation";

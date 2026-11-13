@@ -1,6 +1,6 @@
 import { formatDate } from "@tid/calendar/dateDisplay";
 import { addMonths } from "@tid/calendar/isoDate";
-import type { YearChoice } from "@tid/ui";
+import type { PeriodChoice, YearChoice } from "@tid/ui";
 
 /** The years around `month`, each with its months, for the picker a `PeriodNavigation` label opens. */
 export function yearsAround(
@@ -22,5 +22,17 @@ export function yearsAround(
         };
       }),
     };
+  });
+}
+
+/** The years around `year`, for the picker a `PeriodNavigation` label opens on a page that shows a year. */
+export function yearsNear(
+  year: string,
+  /** The page with its year changed, as one of the picker's links needs it. */
+  href: (change: { year: string }) => string,
+): PeriodChoice[] {
+  return [-4, -3, -2, -1, 0, 1].map((yearOffset) => {
+    const yearOption = String(Number(year) + yearOffset);
+    return { label: yearOption, href: href({ year: yearOption }), current: yearOption === year };
   });
 }

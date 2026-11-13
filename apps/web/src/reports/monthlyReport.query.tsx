@@ -247,22 +247,26 @@ function ReportPage({
   const consultantHref = (userId: number) => consultantPath(userId, month);
   const table = reportTable(report, total, currency, projectHref, consultantHref);
   return (
-    <Page title="Reports">
+    <Page
+      title="Reports"
+      period={
+        <PeriodNavigation
+          previousHref={href({ month: addMonths(month, -1) })}
+          nextHref={href({ month: addMonths(month, 1) })}
+          previousLabel="Previous month"
+          nextLabel="Next month"
+          years={yearsAround(month, href)}
+        >
+          {formatDate(month, "month")}
+        </PeriodNavigation>
+      }
+    >
       <Filtered
         by={
           <>
             <OrganizationSelect {...organizationFilter} />
             <BillableCheckbox />
             {query.billable && <FixedPriceCheckbox />}
-            <PeriodNavigation
-              previousHref={href({ month: addMonths(month, -1) })}
-              nextHref={href({ month: addMonths(month, 1) })}
-              previousLabel="Previous month"
-              nextLabel="Next month"
-              years={yearsAround(month, href)}
-            >
-              {formatDate(month, "month")}
-            </PeriodNavigation>
           </>
         }
       >

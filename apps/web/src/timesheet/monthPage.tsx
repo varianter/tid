@@ -42,7 +42,20 @@ export function MonthPage({
   const { country, fullDayMinutes } = user.organization;
   return (
     <PageSearch.Provider value={query}>
-      <Page title="Timesheet">
+      <Page
+        title="Timesheet"
+        period={
+          <PeriodNavigation
+            previousHref={monthPath(addMonths(month, -1), showWeekends)}
+            nextHref={monthPath(addMonths(month, 1), showWeekends)}
+            previousLabel="Previous month"
+            nextLabel="Next month"
+            years={yearsAround(month, (change) => monthPath(change.month, showWeekends))}
+          >
+            {formatDate(month, "month")}
+          </PeriodNavigation>
+        }
+      >
         <Filtered
           by={
             <>
@@ -57,15 +70,6 @@ export function MonthPage({
                 search={search}
                 shown={showBillableAssignments}
               />
-              <PeriodNavigation
-                previousHref={monthPath(addMonths(month, -1), showWeekends)}
-                nextHref={monthPath(addMonths(month, 1), showWeekends)}
-                previousLabel="Previous month"
-                nextLabel="Next month"
-                years={yearsAround(month, (change) => monthPath(change.month, showWeekends))}
-              >
-                {formatDate(month, "month")}
-              </PeriodNavigation>
             </>
           }
         >

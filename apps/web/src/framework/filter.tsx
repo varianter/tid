@@ -11,7 +11,8 @@ export const usePageSearch = () => useContext(PageSearch);
 
 /**
  * Filters above the part of the page they narrow. A filter that changes everything on the page,
- * like its organization or month, wraps all of the page's content.
+ * like its organization, wraps all of the page's content. The period isn't a filter; it goes in
+ * `Page`'s `period`.
  */
 export function Filtered({ by, children }: PropsWithChildren<{ by: Child }>) {
   return (

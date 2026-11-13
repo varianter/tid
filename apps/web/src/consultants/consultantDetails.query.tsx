@@ -20,7 +20,6 @@ import { HTTPException } from "hono/http-exception";
 import { capacityMinutes } from "../domain/capacity/capacity";
 import type { UserEnv } from "../domain/users/user";
 import { database } from "../framework/database";
-import { Filtered } from "../framework/filter";
 import { yearsAround } from "../framework/periodNavigation";
 import { type QueryProps, queryPage } from "../framework/queryPage";
 import { type Billing, billingLabels } from "../projects/billing";
@@ -141,40 +140,37 @@ function ConsultantDetailsPage({
           ? { href: consultantsPath(user.organizationSlug), label: "Consultants" }
           : undefined
       }
+      period={
+        <PeriodNavigation
+          previousHref={href({ month: addMonths(month, -1) })}
+          nextHref={href({ month: addMonths(month, 1) })}
+          previousLabel="Previous month"
+          nextLabel="Next month"
+          years={yearsAround(month, href)}
+        >
+          {formatDate(month, "month")}
+        </PeriodNavigation>
+      }
     >
-      <Filtered
-        by={
-          <PeriodNavigation
-            previousHref={href({ month: addMonths(month, -1) })}
-            nextHref={href({ month: addMonths(month, 1) })}
-            previousLabel="Previous month"
-            nextLabel="Next month"
-            years={yearsAround(month, href)}
-          >
-            {formatDate(month, "month")}
-          </PeriodNavigation>
+      <SidebarLayout
+        sidebar={
+          <div class="stack-v gap-m">
+            <MonthHours
+              minutes={minutes}
+              billableMinutes={billableMinutes}
+              capacityMinutes={monthCapacityMinutes}
+            />
+            <CurrentProjects
+              projects={currentBillableProjects}
+              projectHref={(projectId) =>
+                projectReportUrl.path({ projectId, month, organization: user.organizationSlug })
+              }
+            />
+          </div>
         }
       >
-        <SidebarLayout
-          sidebar={
-            <div class="stack-v gap-m">
-              <MonthHours
-                minutes={minutes}
-                billableMinutes={billableMinutes}
-                capacityMinutes={monthCapacityMinutes}
-              />
-              <CurrentProjects
-                projects={currentBillableProjects}
-                projectHref={(projectId) =>
-                  projectReportUrl.path({ projectId, month, organization: user.organizationSlug })
-                }
-              />
-            </div>
-          }
-        >
-          <MonthEntries month={month} entries={entries} titleLabel="Project" />
-        </SidebarLayout>
-      </Filtered>
+        <MonthEntries month={month} entries={entries} titleLabel="Project" />
+      </SidebarLayout>
     </Page>
   );
 }

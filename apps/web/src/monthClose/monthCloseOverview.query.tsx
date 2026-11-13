@@ -145,6 +145,17 @@ function MonthCloseOverviewPage({
     <Page
       title="Month close"
       description="Where each organization's month close stands, and what its consultants billed"
+      period={
+        <PeriodNavigation
+          previousHref={href({ month: addMonths(month, -1) })}
+          nextHref={href({ month: addMonths(month, 1) })}
+          previousLabel="Previous month"
+          nextLabel="Next month"
+          years={yearsAround(month, href)}
+        >
+          {formatDate(month, "month")}
+        </PeriodNavigation>
+      }
     >
       <MonthCloseTabs
         active="overview"
@@ -152,22 +163,7 @@ function MonthCloseOverviewPage({
         organization={ownOrganization}
         fixedPrice={query.fixedPrice}
       />
-      <Filtered
-        by={
-          <>
-            <FixedPriceCheckbox />
-            <PeriodNavigation
-              previousHref={href({ month: addMonths(month, -1) })}
-              nextHref={href({ month: addMonths(month, 1) })}
-              previousLabel="Previous month"
-              nextLabel="Next month"
-              years={yearsAround(month, href)}
-            >
-              {formatDate(month, "month")}
-            </PeriodNavigation>
-          </>
-        }
-      >
+      <Filtered by={<FixedPriceCheckbox />}>
         <DataGrid
           columns={[
             { label: "Organization" },
