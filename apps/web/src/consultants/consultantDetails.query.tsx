@@ -94,7 +94,7 @@ export const consultantDetails = queryPage({
       currentBillableProjects,
       minutes: monthTotals?.minutes ?? 0,
       billableMinutes: monthTotals?.billableMinutes ?? 0,
-      monthCapacityMinutes: capacityMinutes(month, user.country, user.fullDayMinutes, user.lastDay),
+      monthCapacityMinutes: capacityMinutes(month, user.country, user.fullDayMinutes, user),
       entries,
     };
   },

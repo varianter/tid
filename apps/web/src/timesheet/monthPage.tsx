@@ -85,7 +85,7 @@ export function MonthPage({
             <TimesheetGrid
               days={days}
               calendar={calendarFor(country)}
-              expectedMinutes={capacityMinutes(month, country, fullDayMinutes, user.lastDay)}
+              expectedMinutes={capacityMinutes(month, country, fullDayMinutes, user)}
               tasks={tasks}
               entries={entries}
               cellsAction={cellsActionOf(month, search)}

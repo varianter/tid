@@ -55,6 +55,18 @@ test("managers list an organization's consultants, with who's a manager", async 
   expect((await requestAs(manager, "/consultants?organization=nowhere")).status).toBe(404);
 });
 
+test("people who haven't started show their first day, and don't count yet", async () => {
+  await database.insert(usersTable).values({
+    name: "Siri",
+    email: "siri@variant.no",
+    orgId: await organizationIdBySlug("oslo"),
+    firstDay: "2099-01-05",
+  });
+  const page = await (await requestAs(manager, "/consultants?organization=oslo")).text();
+  expect(page).toContain("First day 5 January 2099");
+  expect(page).toContain("1 starting");
+});
+
 test("managers list a whole country's consultants", async () => {
   const norway = await (await requestAs(manager, "/consultants?organization=no")).text();
   expect(norway).toContain("ola@variant.no");

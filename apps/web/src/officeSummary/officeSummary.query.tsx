@@ -45,6 +45,7 @@ async function loadLoggedTime(period: Period): Promise<LoggedTime[]> {
     .select({
       office: view.accountName,
       userId: users.id,
+      firstDay: users.firstDay,
       lastDay: users.lastDay,
       month,
       currency: projects.currency,
@@ -61,7 +62,7 @@ async function loadLoggedTime(period: Period): Promise<LoggedTime[]> {
     .innerJoin(projects, eq(projects.code, view.projectCode))
     .innerJoin(users, eq(users.email, view.userEmail))
     .where(between(view.spentDate, firstDayOfMonth(first), lastDayOfMonth(last)))
-    .groupBy(view.accountName, users.id, users.lastDay, month, projects.currency);
+    .groupBy(view.accountName, users.id, users.firstDay, users.lastDay, month, projects.currency);
 }
 
 export const officeSummary = queryPage({

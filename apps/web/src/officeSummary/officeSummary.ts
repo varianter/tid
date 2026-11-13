@@ -8,6 +8,7 @@ type Office = { legalName: string; country: Country; fullDayMinutes: number };
 export type LoggedTime = {
   office: string;
   userId: number;
+  firstDay: string | null;
   lastDay: string | null;
   month: string;
   currency: string | null;
@@ -41,7 +42,7 @@ const empty = (): OfficeTotals => ({
 
 /**
  * Totals per office, keyed by legal name. Consultants are those who logged time, and capacity is
- * theirs in the months they logged it, since users have no start date to tell who was employed.
+ * theirs in the months they logged it, since only people registered ahead have a first day.
  */
 export function summarizeOffices(offices: Office[], logged: LoggedTime[]) {
   const totals = new Map(offices.map((office) => [office.legalName, empty()]));
@@ -67,7 +68,7 @@ export function summarizeOffices(offices: Office[], logged: LoggedTime[]) {
     if (!consultantMonths.has(consultantMonth)) {
       consultantMonths.add(consultantMonth);
       sum.capacityHours +=
-        capacityMinutes(time.month, office.country, office.fullDayMinutes, time.lastDay) / 60;
+        capacityMinutes(time.month, office.country, office.fullDayMinutes, time) / 60;
     }
   }
   for (const [name, people] of consultants) {
