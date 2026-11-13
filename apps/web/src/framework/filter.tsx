@@ -17,9 +17,7 @@ export function Filtered({ by, children }: PropsWithChildren<{ by: Child }>) {
   return (
     <InsideFiltered.Provider value={true}>
       <div class="stack-v flex-nowrap gap-m">
-        <div class="stack-h wrap gap-m py-4xs b-all bc-subtle br-l surface-tinted pl-2xs pr-4xs">
-          {by}
-        </div>
+        <div class="stack-h wrap gap-m">{by}</div>
         {children}
       </div>
     </InsideFiltered.Provider>

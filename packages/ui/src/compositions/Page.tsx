@@ -24,8 +24,8 @@ export function Page({ title, description, back, actions, layer, children }: Pag
     </div>
   );
   return (
-    <PageFrame component="Page" title={title} layer={layer} class="px-s-m pb-l">
-      <header class="stack-v gap-2xs -mx-s-m mb-s p-s-m pb-s surface-tinted b-b bc-subtle br-xl br-bl-none br-br-none">
+    <PageFrame component="Page" title={title} layer={layer} class="px-s-m pb-l pt-m">
+      <header class="stack-v gap-2xs -mx-s-m mb-s p-s-m pb-s">
         {back && (
           <Button
             as="a"
