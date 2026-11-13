@@ -9,14 +9,14 @@ export const showBillableAssignments = async (
 ) => {
   const month = c.req.param("month");
   if (!isIsoMonth(month)) return c.notFound();
-  const { show } = await c.req.parseBody();
-  if (show === "on") deleteCookie(c, hideBillableAssignmentsCookie, { path: "/" });
-  else
+  const { hide } = await c.req.parseBody();
+  if (hide === "on")
     setCookie(c, hideBillableAssignmentsCookie, "on", {
       path: "/",
       maxAge: 31536000,
       sameSite: "Lax",
       httpOnly: true,
     });
+  else deleteCookie(c, hideBillableAssignmentsCookie, { path: "/" });
   return c.redirect(`/timesheet/month/${month}${new URL(c.req.url).search}`, 303);
 };

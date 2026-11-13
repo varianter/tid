@@ -19,8 +19,8 @@ export function ShowBillableAssignmentsForm({
         class="stack-v flex-nowrap gap-3xs"
       >
         <Label for="billable-assignments" class="stack-h items-center gap-2xs">
-          <Checkbox id="billable-assignments" name="show" value="on" checked={shown} />
-          Show billable assignments
+          <Checkbox id="billable-assignments" name="hide" value="on" checked={!shown} />
+          I’ll add tasks myself
         </Label>
         <noscript>
           <Button type="submit" data-size="small">

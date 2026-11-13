@@ -74,9 +74,9 @@ export function TimesheetGrid({
   if (rows.length === 0) return <NoRows locked={locked} addableTasks={addableTasks} />;
   return (
     <>
-      {addable && <AddTaskForm addableTasks={addableTasks} class="mt-s mb-m" />}
+      {addable && <AddTaskForm addableTasks={addableTasks} />}
       <div
-        class={cx("my-s t-tabular", sheetFrame)}
+        class={cx("mt-xl mb-s t-tabular", sheetFrame)}
         style={`--day-tracks: ${days.length + weeks.length - 1}; --task-columns: ${rows.length};`}
       >
         <div data-task-names>
