@@ -28,10 +28,7 @@ export function ProgressBar({
       {...(label ? { role: "img", "aria-label": label } : { "aria-hidden": "true" })}
       {...attributes}
     >
-      <div
-        class="stack-h flex-nowrap gap-none of-hidden b-all bc-subtle surface-tinted br-m"
-        style="height: 1em;"
-      >
+      <div class="stack-h flex-nowrap gap-none of-hidden surface-dyed br-m" style="height: 1em;">
         {segments.map((segment) => (
           <span
             class="h-full"

@@ -35,6 +35,7 @@ export function Actions({
           as="a"
           href={href}
           data-variant="filled"
+          data-size="small"
           aria-label={ariaLabel}
           {...(layer && {
             [attributes.layer]: true,
