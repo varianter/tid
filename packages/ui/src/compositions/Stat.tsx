@@ -16,25 +16,32 @@ export function StatList({
 type StatProps = {
   label: string;
   value: string;
-  /** Shown beside the value, such as a percentage. */
+  /** What the value is measured against, shown smaller after it as "value / outOf". */
+  outOf?: string;
+  /** Shown at the end of the line under the value, such as a percentage. */
   share?: string;
-  /** A line under the value, such as what it's measured against. */
+  /** Shown at the start of the line under the value. */
   note?: string;
   /** Shown between the value and the note, such as a bar. */
   children?: Child;
 };
 
 /** One figure in a `StatList`. */
-export function Stat({ label, value, share, note, children }: StatProps) {
+export function Stat({ label, value, outOf, share, note, children }: StatProps) {
   return (
     <div composite-component="Stat" class="stack-v gap-3xs flex-1 b-all bc-subtle br-l p-xs">
       <dt class="fs-s ink-subtle">{label}</dt>
-      <dd class="stack-h flex-nowrap items-baseline gap-xs">
+      <dd class="stack-h flex-nowrap items-baseline gap-2xs">
         <span class="fs-l fw-medium">{value}</span>
-        {share && <span class="ink-subtle">{share}</span>}
+        {outOf && <span class="fs-s ink-subtle">/ {outOf}</span>}
       </dd>
       {children && <dd class="mt-3xs">{children}</dd>}
-      {note && <dd class="fs-xs ink-subtle">{note}</dd>}
+      {(note || share) && (
+        <dd class="stack-h flex-nowrap items-baseline gap-xs fs-xs ink-subtle">
+          {note && <span>{note}</span>}
+          {share && <span class="ml-auto">{share}</span>}
+        </dd>
+      )}
     </div>
   );
 }

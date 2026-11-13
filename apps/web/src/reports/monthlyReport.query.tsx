@@ -362,7 +362,7 @@ function Summary({
         label="Logged"
         value={formatTotalHours(hours * 60)}
         share={formatShare(hours, capacityHours)}
-        note={`of ${formatTotalHours(capacityHours * 60)} capacity`}
+        outOf={`${formatTotalHours(capacityHours * 60)}`}
       >
         <ProgressBar max={capacityHours} segments={[{ value: hours, palette: "purple" }]} />
       </Stat>

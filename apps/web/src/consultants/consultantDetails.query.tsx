@@ -218,7 +218,7 @@ function MonthHours({
         label="Logged"
         value={formatTotalHours(minutes)}
         share={formatShare(minutes, capacityMinutes)}
-        note={`of ${formatTotalHours(capacityMinutes)} capacity`}
+        outOf={`${formatTotalHours(capacityMinutes)}`}
       >
         <ProgressBar max={capacityMinutes} segments={[{ value: minutes, palette: "purple" }]} />
       </Stat>

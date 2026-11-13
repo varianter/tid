@@ -141,7 +141,7 @@ function ConsultantHoursListPage({
                   label="Logged"
                   value={formatTotalHours(loggedMinutes)}
                   share={formatShare(loggedMinutes, expectedMinutes)}
-                  note={`of ${formatTotalHours(expectedMinutes)} expected`}
+                  outOf={`${formatTotalHours(expectedMinutes)} expected`}
                 >
                   <ProgressBar
                     max={expectedMinutes}
