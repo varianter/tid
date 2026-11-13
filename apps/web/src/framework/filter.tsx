@@ -18,7 +18,9 @@ export function Filtered({ by, children }: PropsWithChildren<{ by: Child }>) {
   return (
     <InsideFiltered.Provider value={true}>
       <div class="stack-v flex-nowrap gap-m">
-        <div class="stack-h wrap gap-m">{by}</div>
+        <div class="stack-h wrap gap-m" data-transition="steady">
+          {by}
+        </div>
         {children}
       </div>
     </InsideFiltered.Provider>

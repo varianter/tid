@@ -171,6 +171,21 @@ export function Layout({ currentPath, user, logoutUrl, scriptSrcs, children }: L
               view-transition-name: content;
             }
 
+            /* Controls such as tabs and filters stay put while the content they change slides in. A
+               name of their own lifts them out of the content's snapshot. */
+            [data-transition="steady"]{
+              view-transition-name: match-element;
+              view-transition-class: steady;
+            }
+
+            ::view-transition-old(.steady) {
+              display: none;
+            }
+
+            ::view-transition-new(.steady) {
+              animation: none;
+            }
+
             ::view-transition-old(root),
             ::view-transition-new(root) {
               animation: none;
@@ -267,6 +282,7 @@ export function Layout({ currentPath, user, logoutUrl, scriptSrcs, children }: L
             )}
           </nav>
         </Popover>
+
         <div class="b-l b-t bc-subtle br-bl-none br-br-none br-l br-tr-none flex-1 mt-2xs py-0 surface-base w-min-0">
           <button
             type="button"
@@ -279,6 +295,7 @@ export function Layout({ currentPath, user, logoutUrl, scriptSrcs, children }: L
           </button>
           {children}
         </div>
+
         {/* What @tid/via clones for each `a[via-layer]` it opens. */}
         <template id={layerTemplateId}>
           {/* Only the surface: the page inside sets its own width and padding. */}
