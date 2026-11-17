@@ -201,7 +201,7 @@ function NoRows({ locked, addableTasks }: { locked: boolean; addableTasks: Task[
 function AddTaskForm({ addableTasks, class: className }: { addableTasks: Task[]; class?: string }) {
   return (
     <auto-submit>
-      <form method="get" class={cx("stack-h flex-nowrap items-center gap-2xs w-max-3", className)}>
+      <form method="get" class={cx("stack-h flex-nowrap items-center gap-2xs w-max-2", className)}>
         {[...usePageSearch()].map(([name, value]) => (
           <input type="hidden" name={name} value={value} />
         ))}

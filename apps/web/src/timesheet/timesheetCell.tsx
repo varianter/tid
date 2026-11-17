@@ -79,7 +79,7 @@ export function TimesheetCell({
         // Out of the tab order, since keyboards have F.
         tabindex={-1}
         aria-label="Fill the rest of the day"
-        data-variant="tinted"
+        data-variant="filled"
         data-size="small"
         class="justify-self-start ml-3xs"
         data-fill-day
