@@ -15,7 +15,7 @@ export const chooseOpenProjectsForm = z.object({
   projectId: z.preprocess(checkboxArray, z.array(z.coerce.number().int())),
 });
 
-export type OpenableProject = {
+type OpenableProject = {
   id: number;
   name: string;
   code: string;
