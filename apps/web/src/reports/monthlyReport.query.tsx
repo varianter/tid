@@ -30,7 +30,7 @@ import { inMonth } from "../framework/monthCondition";
 import { yearsAround } from "../framework/periodNavigation";
 import { type QueryProps, queryPage } from "../framework/queryPage";
 import { FixedPriceCheckbox, fixedPriceCondition } from "../projects/fixedPriceFilter";
-import { projectReportUrl } from "../projects/projects.url";
+import { projectHoursUrl } from "../projects/projects.url";
 import { formatShare } from "../share/share";
 import { BillableCheckbox, billableCondition } from "./billableFilter";
 import { reportUrl, type Tab, tabs } from "./reports.url";
@@ -221,8 +221,7 @@ function ReportPage({
   currency: string;
 } & QueryProps<typeof reportUrl>) {
   const { month } = query;
-  const projectHref = (projectId: number) =>
-    projectReportUrl.path({ projectId, month, organization: organizationFilter.selected.value });
+  const projectHref = (projectId: number) => projectHoursUrl.path({ projectId, month });
   const consultantHref = (userId: number) => consultantPath(userId, month);
   const table = reportTable(report, total, currency, projectHref, consultantHref);
   return (

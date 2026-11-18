@@ -8,30 +8,11 @@ import {
   timeEntriesExport,
   users,
 } from "@tid/db/schema";
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
-import type { OrganizationOption } from "../domain/organizations/organizationFilter";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { database } from "../framework/database";
 import { inMonth } from "../framework/monthCondition";
 import type { MonthEntry } from "../timeEntries/monthEntries";
 import { buildProjectReport, type ProjectReport } from "./projectReport";
-
-/**
- * A project's hours in `month` by the consultants of `consultantsOf`, in the calendar of their
- * country. Undefined for no such project.
- */
-export async function loadProjectReport(
-  projectId: number,
-  month: Temporal.PlainYearMonth,
-  consultantsOf: OrganizationOption,
-): Promise<ProjectReport | undefined> {
-  const project = await loadReportedProject(projectId);
-  if (!project) return undefined;
-  const consultantAccounts = consultantsOf.organizations.map(
-    (organization) => organization.legalName,
-  );
-  const entries = await loadDayEntries(project.code, month, consultantAccounts);
-  return buildProjectReport(project, entries, month, consultantsOf.country);
-}
 
 /**
  * A project's hours in `month` by everyone, since its contract owner invoices them all, in the
@@ -74,8 +55,8 @@ async function loadReportedProject(projectId: number) {
   return project;
 }
 
-/** Each consultant's hours a day on the project, by those of `accounts`, or by everyone without it. */
-function loadDayEntries(projectCode: string, month: Temporal.PlainYearMonth, accounts?: string[]) {
+/** Each consultant's hours a day on the project. */
+function loadDayEntries(projectCode: string, month: Temporal.PlainYearMonth) {
   const view = timeEntriesExport;
   return database
     .select({
@@ -86,22 +67,15 @@ function loadDayEntries(projectCode: string, month: Temporal.PlainYearMonth, acc
       amount: sql`coalesce(sum(${view.amount}), 0)`.mapWith(Number),
     })
     .from(view)
-    .where(
-      and(
-        accounts && inArray(view.accountName, accounts),
-        eq(view.projectCode, projectCode),
-        inMonth(view.spentDate, month),
-      ),
-    )
+    .where(and(eq(view.projectCode, projectCode), inMonth(view.spentDate, month)))
     .groupBy(view.userEmail, view.userName, view.spentDate)
     .orderBy(view.userName);
 }
 
-/** Each entry on the project in `month` by the consultants of `organization`, newest first. */
+/** Each entry on the project in `month`, by everyone, newest first. */
 export const loadProjectEntries = (
   projectId: number,
   month: Temporal.PlainYearMonth,
-  selected: OrganizationOption,
 ): Promise<MonthEntry[]> =>
   database
     .select({
@@ -114,14 +88,5 @@ export const loadProjectEntries = (
     .from(timeEntries)
     .innerJoin(tasks, eq(tasks.id, timeEntries.taskId))
     .innerJoin(users, eq(users.id, timeEntries.userId))
-    .where(
-      and(
-        eq(tasks.projectId, projectId),
-        inArray(
-          users.orgId,
-          selected.organizations.map((organization) => organization.id),
-        ),
-        inMonth(timeEntries.spentOn, month),
-      ),
-    )
+    .where(and(eq(tasks.projectId, projectId), inMonth(timeEntries.spentOn, month)))
     .orderBy(desc(timeEntries.spentOn), users.name, tasks.name);
