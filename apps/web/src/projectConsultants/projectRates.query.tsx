@@ -7,7 +7,7 @@ import { and, eq, sql } from "drizzle-orm";
 import type { Context } from "hono";
 import { formatAmount } from "../domain/amount/amount";
 import { database } from "../framework/database";
-import { ratesPath } from "./projectConsultants.url";
+import { ratesPath, ratesSectionId } from "./projectConsultants.url";
 import { ratePeriods } from "./ratePeriods";
 
 // Only hourly projects have rates.
@@ -72,6 +72,7 @@ function ProjectRatesPage({ project, consultants, today }: ProjectRatesPageProps
         const ids = { projectId: project.id, userId: consultant.userId };
         return (
           <Section
+            id={ratesSectionId(consultant.userId)}
             title={consultant.name}
             actions={[
               {
