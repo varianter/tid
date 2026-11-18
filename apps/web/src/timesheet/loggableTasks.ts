@@ -43,7 +43,7 @@ const openToOrganizationOf = (userId: number) =>
   );
 
 /** Assigned to the project, and when `endedBefore` is given, not rolled off before it. */
-const assignedTo = (userId: number, endedBefore?: string) =>
+const assignedTo = (userId: number, endedBefore?: Temporal.PlainDate) =>
   exists(
     database
       .select()
@@ -59,7 +59,7 @@ const assignedTo = (userId: number, endedBefore?: string) =>
       ),
   );
 
-const loggedOn = (userId: number, from?: string, till?: string) =>
+const loggedOn = (userId: number, from?: Temporal.PlainDate, till?: Temporal.PlainDate) =>
   exists(
     database
       .select()
@@ -82,14 +82,14 @@ export const loggableBy = (userId: number) =>
   or(openToOrganizationOf(userId), assignedTo(userId), loggedOn(userId));
 
 /** Tasks the timesheet offers between from and till: loggable ones, less projects the user rolled off before then. */
-export const offeredTo = (userId: number, from: string, till: string) =>
+export const offeredTo = (userId: number, from: Temporal.PlainDate, till: Temporal.PlainDate) =>
   or(openToOrganizationOf(userId), assignedTo(userId, from), loggedOn(userId, from, till));
 
 /**
  * Tasks the timesheet shows from the start: billable projects the user is assigned to, unless the
  * assignment or the project ended before from. Start dates are ignored.
  */
-export const onBillableAssignment = (userId: number, from: string) =>
+export const onBillableAssignment = (userId: number, from: Temporal.PlainDate) =>
   and(
     assignedTo(userId, from),
     ne(projects.billing, "non_billable"),

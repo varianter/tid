@@ -7,6 +7,7 @@ import {
   summarizeOffices,
   totalOfOffices,
 } from "./officeSummary";
+import { officeSummaryUrl } from "./officeSummary.url";
 import { monthsOf, shiftPeriod, togglePeriod } from "./officeSummaryPeriod";
 
 const offices = [
@@ -18,7 +19,7 @@ const logged = (time: Partial<LoggedTime>): LoggedTime => ({
   office: "Oslo AS",
   userId: 1,
   lastDay: null,
-  month: "2026-09",
+  month: Temporal.PlainYearMonth.from("2026-09"),
   currency: "NOK",
   hours: 10,
   billableHours: 8,
@@ -67,20 +68,47 @@ test("the total leaves out money and weighs offices by their hours", () => {
 });
 
 test("a year runs up to this month, and toggles to a month in it", () => {
-  expect(monthsOf("2026", "2026-03")).toEqual(["2026-01", "2026-02", "2026-03"]);
-  expect(monthsOf("2025", "2026-03")).toHaveLength(12);
-  expect(shiftPeriod("2026", -1)).toBe("2025");
-  expect(shiftPeriod("2026-01", -1)).toBe("2025-12");
-  expect(togglePeriod("2026-03", "2026-10")).toBe("2026");
-  expect(togglePeriod("2026", "2026-10")).toBe("2026-10");
-  expect(togglePeriod("2025", "2026-10")).toBe("2025-12");
+  expect(monthsOf(2026, Temporal.PlainYearMonth.from("2026-03"))).toEqual([
+    Temporal.PlainYearMonth.from("2026-01"),
+    Temporal.PlainYearMonth.from("2026-02"),
+    Temporal.PlainYearMonth.from("2026-03"),
+  ]);
+  expect(monthsOf(2025, Temporal.PlainYearMonth.from("2026-03"))).toHaveLength(12);
+  expect(shiftPeriod(2026, -1)).toBe(2025);
+  expect(shiftPeriod(Temporal.PlainYearMonth.from("2026-01"), -1)).toEqual(
+    Temporal.PlainYearMonth.from("2025-12"),
+  );
+  expect(
+    togglePeriod(Temporal.PlainYearMonth.from("2026-03"), Temporal.PlainYearMonth.from("2026-10")),
+  ).toBe(2026);
+  expect(togglePeriod(2026, Temporal.PlainYearMonth.from("2026-10"))).toEqual(
+    Temporal.PlainYearMonth.from("2026-10"),
+  );
+  expect(togglePeriod(2025, Temporal.PlainYearMonth.from("2026-10"))).toEqual(
+    Temporal.PlainYearMonth.from("2025-12"),
+  );
+});
+
+test("a period keeps its URL text", () => {
+  expect(officeSummaryUrl.path({ period: 2026 })).toBe("/office-summary?period=2026");
+  expect(officeSummaryUrl.path({ period: Temporal.PlainYearMonth.from("2026-03") })).toBe(
+    "/office-summary?period=2026-03",
+  );
+  expect(officeSummaryUrl.read("http://tid.test/office-summary?period=2026")?.period).toBe(2026);
+  expect(officeSummaryUrl.read("http://tid.test/office-summary?period=2026-03")?.period).toEqual(
+    Temporal.PlainYearMonth.from("2026-03"),
+  );
 });
 
 test("each month's billable share adds up every office", () => {
   const byMonth = billablePercentByMonth([
     logged({}),
     logged({ office: "Stockholm AB", billableHours: 2, billableBaseHours: 10 }),
-    logged({ month: "2026-10", billableHours: 0, billableBaseHours: 0 }),
+    logged({
+      month: Temporal.PlainYearMonth.from("2026-10"),
+      billableHours: 0,
+      billableBaseHours: 0,
+    }),
   ]);
   expect([...byMonth]).toEqual([
     ["2026-09", 50],

@@ -11,7 +11,7 @@ import {
   timeEntriesExport,
   users,
 } from "./schema";
-import { seedDatabase, startOfLastMonth } from "./seedDatabase";
+import { lastMonthOf, seedDatabase } from "./seedDatabase";
 import { dayOf, Weekday } from "./week";
 
 const database = createDatabase(process.env.DATABASE_URL ?? "");
@@ -57,7 +57,7 @@ describe("seeding", () => {
       .from(timeEntries)
       .orderBy(asc(timeEntries.spentOn))
       .limit(1);
-    expect(earliest?.spentOn).toBe(dayOf(now, -30, Weekday.Monday));
+    expect(earliest?.spentOn).toEqual(dayOf(now, -30, Weekday.Monday));
 
     const [unrated] = await database
       .select({
@@ -107,7 +107,9 @@ describe("seeding", () => {
       .select({ organization: organizations.slug, month: monthLocks.month })
       .from(monthLocks)
       .innerJoin(organizations, eq(organizations.id, monthLocks.orgId));
-    expect(locks).toEqual([{ organization: "trondheim", month: "2026-09-01" }]);
+    expect(locks).toEqual([
+      { organization: "trondheim", month: Temporal.PlainYearMonth.from("2026-09") },
+    ]);
   });
 
   test("extra people seed more users without losing the hand-written ones", async () => {
@@ -116,12 +118,18 @@ describe("seeding", () => {
   });
 });
 
-test("startOfLastMonth steps back across the year boundary", () => {
-  expect(startOfLastMonth(new Date("2026-10-14T00:00:00Z"))).toBe("2026-09-01");
-  expect(startOfLastMonth(new Date("2026-01-05T00:00:00Z"))).toBe("2025-12-01");
+test("lastMonthOf steps back across the year boundary", () => {
+  expect(lastMonthOf(new Date("2026-10-14T00:00:00Z"))).toEqual(
+    Temporal.PlainYearMonth.from("2026-09"),
+  );
+  expect(lastMonthOf(new Date("2026-01-05T00:00:00Z"))).toEqual(
+    Temporal.PlainYearMonth.from("2025-12"),
+  );
 });
 
-test("startOfLastMonth goes by the month in Oslo", () => {
+test("lastMonthOf goes by the month in Oslo", () => {
   // 31 October 23:30 UTC is already 1 November in Oslo.
-  expect(startOfLastMonth(new Date("2026-10-31T23:30:00Z"))).toBe("2026-10-01");
+  expect(lastMonthOf(new Date("2026-10-31T23:30:00Z"))).toEqual(
+    Temporal.PlainYearMonth.from("2026-10"),
+  );
 });

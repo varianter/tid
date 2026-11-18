@@ -53,7 +53,12 @@ beforeAll(async () => {
       { name: "Kari", email: "kari@variant.no", orgId: oslo },
       { name: "Ola", email: "ola@variant.no", orgId: oslo },
       { name: "Per", email: "per@variant.no", orgId: await organizationIdBySlug("bergen") },
-      { name: "Liv", email: "liv@variant.no", orgId: oslo, lastDay: "2026-01-31" },
+      {
+        name: "Liv",
+        email: "liv@variant.no",
+        orgId: oslo,
+        lastDay: Temporal.PlainDate.from("2026-01-31"),
+      },
     ])
     .returning()) as [UserRow, UserRow, UserRow, UserRow];
   await database.insert(userRoles).values({ userId: manager.id, role: "manager" });

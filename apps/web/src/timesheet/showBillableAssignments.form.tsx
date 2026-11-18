@@ -7,7 +7,7 @@ export function ShowBillableAssignmentsForm({
   search,
   shown,
 }: {
-  month: string;
+  month: Temporal.PlainYearMonth;
   search: string;
   shown: boolean;
 }) {

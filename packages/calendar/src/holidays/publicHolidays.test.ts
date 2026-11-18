@@ -3,7 +3,9 @@ import type { Country } from "./publicHolidays";
 import { getPublicHolidays } from "./publicHolidays";
 
 function datesById(country: Country, year: number) {
-  return new Map(getPublicHolidays(year, country).map((holiday) => [holiday.id, holiday.date]));
+  return new Map(
+    getPublicHolidays(year, country).map((holiday) => [holiday.id, holiday.date.toString()]),
+  );
 }
 
 test("swedish midsummer and all saints are Saturdays, with midsummer eve the Friday before", () => {

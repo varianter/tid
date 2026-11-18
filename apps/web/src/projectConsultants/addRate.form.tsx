@@ -1,6 +1,6 @@
-import { isIsoDate } from "@tid/calendar/isoDate";
 import { Form, FormField, FormPage } from "@tid/ui";
 import { z } from "zod";
+import { dayParam } from "../framework/calendarParams";
 import type { FormState } from "../framework/formAction";
 import type { Consultant } from "./projectConsultant";
 import { projectRatesPath } from "./projectConsultants.url";
@@ -14,12 +14,12 @@ export const addRateForm = z.object({
     .pipe(z.number("Enter a number").min(0, "Can't be negative"))
     // Stored in minor units.
     .transform((rate) => Math.round(rate * 100)),
-  validFrom: z.string().refine(isIsoDate, "Choose a date"),
+  validFrom: dayParam("Choose a date"),
 });
 
 type AddRateFormPageProps = {
   consultant: Consultant;
-  today: string;
+  today: Temporal.PlainDate;
   form: FormState<typeof addRateForm>;
 };
 
@@ -41,7 +41,7 @@ export function AddRateFormPage({ consultant, today, form }: AddRateFormPageProp
           name="validFrom"
           label="Start date"
           type="date"
-          value={form.values?.validFrom ?? today}
+          value={form.values?.validFrom ?? today.toString()}
           errors={form.fieldErrors.validFrom}
           required
         />

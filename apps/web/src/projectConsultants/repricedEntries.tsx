@@ -7,7 +7,7 @@ import type { Price } from "./projectConsultant";
 /** A logged entry that a rate change reprices, at its price before the change. */
 export type RepricedEntry = {
   id: number;
-  spentOn: string;
+  spentOn: Temporal.PlainDate;
   task: string;
   minutes: number;
   rate: number | null;

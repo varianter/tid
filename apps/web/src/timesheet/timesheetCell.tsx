@@ -1,13 +1,13 @@
 import { formatDate } from "@tid/calendar/dateDisplay";
-import { isIsoDate } from "@tid/calendar/isoDate";
 import { formatHours } from "@tid/elements/hours";
 import { Button, ColorMode, Icon, Input, Popover } from "@tid/ui";
 import { z } from "zod";
+import { dayParam } from "../framework/calendarParams";
 import type { Task } from "./loggableTasks";
 
 export const cellFields = z.object({
   taskId: z.coerce.number().int().positive(),
-  date: z.string().refine(isIsoDate),
+  date: dayParam(),
 });
 
 export const hoursHint = "Enter hours, like 7,5";
@@ -46,7 +46,7 @@ export function TimesheetCell({
   locked = false,
 }: {
   task: Task;
-  day: string;
+  day: Temporal.PlainDate;
   minutes: number;
   action: string;
   error?: CellError;
@@ -99,7 +99,7 @@ export function TimesheetCell({
       data-minutes={minutes}
     >
       <input type="hidden" name="taskId" value={task.id} />
-      <input type="hidden" name="date" value={day} />
+      <input type="hidden" name="date" value={day.toString()} />
       {error ? (
         <ColorMode palette="coral" class="pos-relative stack-h flex-nowrap items-center gap-3xs">
           {hoursControl}

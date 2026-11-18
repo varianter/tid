@@ -1,14 +1,11 @@
-import { isIsoMonth } from "@tid/calendar/isoDate";
 import type { Context } from "hono";
 import { deleteCookie, setCookie } from "hono/cookie";
 import type { UserEnv } from "../domain/users/user";
+import type { MonthParamEnv } from "../framework/calendarParams";
 import { hideBillableAssignmentsCookie } from "./billableAssignments";
 
-export const showBillableAssignments = async (
-  c: Context<UserEnv, "/month/:month/billable-assignments">,
-) => {
-  const month = c.req.param("month");
-  if (!isIsoMonth(month)) return c.notFound();
+export const showBillableAssignments = async (c: Context<UserEnv & MonthParamEnv>) => {
+  const month = c.get("month");
   const { hide } = await c.req.parseBody();
   if (hide === "on")
     setCookie(c, hideBillableAssignmentsCookie, "on", {

@@ -1,8 +1,9 @@
-import { firstDayOfMonth, lastDayOfMonth } from "@tid/calendar/isoDate";
+import { firstDayOf, lastDayOf } from "@tid/calendar/calendarMonth";
 import { timeEntries } from "@tid/db/schema";
-import { and, between, eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import type { User } from "../domain/users/user";
 import { database } from "../framework/database";
+import { inMonth } from "../framework/monthCondition";
 import { isLockedOn } from "../monthClose/monthLock.data";
 import { offeredTo, onBillableAssignment, userTasks } from "./loggableTasks";
 
@@ -12,11 +13,11 @@ import { offeredTo, onBillableAssignment, userTasks } from "./loggableTasks";
  */
 export async function loadTimesheet(
   user: Pick<User, "id" | "orgId">,
-  month: string,
+  month: Temporal.PlainYearMonth,
   showBillableAssignments: boolean,
 ) {
-  const from = firstDayOfMonth(month);
-  const till = lastDayOfMonth(month);
+  const from = firstDayOf(month);
+  const till = lastDayOf(month);
   const [entries, assignedTasks, tasks, locked] = await Promise.all([
     database
       .select({
@@ -25,7 +26,7 @@ export async function loadTimesheet(
         minutes: timeEntries.minutes,
       })
       .from(timeEntries)
-      .where(and(eq(timeEntries.userId, user.id), between(timeEntries.spentOn, from, till))),
+      .where(and(eq(timeEntries.userId, user.id), inMonth(timeEntries.spentOn, month))),
     showBillableAssignments ? userTasks().where(onBillableAssignment(user.id, from)) : [],
     userTasks().where(offeredTo(user.id, from, till)),
     isLockedOn(user.orgId, from),

@@ -94,9 +94,12 @@ test("only to another organization in the same country", async () => {
 
 test("logged time keeps the consultant where they are, and says why", async () => {
   const { task } = await internalTask();
-  await database
-    .insert(timeEntries)
-    .values({ userId: newcomer.id, taskId: task.id, spentOn: "2026-11-02", minutes: 60 });
+  await database.insert(timeEntries).values({
+    userId: newcomer.id,
+    taskId: task.id,
+    spentOn: Temporal.PlainDate.from("2026-11-02"),
+    minutes: 60,
+  });
 
   const page = await (await requestAsUser(manager, mount, formPath())).text();
   expect(page).toContain("logged time");
@@ -119,9 +122,11 @@ test("project assignments keep the consultant where they are, and are named", as
 });
 
 test("having locked a month keeps the consultant where they are", async () => {
-  await database
-    .insert(monthLocks)
-    .values({ orgId: osloId, month: "2026-10-01", lockedBy: newcomer.id });
+  await database.insert(monthLocks).values({
+    orgId: osloId,
+    month: Temporal.PlainYearMonth.from("2026-10"),
+    lockedBy: newcomer.id,
+  });
 
   expect((await changeTo(bergenId)).status).toBe(422);
   expect(await organizationOf(newcomer)).toBe(osloId);

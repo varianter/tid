@@ -1,6 +1,6 @@
 import type { Calendar } from "@tid/calendar";
+import { mondayOf } from "@tid/calendar/calendarDay";
 import { formatDate } from "@tid/calendar/dateDisplay";
-import { isoWeek, mondayOf } from "@tid/calendar/isoDate";
 import { todayInOslo } from "@tid/calendar/osloClock";
 import type { SpecialDay } from "@tid/calendar/publicHolidays";
 import { formatHours } from "@tid/elements/hours";
@@ -13,12 +13,12 @@ import { LoggedHours } from "./loggedHours";
 import { dayLabelLayout, sheetFrame, sheetLayout } from "./sheetLayout";
 import { type CellError, TimesheetCell } from "./timesheetCell";
 
-type TimeEntry = { taskId: number; spentOn: string; minutes: number };
+type TimeEntry = { taskId: number; spentOn: Temporal.PlainDate; minutes: number };
 /** A failed save on the month, naming the cell to show it on. */
-export type MonthError = CellError & { taskId: number; day: string };
+export type MonthError = CellError & { taskId: number; day: Temporal.PlainDate };
 
 export type TimesheetGridProps = {
-  days: string[];
+  days: Temporal.PlainDate[];
   calendar: Calendar;
   /** What the consultant should log this month, so the totals can show how far they've come. */
   expectedMinutes: number;
@@ -48,15 +48,16 @@ export function TimesheetGrid({
   const today = todayInOslo();
   const holidays = days.map(calendar.holidayOn);
   const tints = days.map((day, index): DayTintKind | undefined =>
-    day === today ? "today" : holidays[index] ? "holiday" : undefined,
+    day.equals(today) ? "today" : holidays[index] ? "holiday" : undefined,
   );
   // A week starts wherever the Monday changes, which still holds with weekends hidden.
   const startsWeek = days.map(
-    (day, index) => index > 0 && mondayOf(day) !== mondayOf(days[index - 1] ?? day),
+    (day, index) => index > 0 && !mondayOf(day).equals(mondayOf(days[index - 1] ?? day)),
   );
-  const weeks = [...Map.groupBy(days, mondayOf).values()];
-  const minutesOn = (taskId: number, day: string) =>
-    entries.find((entry) => entry.taskId === taskId && entry.spentOn === day)?.minutes ?? 0;
+  // Keyed by text, since two Temporal values for the same Monday are different objects.
+  const weeks = [...Map.groupBy(days, (day) => mondayOf(day).toString()).values()];
+  const minutesOn = (taskId: number, day: Temporal.PlainDate) =>
+    entries.find((entry) => entry.taskId === taskId && entry.spentOn.equals(day))?.minutes ?? 0;
   const sumMinutes = (predicate: (entry: (typeof entries)[number]) => boolean) =>
     entries.filter(predicate).reduce((total, entry) => total + entry.minutes, 0);
 
@@ -99,7 +100,7 @@ export function TimesheetGrid({
                   class="surface-tinted br-m px-xs py-3xs mb-3xs fs-xs lh-snug"
                   style={`--week-days: ${weekDays.length};`}
                 >
-                  Week {isoWeek(weekDays[0] ?? "")}
+                  Week {weekDays[0]?.weekOfYear}
                 </div>
               </>
             ))}
@@ -112,11 +113,11 @@ export function TimesheetGrid({
               <>
                 {startsWeek[index] && <WeekGap />}
                 <DayTint
-                  id={day === today ? "today" : undefined}
+                  id={day.equals(today) ? "today" : undefined}
                   tint={tints[index]}
                   class={`ta-right fs-s py-xs px-3xs stack-v justify-end items-end br-m br-bl-none br-br-none${tints[index] ? "" : " surface-base"}`}
                 >
-                  <DayLabel isToday={day === today} holiday={holidays[index]} />
+                  <DayLabel isToday={day.equals(today)} holiday={holidays[index]} />
                   {formatDate(day, "day")}
                 </DayTint>
               </>
@@ -140,7 +141,7 @@ export function TimesheetGrid({
                       day={day}
                       minutes={minutesOn(task.id, day)}
                       action={cellsAction}
-                      error={error?.taskId === task.id && error.day === day ? error : undefined}
+                      error={error?.taskId === task.id && error.day.equals(day) ? error : undefined}
                       locked={locked}
                     />
                   </DayTint>
@@ -163,9 +164,9 @@ export function TimesheetGrid({
                   {startsWeek[index] && <WeekGap />}
                   <div
                     class="px-xs self-stretch stack-v justify-center surface-base"
-                    data-day-total={day}
+                    data-day-total={day.toString()}
                   >
-                    {formatHours(sumMinutes((entry) => entry.spentOn === day))}
+                    {formatHours(sumMinutes((entry) => entry.spentOn.equals(day)))}
                   </div>
                 </>
               ))}

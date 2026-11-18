@@ -1,5 +1,5 @@
-import { isIsoDate } from "@tid/calendar/isoDate";
 import { z } from "zod";
+import { dayParam } from "../framework/calendarParams";
 import { formAction } from "../framework/formAction";
 import { emptyAsMissing } from "../framework/formValues";
 import { idParams } from "./projectConsultant";
@@ -11,7 +11,7 @@ import { addRateAndReprice, entriesToReprice } from "./repricing.data";
 // The rate in minor units, as the rates form passes it on.
 const repriceQuery = z.object({
   rate: z.preprocess(emptyAsMissing, z.coerce.number().int().min(0)),
-  validFrom: z.string().refine(isIsoDate),
+  validFrom: dayParam(),
 });
 
 export const repriceEntries = formAction({

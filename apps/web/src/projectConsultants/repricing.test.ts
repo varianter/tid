@@ -52,27 +52,33 @@ beforeAll(async () => {
   ids = { projectId: project.id, userId: user.id };
   await database.insert(projectAssignments).values({ ...ids, orgId: organization.id });
   await database.insert(assignmentRates).values([
-    { ...ids, validFrom: "2026-01-01", rate: 100000 },
-    { ...ids, validFrom: "2026-07-01", rate: 120000 },
+    { ...ids, validFrom: Temporal.PlainDate.from("2026-01-01"), rate: 100000 },
+    { ...ids, validFrom: Temporal.PlainDate.from("2026-07-01"), rate: 120000 },
   ]);
   const entry = { userId: user.id, taskId: task.id, minutes: 60, currency: "NOK" };
   await database.insert(timeEntries).values([
     // Copied from Harvest, at a rate the rate history doesn't have.
-    { ...entry, spentOn: "2026-02-27", rate: 99900 },
-    { ...entry, spentOn: "2026-03-02", rate: 100000 },
-    { ...entry, spentOn: "2026-07-01", rate: 120000 },
+    { ...entry, spentOn: Temporal.PlainDate.from("2026-02-27"), rate: 99900 },
+    { ...entry, spentOn: Temporal.PlainDate.from("2026-03-02"), rate: 100000 },
+    { ...entry, spentOn: Temporal.PlainDate.from("2026-07-01"), rate: 120000 },
   ]);
-  await database
-    .insert(monthLocks)
-    .values({ orgId: organization.id, month: "2026-03-01", lockedBy: user.id });
+  await database.insert(monthLocks).values({
+    orgId: organization.id,
+    month: Temporal.PlainYearMonth.from("2026-03"),
+    lockedBy: user.id,
+  });
 });
 
 test("a backdated rate reprices its period up to the next rate, locked months included", async () => {
-  const newRate = { validFrom: "2026-03-01", rate: 110000, currency: "NOK" };
+  const newRate = {
+    validFrom: Temporal.PlainDate.from("2026-03-01"),
+    rate: 110000,
+    currency: "NOK",
+  };
 
-  expect(await entriesToReprice(ids, newRate.validFrom, newRate)).toMatchObject([
-    { spentOn: "2026-03-02", rate: 100000, isLocked: true },
-  ]);
+  const toReprice = await entriesToReprice(ids, newRate.validFrom, newRate);
+  expect(toReprice.map((entry) => entry.spentOn)).toEqual([Temporal.PlainDate.from("2026-03-02")]);
+  expect(toReprice).toMatchObject([{ rate: 100000, isLocked: true }]);
 
   await addRateAndReprice(ids, newRate);
   const rates = await database
@@ -80,9 +86,9 @@ test("a backdated rate reprices its period up to the next rate, locked months in
     .from(timeEntries)
     .orderBy(asc(timeEntries.spentOn));
   expect(rates).toEqual([
-    { spentOn: "2026-02-27", rate: 99900 },
-    { spentOn: "2026-03-02", rate: 110000 },
-    { spentOn: "2026-07-01", rate: 120000 },
+    { spentOn: Temporal.PlainDate.from("2026-02-27"), rate: 99900 },
+    { spentOn: Temporal.PlainDate.from("2026-03-02"), rate: 110000 },
+    { spentOn: Temporal.PlainDate.from("2026-07-01"), rate: 120000 },
   ]);
   expect(await entriesToReprice(ids, newRate.validFrom, newRate)).toEqual([]);
 });

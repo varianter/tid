@@ -1,10 +1,11 @@
 import { type Calendar, calendarFor } from "@tid/calendar";
-import { formatDate } from "@tid/calendar/dateDisplay";
-import { daysOfMonth } from "@tid/calendar/isoDate";
+import { daysOf } from "@tid/calendar/calendarMonth";
+import { formatMonth } from "@tid/calendar/dateDisplay";
 import type { Country } from "@tid/calendar/publicHolidays";
 import type { Billing } from "./billing";
 
-type Consultant = { name: string; hoursByDay: Map<string, number>; hours: number };
+/** `hoursByDay` is keyed by day of the month. */
+type Consultant = { name: string; hoursByDay: Map<number, number>; hours: number };
 
 export type ProjectReport = {
   project: {
@@ -18,7 +19,7 @@ export type ProjectReport = {
   };
   /** The month, as people read it. */
   period: string;
-  days: string[];
+  days: Temporal.PlainDate[];
   calendar: Calendar;
   consultants: Consultant[];
   hours: number;
@@ -27,13 +28,19 @@ export type ProjectReport = {
 };
 
 /** A consultant's hours and amount on one day. */
-export type DayEntry = { email: string; name: string; day: string; hours: number; amount: number };
+export type DayEntry = {
+  email: string;
+  name: string;
+  day: Temporal.PlainDate;
+  hours: number;
+  amount: number;
+};
 
 /** The report of a project's day entries in `month`, a row per consultant. */
 export function buildProjectReport(
   project: ProjectReport["project"],
   entries: DayEntry[],
-  month: string,
+  month: Temporal.PlainYearMonth,
   country: Country,
 ): ProjectReport {
   const consultants = new Map<string, Consultant>();
@@ -43,15 +50,15 @@ export function buildProjectReport(
       hoursByDay: new Map(),
       hours: 0,
     };
-    consultant.hoursByDay.set(entry.day, entry.hours);
+    consultant.hoursByDay.set(entry.day.day, entry.hours);
     consultant.hours += entry.hours;
     consultants.set(entry.email, consultant);
   }
 
   return {
     project,
-    period: formatDate(month, "month"),
-    days: daysOfMonth(month),
+    period: formatMonth(month),
+    days: daysOf(month),
     calendar: calendarFor(country),
     consultants: [...consultants.values()],
     hours: entries.reduce((total, entry) => total + entry.hours, 0),

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { organizationField } from "../domain/organizations/organizationFilter";
-import { monthField } from "../framework/pageMonth";
+import { monthField } from "../framework/calendarParams";
 import { idParam, pageUrl } from "../framework/pageUrl";
 
 export const projectsPath = (organization: string) =>

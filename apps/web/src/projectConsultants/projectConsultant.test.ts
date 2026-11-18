@@ -84,12 +84,22 @@ test("an organization open to members stays after its last consultant leaves", a
 });
 
 test("an assignment counts until its last day, and leaving the company overrides it", () => {
-  const today = "2026-10-22";
+  const today = Temporal.PlainDate.from("2026-10-22");
   expect(assignmentState({ endsOn: null, lastDay: null }, today)).toBe("onProject");
   expect(assignmentState({ endsOn: today, lastDay: null }, today)).toBe("onProject");
-  expect(assignmentState({ endsOn: "2026-10-21", lastDay: null }, today)).toBe("offProject");
-  expect(assignmentState({ endsOn: null, lastDay: "2026-10-21" }, today)).toBe("leftCompany");
-  expect(assignmentState({ endsOn: "2026-09-30", lastDay: "2026-10-21" }, today)).toBe(
-    "leftCompany",
-  );
+  expect(
+    assignmentState({ endsOn: Temporal.PlainDate.from("2026-10-21"), lastDay: null }, today),
+  ).toBe("offProject");
+  expect(
+    assignmentState({ endsOn: null, lastDay: Temporal.PlainDate.from("2026-10-21") }, today),
+  ).toBe("leftCompany");
+  expect(
+    assignmentState(
+      {
+        endsOn: Temporal.PlainDate.from("2026-09-30"),
+        lastDay: Temporal.PlainDate.from("2026-10-21"),
+      },
+      today,
+    ),
+  ).toBe("leftCompany");
 });

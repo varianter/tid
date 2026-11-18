@@ -204,15 +204,21 @@ test("a consultant with logged time is rolled off by ending the assignment, whic
   await assign();
   const [task] = await database.insert(tasks).values({ projectId, name: "Build" }).returning();
   if (!task) throw new Error("Expected a task");
-  await database
-    .insert(timeEntries)
-    .values({ userId: member.id, taskId: task.id, spentOn: "2026-01-05", minutes: 60 });
-  await database
-    .insert(assignmentRates)
-    .values({ projectId, userId: member.id, validFrom: "2026-01-01", rate: 100000 });
+  await database.insert(timeEntries).values({
+    userId: member.id,
+    taskId: task.id,
+    spentOn: Temporal.PlainDate.from("2026-01-05"),
+    minutes: 60,
+  });
+  await database.insert(assignmentRates).values({
+    projectId,
+    userId: member.id,
+    validFrom: Temporal.PlainDate.from("2026-01-01"),
+    rate: 100000,
+  });
 
   expect((await requestAs(manager, endPath, { endsOn: "2026-02-01" })).status).toBe(303);
-  expect(await assignmentEnd()).toEqual(["2026-02-01"]);
+  expect(await assignmentEnd()).toEqual([Temporal.PlainDate.from("2026-02-01")]);
 
   await assign();
   expect(await assignmentEnd()).toEqual([null]);
@@ -238,9 +244,12 @@ test("an hourly project flags consultants on it who have no current rate", async
   const page = async () => (await requestAs(manager, `/projects/${projectId}`)).text();
   expect(await page()).toContain("No rate");
 
-  await database
-    .insert(assignmentRates)
-    .values({ projectId, userId: member.id, validFrom: "2026-01-01", rate: 100000 });
+  await database.insert(assignmentRates).values({
+    projectId,
+    userId: member.id,
+    validFrom: Temporal.PlainDate.from("2026-01-01"),
+    rate: 100000,
+  });
   expect(await page()).not.toContain("No rate");
 });
 
@@ -285,7 +294,12 @@ test("consultants who have left can't be assigned", async () => {
   const projectId = await startNonBillable("ACME-11");
   const [leaver] = await database
     .insert(users)
-    .values({ name: "Liv", email: "liv@variant.no", orgId: oslo, lastDay: "2026-01-31" })
+    .values({
+      name: "Liv",
+      email: "liv@variant.no",
+      orgId: oslo,
+      lastDay: Temporal.PlainDate.from("2026-01-31"),
+    })
     .returning();
   if (!leaver) throw new Error("Expected a user");
   const assign = await requestAs(manager, `/projects/${projectId}/consultants/new`, {
@@ -364,8 +378,18 @@ test("editing a project sets and clears its invoicing lead, who may have left si
   const [leftBefore, leftAfter] = (await database
     .insert(users)
     .values([
-      { name: "Åse", email: "ase@variant.no", orgId: oslo, lastDay: "2026-01-31" },
-      { name: "Tor", email: "tor@variant.no", orgId: oslo, lastDay: "2026-01-31" },
+      {
+        name: "Åse",
+        email: "ase@variant.no",
+        orgId: oslo,
+        lastDay: Temporal.PlainDate.from("2026-01-31"),
+      },
+      {
+        name: "Tor",
+        email: "tor@variant.no",
+        orgId: oslo,
+        lastDay: Temporal.PlainDate.from("2026-01-31"),
+      },
     ])
     .returning()) as [UserRow, UserRow];
 
@@ -390,9 +414,12 @@ test("a project without logged time is deleted with its tasks, consultants and r
   await requestAs(manager, `/projects/${projectId}/consultants/new`, {
     userId: String(member.id),
   });
-  await database
-    .insert(assignmentRates)
-    .values({ projectId, userId: member.id, validFrom: "2026-01-01", rate: 100000 });
+  await database.insert(assignmentRates).values({
+    projectId,
+    userId: member.id,
+    validFrom: Temporal.PlainDate.from("2026-01-01"),
+    rate: 100000,
+  });
   const deletePath = `/projects/${projectId}/delete`;
   expect(await (await requestAs(manager, `/projects/${projectId}`)).text()).toContain(deletePath);
 
@@ -406,9 +433,12 @@ test("a project without logged time is deleted with its tasks, consultants and r
 test("a project with logged time can't be deleted, even if the hours are zero", async () => {
   const projectId = await startNonBillable("ACME-15");
   const task = onlyRow(await database.select().from(tasks).where(eq(tasks.projectId, projectId)));
-  await database
-    .insert(timeEntries)
-    .values({ userId: member.id, taskId: task.id, spentOn: "2026-01-05", minutes: 0 });
+  await database.insert(timeEntries).values({
+    userId: member.id,
+    taskId: task.id,
+    spentOn: Temporal.PlainDate.from("2026-01-05"),
+    minutes: 0,
+  });
   const deletePath = `/projects/${projectId}/delete`;
 
   expect(await (await requestAs(manager, `/projects/${projectId}`)).text()).not.toContain(

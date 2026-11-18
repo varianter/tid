@@ -8,8 +8,8 @@ type Office = { legalName: string; country: Country; fullDayMinutes: number };
 export type LoggedTime = {
   office: string;
   userId: number;
-  lastDay: string | null;
-  month: string;
+  lastDay: Temporal.PlainDate | null;
+  month: Temporal.PlainYearMonth;
   currency: string | null;
   hours: number;
   billableHours: number;
@@ -79,7 +79,7 @@ export function summarizeOffices(offices: Office[], logged: LoggedTime[]) {
 
 /** Billable hours as a percentage of the billable base, per month, across every office. */
 export function billablePercentByMonth(logged: LoggedTime[]) {
-  const byMonth = Map.groupBy(logged, (time) => time.month);
+  const byMonth = Map.groupBy(logged, (time) => time.month.toString());
   return new Map(
     [...byMonth].map(([month, times]) => {
       const billable = times.reduce((sum, time) => sum + time.billableHours, 0);

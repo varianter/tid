@@ -16,7 +16,7 @@ type AssignablePerson = {
   name: string;
   orgName: string;
   /** Set when they were on the project before. */
-  leftProjectOn: string | null;
+  leftProjectOn: Temporal.PlainDate | null;
 };
 
 type AssignConsultantsFormPageProps = {

@@ -1,5 +1,5 @@
-import { formatDate } from "@tid/calendar/dateDisplay";
-import { addMonths, firstDayOfMonth, lastDayOfMonth } from "@tid/calendar/isoDate";
+import { firstDayOf } from "@tid/calendar/calendarMonth";
+import { formatMonth } from "@tid/calendar/dateDisplay";
 import { projects, timeEntriesExport, users } from "@tid/db/schema";
 import { formatTotalHours } from "@tid/elements/hours";
 import {
@@ -13,7 +13,7 @@ import {
   StatList,
   Tabs,
 } from "@tid/ui";
-import { and, between, eq, gte, inArray, isNull, or, sql } from "drizzle-orm";
+import { and, eq, gte, inArray, isNull, or, sql } from "drizzle-orm";
 import type { Child } from "hono/jsx";
 import { consultantPath } from "../consultants/consultants.url";
 import { type Amounts, addAmounts, formatAmounts } from "../domain/amount/amount";
@@ -26,6 +26,7 @@ import {
 } from "../domain/organizations/organizationFilter";
 import { database } from "../framework/database";
 import { Filtered } from "../framework/filter";
+import { inMonth } from "../framework/monthCondition";
 import { yearsAround } from "../framework/periodNavigation";
 import { type QueryProps, queryPage } from "../framework/queryPage";
 import { FixedPriceCheckbox, fixedPriceCondition } from "../projects/fixedPriceFilter";
@@ -47,7 +48,7 @@ export const monthlyReport = queryPage({
         view.accountName,
         selected.organizations.map((organization) => organization.legalName),
       ),
-      between(view.spentDate, firstDayOfMonth(month), lastDayOfMonth(month)),
+      inMonth(view.spentDate, month),
       billableCondition(billable, view.billable),
       // Fixed price only narrows billable hours, so a report without filters has every hour.
       billable ? fixedPriceCondition(fixedPrice, projects.billing) : undefined,
@@ -138,7 +139,7 @@ export const monthlyReport = queryPage({
             users.orgId,
             selected.organizations.map((organization) => organization.id),
           ),
-          or(isNull(users.lastDay), gte(users.lastDay, firstDayOfMonth(month))),
+          or(isNull(users.lastDay), gte(users.lastDay, firstDayOf(month))),
         ),
       );
     const capacityHours =
@@ -229,13 +230,13 @@ function ReportPage({
       title="Reports"
       period={
         <PeriodNavigation
-          previousHref={href({ month: addMonths(month, -1) })}
-          nextHref={href({ month: addMonths(month, 1) })}
+          previousHref={href({ month: month.subtract({ months: 1 }) })}
+          nextHref={href({ month: month.add({ months: 1 }) })}
           previousLabel="Previous month"
           nextLabel="Next month"
           years={yearsAround(month, href)}
         >
-          {formatDate(month, "month")}
+          {formatMonth(month)}
         </PeriodNavigation>
       }
     >
@@ -260,7 +261,7 @@ function ReportPage({
           <div class="b-all bc-subtle br-l p-m mt-s">
             {table.rows.length === 0 ? (
               <EmptyState title="No hours logged">
-                No time was logged in {formatDate(month, "month")}.
+                No time was logged in {formatMonth(month)}.
               </EmptyState>
             ) : (
               <DataGrid columns={table.columns}>

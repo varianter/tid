@@ -1,6 +1,7 @@
 import { calendarFor } from "@tid/calendar";
-import { formatDate } from "@tid/calendar/dateDisplay";
-import { addMonths, daysOfMonth, isWeekend } from "@tid/calendar/isoDate";
+import { isWeekend } from "@tid/calendar/calendarDay";
+import { daysOf } from "@tid/calendar/calendarMonth";
+import { formatMonth } from "@tid/calendar/dateDisplay";
 import { todayInOslo } from "@tid/calendar/osloClock";
 import { Checkbox, Label, Page, PeriodNavigation } from "@tid/ui";
 import { capacityMinutes } from "../domain/capacity/capacity";
@@ -25,7 +26,7 @@ export function MonthPage({
   showBillableAssignments,
   error,
 }: {
-  month: string;
+  month: Temporal.PlainYearMonth;
   user: User;
   /** The page's query string, kept by its links and forms. */
   search: string;
@@ -36,8 +37,8 @@ export function MonthPage({
   const query = new URLSearchParams(search);
   const showWeekends = query.get("weekends") === "on";
   // A weekend with hours stays visible, so hiding weekends never hides time.
-  const days = daysOfMonth(month).filter(
-    (day) => showWeekends || !isWeekend(day) || entries.some((entry) => entry.spentOn === day),
+  const days = daysOf(month).filter(
+    (day) => showWeekends || !isWeekend(day) || entries.some((entry) => entry.spentOn.equals(day)),
   );
   const { country, fullDayMinutes } = user.organization;
   return (
@@ -46,13 +47,13 @@ export function MonthPage({
         title="Timesheet"
         period={
           <PeriodNavigation
-            previousHref={monthPath(addMonths(month, -1), showWeekends)}
-            nextHref={monthPath(addMonths(month, 1), showWeekends)}
+            previousHref={monthPath(month.subtract({ months: 1 }), showWeekends)}
+            nextHref={monthPath(month.add({ months: 1 }), showWeekends)}
             previousLabel="Previous month"
             nextLabel="Next month"
             years={yearsAround(month, (change) => monthPath(change.month, showWeekends))}
           >
-            {formatDate(month, "month")}
+            {formatMonth(month)}
           </PeriodNavigation>
         }
       >
@@ -75,7 +76,7 @@ export function MonthPage({
         >
           {locked && (
             <p class="b-all bc-subtle br-l fs-s p-xs surface-tinted">
-              {formatDate(month, "month")} is locked. Ask a manager to unlock it if something needs
+              {formatMonth(month)} is locked. Ask a manager to unlock it if something needs
               changing.
             </p>
           )}
@@ -84,7 +85,7 @@ export function MonthPage({
             style="--sheet-bleed: var(--spacing-s-m)"
             cell-action={`/timesheet/month/${month}/cell${search}`}
             full-day-minutes={fullDayMinutes}
-            today={todayInOslo()}
+            today={todayInOslo().toString()}
           >
             <TimesheetGrid
               days={days}

@@ -1,10 +1,11 @@
-import { firstDayOfMonth, lastDayOfMonth } from "@tid/calendar/isoDate";
+import { firstDayOf } from "@tid/calendar/calendarMonth";
 import { todayInOslo } from "@tid/calendar/osloClock";
 import type { Country } from "@tid/calendar/publicHolidays";
 import { projects, tasks, timeEntries, users } from "@tid/db/schema";
-import { and, between, eq, gte, isNull, or, sql } from "drizzle-orm";
+import { and, eq, gte, isNull, or, sql } from "drizzle-orm";
 import { capacityMinutes } from "../domain/capacity/capacity";
 import { database } from "../framework/database";
+import { inMonth } from "../framework/monthCondition";
 
 export type ConsultantHours = {
   id: number;
@@ -21,10 +22,12 @@ export type ConsultantHours = {
  */
 export async function loadConsultantHours(
   organization: { id: number; country: Country; fullDayMinutes: number },
-  month: string,
+  month: Temporal.PlainYearMonth,
 ): Promise<ConsultantHours[]> {
-  const first = firstDayOfMonth(month);
+  const first = firstDayOf(month);
+  // Hours not yet due don't count as missing, so the current month only checks up to today.
   const today = todayInOslo();
+  const dueUntil = month.equals(today.toPlainYearMonth()) ? today : null;
 
   const consultants = await database
     .select({
@@ -40,10 +43,7 @@ export async function loadConsultantHours(
     .from(users)
     .leftJoin(
       timeEntries,
-      and(
-        eq(timeEntries.userId, users.id),
-        between(timeEntries.spentOn, first, lastDayOfMonth(month)),
-      ),
+      and(eq(timeEntries.userId, users.id), inMonth(timeEntries.spentOn, month)),
     )
     .leftJoin(tasks, eq(tasks.id, timeEntries.taskId))
     .leftJoin(projects, eq(projects.id, tasks.projectId))
@@ -54,8 +54,9 @@ export async function loadConsultantHours(
     .orderBy(users.name);
 
   return consultants.map((consultant) => {
-    // Hours not yet due don't count as missing, so the current month only checks up to today.
-    const until = consultant.lastDay && consultant.lastDay < today ? consultant.lastDay : today;
+    const until = [consultant.lastDay, dueUntil]
+      .filter((day) => day !== null)
+      .sort(Temporal.PlainDate.compare)[0];
     const expectedMinutes = capacityMinutes(
       month,
       organization.country,

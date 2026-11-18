@@ -44,15 +44,17 @@ beforeAll(async () => {
   };
   await addProject("Hourly", {});
   await addProject("Fixed fee", { billing: "fixed_fee" });
-  await addProject("Starts later", {}, { startsOn: "2026-12-01" });
-  await addProject("Ends this month", {}, { endsOn: "2026-10-15" });
+  await addProject("Starts later", {}, { startsOn: Temporal.PlainDate.from("2026-12-01") });
+  await addProject("Ends this month", {}, { endsOn: Temporal.PlainDate.from("2026-10-15") });
   await addProject("Internal", { billing: "non_billable", currency: null });
-  await addProject("Rolled off", {}, { endsOn: "2026-09-30" });
-  await addProject("Project ended", { endsOn: "2026-09-30" });
+  await addProject("Rolled off", {}, { endsOn: Temporal.PlainDate.from("2026-09-30") });
+  await addProject("Project ended", { endsOn: Temporal.PlainDate.from("2026-09-30") });
 });
 
 test("the timesheet shows billable projects the user is assigned to, unless they ended before the month", async () => {
-  const shown = await userTasks().where(onBillableAssignment(userId, "2026-10-01"));
+  const shown = await userTasks().where(
+    onBillableAssignment(userId, Temporal.PlainDate.from("2026-10-01")),
+  );
   expect(shown.map((task) => task.projectName).sort()).toEqual([
     "Ends this month",
     "Fixed fee",
@@ -62,6 +64,10 @@ test("the timesheet shows billable projects the user is assigned to, unless they
 });
 
 test("a user who hides billable assignments gets none shown unasked", async () => {
-  const { assignedTaskIds } = await loadTimesheet({ id: userId, orgId }, "2026-10", false);
+  const { assignedTaskIds } = await loadTimesheet(
+    { id: userId, orgId },
+    Temporal.PlainYearMonth.from("2026-10"),
+    false,
+  );
   expect(assignedTaskIds).toEqual([]);
 });

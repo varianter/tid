@@ -1,10 +1,10 @@
-import { formatDate } from "@tid/calendar/dateDisplay";
+import { formatDate, formatMonth } from "@tid/calendar/dateDisplay";
 import { formatTotalHours } from "@tid/elements/hours";
 import { DataGrid, Section } from "@tid/ui";
 
 /** A time entry, titled by whatever the list isn't already about: its project, or who logged it. */
 export type MonthEntry = {
-  spentOn: string;
+  spentOn: Temporal.PlainDate;
   minutes: number;
   notes: string | null;
   task: string;
@@ -18,16 +18,17 @@ export function MonthEntries({
   entries,
   titleLabel,
 }: {
-  month: string;
+  month: Temporal.PlainYearMonth;
   entries: MonthEntry[];
   /** What the first column holds, such as "Project". */
   titleLabel: string;
 }) {
-  const days = Map.groupBy(entries, (entry) => entry.spentOn);
+  // Keyed by text, since two Temporal values for the same day are different objects.
+  const days = Map.groupBy(entries, (entry) => entry.spentOn.toString());
   return (
     <Section title="Entries">
       {days.size === 0 ? (
-        <p class="ink-subtle">No time was logged in {formatDate(month, "month")}.</p>
+        <p class="ink-subtle">No time was logged in {formatMonth(month)}.</p>
       ) : (
         <DataGrid
           columns={[{ label: titleLabel }, { label: "Task" }, { label: "Hours", kind: "number" }]}
@@ -36,7 +37,7 @@ export function MonthEntries({
             <>
               <DataGrid.Group>
                 <span class="stack-h">
-                  <span class="flex-1">{formatDate(day)}</span>
+                  <span class="flex-1">{formatDate(Temporal.PlainDate.from(day))}</span>
                   {formatTotalHours(dayEntries.reduce((sum, entry) => sum + entry.minutes, 0))}
                 </span>
               </DataGrid.Group>
