@@ -57,7 +57,7 @@ export const consultantList = async (c: Context<UserEnv>) => {
       consultants={rows.map((row) => ({
         ...row,
         officeName: officeNames.get(row.orgId) ?? "",
-        hasLeft: row.lastDay !== null && row.lastDay < today,
+        hasLeft: row.lastDay !== null && Temporal.PlainDate.compare(row.lastDay, today) < 0,
         projectNames: (projectsByUser.get(row.id) ?? []).map((project) => project.name),
       }))}
       {...organizationFilter}
@@ -69,7 +69,7 @@ type ConsultantRow = {
   id: number;
   name: string;
   email: string;
-  lastDay: string | null;
+  lastDay: Temporal.PlainDate | null;
   isManager: boolean;
   officeName: string;
   hasLeft: boolean;

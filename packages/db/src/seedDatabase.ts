@@ -1,5 +1,4 @@
-import { addMonths, firstDayOfMonth, monthOf } from "@tid/calendar/isoDate";
-import { isoDateInOslo } from "@tid/calendar/osloClock";
+import { dayInOslo } from "@tid/calendar/osloClock";
 import { sql } from "drizzle-orm";
 import type { Database } from "./client";
 import {
@@ -32,9 +31,9 @@ import {
 } from "./schema";
 import { dayOf, Weekday } from "./week";
 
-// As YYYY-MM-01. The seed locks it so a locked month can be compared against an open one.
-export function startOfLastMonth(now: Date) {
-  return firstDayOfMonth(addMonths(monthOf(isoDateInOslo(now)), -1));
+// The seed locks it so a locked month can be compared against an open one.
+export function lastMonthOf(now: Date) {
+  return dayInOslo(now).toPlainYearMonth().subtract({ months: 1 });
 }
 
 function byKey<Row>(rows: Row[], key: (row: Row) => string) {
@@ -63,7 +62,7 @@ export function seedDatabase(
   const startWeek = -weeks;
   const allPeople = extraPeople === 0 ? people : [...people, ...syntheticPeople(extraPeople)];
   const windowStart = dayOf(now, startWeek, Weekday.Monday);
-  const lastMonth = startOfLastMonth(now);
+  const lastMonth = lastMonthOf(now);
   const projectEntries = Object.entries(projectCatalog) as [ProjectCode, ProjectDefinition][];
 
   return database.transaction(async (transaction) => {
@@ -79,7 +78,11 @@ export function seedDatabase(
           email: person.email,
           orgId: organizationId(person.organization),
           createdAt: new Date(
-            dayOf(now, Math.max(startWeek, person.joinedWeek ?? startWeek), Weekday.Monday),
+            dayOf(
+              now,
+              Math.max(startWeek, person.joinedWeek ?? startWeek),
+              Weekday.Monday,
+            ).toString(),
           ),
           lastDay:
             person.leftWeek === undefined ? null : dayOf(now, person.leftWeek, Weekday.Friday),

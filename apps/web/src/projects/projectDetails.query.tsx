@@ -1,6 +1,6 @@
+import { firstDayOf } from "@tid/calendar/calendarMonth";
 import { formatDate } from "@tid/calendar/dateDisplay";
-import { addMonths, firstDayOfMonth, monthOf } from "@tid/calendar/isoDate";
-import { todayInOslo } from "@tid/calendar/osloClock";
+import { thisMonthInOslo, todayInOslo } from "@tid/calendar/osloClock";
 import {
   assignmentRates,
   clients,
@@ -15,7 +15,7 @@ import {
 import { formatTotalHours } from "@tid/elements/hours";
 import { Badge, Button, DataGrid, Detail, Icon, Page, Section } from "@tid/ui";
 import { attributes } from "@tid/via/attributes";
-import { and, desc, eq, lte, type SQL, sql } from "drizzle-orm";
+import { and, desc, eq, gte, lt, lte, type SQL, sql } from "drizzle-orm";
 import type { Context } from "hono";
 import { consultantPath } from "../consultants/consultants.url";
 import { formatAmount } from "../domain/amount/amount";
@@ -39,9 +39,10 @@ import { projectReportUrl } from "./projects.url";
 type HoursSpent = { total: number; lastMonth: number; thisMonth: number };
 
 // Minutes in each period, summed over the time entries that `where` keeps.
-const hoursSpent = (today: string) => {
-  const thisMonthStart = firstDayOfMonth(monthOf(today));
-  const lastMonthStart = firstDayOfMonth(addMonths(monthOf(today), -1));
+const hoursSpent = (today: Temporal.PlainDate) => {
+  const thisMonth = today.toPlainYearMonth();
+  const thisMonthStart = firstDayOf(thisMonth);
+  const lastMonthStart = firstDayOf(thisMonth.subtract({ months: 1 }));
   const minutesFrom = (condition?: SQL) =>
     sql`coalesce(sum(${timeEntries.minutes}) ${condition ? sql`filter (where ${condition})` : sql``}, 0)`.mapWith(
       Number,
@@ -49,9 +50,9 @@ const hoursSpent = (today: string) => {
   return {
     total: minutesFrom(),
     lastMonth: minutesFrom(
-      sql`${timeEntries.spentOn} >= ${lastMonthStart} and ${timeEntries.spentOn} < ${thisMonthStart}`,
+      and(gte(timeEntries.spentOn, lastMonthStart), lt(timeEntries.spentOn, thisMonthStart)),
     ),
-    thisMonth: minutesFrom(sql`${timeEntries.spentOn} >= ${thisMonthStart}`),
+    thisMonth: minutesFrom(gte(timeEntries.spentOn, thisMonthStart)),
   };
 };
 
@@ -166,9 +167,9 @@ type Consultant = Person &
   HoursSpent & {
     /** In minor units of the project's currency; none when no rate has started yet. */
     rate: number | null;
-    endsOn: string | null;
+    endsOn: Temporal.PlainDate | null;
     /** The day they left the company. */
-    lastDay: string | null;
+    lastDay: Temporal.PlainDate | null;
     state: AssignmentState;
   };
 
@@ -232,7 +233,7 @@ function ProjectDetailsPage({
       <nav aria-label="About the project" class="stack-h gap-xs">
         <Button
           as="a"
-          href={projectReportUrl.path({ projectId: project.id, month: monthOf(todayInOslo()) })}
+          href={projectReportUrl.path({ projectId: project.id, month: thisMonthInOslo() })}
           data-variant="outlined"
         >
           <Icon name="bar_chart" />

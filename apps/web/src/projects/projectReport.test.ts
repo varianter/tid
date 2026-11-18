@@ -13,11 +13,34 @@ const project = {
 
 test("a consultant's days add up to one row, and only hourly projects get an amount", () => {
   const entries = [
-    { email: "a@variant.no", name: "A", day: "2026-10-01", hours: 7.5, amount: 7500 },
-    { email: "a@variant.no", name: "A", day: "2026-10-02", hours: 2, amount: 2000 },
-    { email: "b@variant.no", name: "B", day: "2026-10-01", hours: 1, amount: 1000 },
+    {
+      email: "a@variant.no",
+      name: "A",
+      day: Temporal.PlainDate.from("2026-10-01"),
+      hours: 7.5,
+      amount: 7500,
+    },
+    {
+      email: "a@variant.no",
+      name: "A",
+      day: Temporal.PlainDate.from("2026-10-02"),
+      hours: 2,
+      amount: 2000,
+    },
+    {
+      email: "b@variant.no",
+      name: "B",
+      day: Temporal.PlainDate.from("2026-10-01"),
+      hours: 1,
+      amount: 1000,
+    },
   ];
-  const report = buildProjectReport(project, entries, "2026-10", "NO");
+  const report = buildProjectReport(
+    project,
+    entries,
+    Temporal.PlainYearMonth.from("2026-10"),
+    "NO",
+  );
   expect(report.consultants.map(({ name, hours }) => ({ name, hours }))).toEqual([
     { name: "A", hours: 9.5 },
     { name: "B", hours: 1 },
@@ -25,6 +48,11 @@ test("a consultant's days add up to one row, and only hourly projects get an amo
   expect(report.hours).toBe(10.5);
   expect(report.amount).toBe(10500);
 
-  const fixed = buildProjectReport({ ...project, billing: "fixed_fee" }, entries, "2026-10", "NO");
+  const fixed = buildProjectReport(
+    { ...project, billing: "fixed_fee" },
+    entries,
+    Temporal.PlainYearMonth.from("2026-10"),
+    "NO",
+  );
   expect(fixed.amount).toBeUndefined();
 });

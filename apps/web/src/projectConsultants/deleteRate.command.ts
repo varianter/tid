@@ -1,8 +1,8 @@
-import { isIsoDate } from "@tid/calendar/isoDate";
 import { todayInOslo } from "@tid/calendar/osloClock";
 import { assignmentRates } from "@tid/db/schema";
 import { and, eq } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
+import { dayParam } from "../framework/calendarParams";
 import { database } from "../framework/database";
 import { formAction } from "../framework/formAction";
 import { DeleteRateFormPage, deleteRateForm } from "./deleteRate.form";
@@ -18,15 +18,15 @@ export const deleteRate = formAction({
   schema: deleteRateForm,
   loader: async (c) => {
     const ids = idParams(c.req.param());
-    const validFrom = c.req.param("validFrom") ?? "";
-    if (!ids || !isIsoDate(validFrom)) return c.notFound();
+    const validFrom = dayParam().safeParse(c.req.param("validFrom")).data;
+    if (!ids || !validFrom) return c.notFound();
     const consultant = await loadConsultant(ids);
     const [rate] = await database
       .select()
       .from(assignmentRates)
       .where(and(ratesOf(ids), eq(assignmentRates.validFrom, validFrom)));
     if (!consultant || !rate) return c.notFound();
-    if (validFrom <= todayInOslo())
+    if (Temporal.PlainDate.compare(validFrom, todayInOslo()) <= 0)
       throw new HTTPException(403, { message: "A rate that has started can't be deleted" });
     const price = await priceBefore(ids, validFrom, consultant.currency);
     return { consultant, validFrom, price, entries: await entriesToReprice(ids, validFrom, price) };

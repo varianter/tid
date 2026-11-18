@@ -1,8 +1,8 @@
-import { isIsoDate } from "@tid/calendar/isoDate";
 import { Field, Form, FormField, FormPage, fieldErrorAttributes, Select } from "@tid/ui";
 import { z } from "zod";
 import { administrationPath } from "../administration/administration.url";
 import type { OrganizationOption } from "../domain/organizations/organization";
+import { dayParam } from "../framework/calendarParams";
 import type { FormState } from "../framework/formAction";
 import { emptyAsMissing } from "../framework/formValues";
 
@@ -13,7 +13,7 @@ export const registerConsultantForm = z.object({
     emptyAsMissing,
     z.coerce.number({ error: "Choose an organization" }).int(),
   ),
-  firstDay: z.string().refine(isIsoDate, "Choose their first day"),
+  firstDay: dayParam("Choose their first day"),
 });
 
 type RegisterConsultantFormPageProps = {

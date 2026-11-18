@@ -47,7 +47,11 @@ beforeEach(async () => {
 test("a manager registers someone before their first day, then sees their page", async () => {
   const response = await register();
   const [siri] = await findByEmail("siri@variant.no");
-  expect(siri).toMatchObject({ name: "Siri", orgId: osloId, firstDay: "2027-01-04" });
+  expect(siri).toMatchObject({
+    name: "Siri",
+    orgId: osloId,
+    firstDay: Temporal.PlainDate.from("2027-01-04"),
+  });
   expect(response.headers.get("location")).toStartWith(`/consultants/${siri?.id}`);
 });
 

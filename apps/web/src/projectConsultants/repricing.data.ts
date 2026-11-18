@@ -19,7 +19,7 @@ import { type NewRate, type Price, type ProjectConsultantIds, ratesOf } from "./
 
 // A rate prices the entries from its start until the next rate takes over. Entries outside that
 // period keep their price, so history imported from Harvest isn't flattened to today's rates.
-async function periodOf(ids: ProjectConsultantIds, validFrom: string) {
+async function periodOf(ids: ProjectConsultantIds, validFrom: Temporal.PlainDate) {
   const [next] = await database
     .select({ validFrom: assignmentRates.validFrom })
     .from(assignmentRates)
@@ -54,7 +54,11 @@ const pricedDifferently = (price: Price) =>
     : isNotNull(timeEntries.rate);
 
 /** The logged entries in the period from validFrom whose price changes to `price`. */
-export async function entriesToReprice(ids: ProjectConsultantIds, validFrom: string, price: Price) {
+export async function entriesToReprice(
+  ids: ProjectConsultantIds,
+  validFrom: Temporal.PlainDate,
+  price: Price,
+) {
   return database
     .select({
       id: timeEntries.id,
@@ -96,7 +100,7 @@ export async function addRateAndReprice(ids: ProjectConsultantIds, newRate: NewR
 /** The price that takes over a rate's period once the rate is gone: the rate before it, if any. */
 export async function priceBefore(
   ids: ProjectConsultantIds,
-  validFrom: string,
+  validFrom: Temporal.PlainDate,
   currency: string,
 ): Promise<Price> {
   const [previous] = await database
@@ -111,7 +115,7 @@ export async function priceBefore(
 /** Deletes the rate and reprices its period at the price that takes over, locked months included. */
 export async function deleteRateAndReprice(
   ids: ProjectConsultantIds,
-  validFrom: string,
+  validFrom: Temporal.PlainDate,
   price: Price,
 ) {
   const period = await periodOf(ids, validFrom);

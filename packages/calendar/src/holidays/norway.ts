@@ -1,4 +1,3 @@
-import { addDays } from "../isoDate";
 import { easterSunday } from "./easter";
 import { PublicHolidayId } from "./holidayIds";
 import type { SpecialDay } from "./publicHolidays";
@@ -11,31 +10,32 @@ const NorwegianHolidayId = {
 
 export function getNorwegianPublicHolidays(year: number): SpecialDay[] {
   const easter = easterSunday(year);
+  const on = (month: number, day: number) => Temporal.PlainDate.from({ year, month, day });
 
   return [
     {
-      date: `${year}-01-01`,
+      date: on(1, 1),
       name: "Første nyttårsdag",
       type: "public-holiday",
       id: PublicHolidayId.NewYearsDay,
       emoji: "🎆",
     },
     {
-      date: addDays(easter, -7),
+      date: easter.subtract({ days: 7 }),
       name: "Palmesøndag",
       type: "public-holiday",
       id: NorwegianHolidayId.PalmSunday,
       emoji: "🌿",
     },
     {
-      date: addDays(easter, -3),
+      date: easter.subtract({ days: 3 }),
       name: "Skjærtorsdag",
       type: "public-holiday",
       id: PublicHolidayId.MaundyThursday,
       emoji: "🐣",
     },
     {
-      date: addDays(easter, -2),
+      date: easter.subtract({ days: 2 }),
       name: "Langfredag",
       type: "public-holiday",
       id: PublicHolidayId.GoodFriday,
@@ -49,70 +49,70 @@ export function getNorwegianPublicHolidays(year: number): SpecialDay[] {
       emoji: "🐣",
     },
     {
-      date: addDays(easter, 1),
+      date: easter.add({ days: 1 }),
       name: "Andre påskedag",
       type: "public-holiday",
       id: PublicHolidayId.EasterMonday,
       emoji: "🐣",
     },
     {
-      date: addDays(easter, 39),
+      date: easter.add({ days: 39 }),
       name: "Kristi himmelfartsdag",
       type: "public-holiday",
       id: PublicHolidayId.AscensionDay,
       emoji: "☁️",
     },
     {
-      date: `${year}-05-01`,
+      date: on(5, 1),
       name: "Offentlig høytidsdag (1. mai)",
       type: "public-holiday",
       id: PublicHolidayId.LabourDay,
       emoji: "🛠️",
     },
     {
-      date: `${year}-05-17`,
+      date: on(5, 17),
       name: "Grunnlovsdag (17. mai)",
       type: "public-holiday",
       id: NorwegianHolidayId.ConstitutionDay,
       emoji: "🇳🇴",
     },
     {
-      date: addDays(easter, 49),
+      date: easter.add({ days: 49 }),
       name: "Første pinsedag",
       type: "public-holiday",
       id: PublicHolidayId.WhitSunday,
       emoji: "🕊️",
     },
     {
-      date: addDays(easter, 50),
+      date: easter.add({ days: 50 }),
       name: "Andre pinsedag",
       type: "public-holiday",
       id: NorwegianHolidayId.WhitMonday,
       emoji: "🕊️",
     },
     {
-      date: `${year}-12-24`,
+      date: on(12, 24),
       name: "Julaften",
       type: "public-holiday",
       id: PublicHolidayId.ChristmasEve,
       emoji: "🎄",
     },
     {
-      date: `${year}-12-25`,
+      date: on(12, 25),
       name: "Første juledag",
       type: "public-holiday",
       id: PublicHolidayId.ChristmasDay,
       emoji: "🎄",
     },
     {
-      date: `${year}-12-26`,
+      date: on(12, 26),
       name: "Andre juledag",
       type: "public-holiday",
       id: PublicHolidayId.BoxingDay,
       emoji: "🎄",
     },
     {
-      date: `${year}-12-31`,
+      date: on(12, 31),
       name: "Nyttårsaften",
       type: "public-holiday",
       id: PublicHolidayId.NewYearsEve,

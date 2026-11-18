@@ -1,24 +1,23 @@
-import { formatDate } from "@tid/calendar/dateDisplay";
-import { addMonths } from "@tid/calendar/isoDate";
+import { formatMonth } from "@tid/calendar/dateDisplay";
 import type { PeriodChoice, YearChoice } from "@tid/ui";
 
 /** The years around `month`, each with its months, for the picker a `PeriodNavigation` label opens. */
 export function yearsAround(
-  month: string,
+  month: Temporal.PlainYearMonth,
   /** The page with its month changed, as one of the picker's links needs it. */
-  href: (change: { month: string }) => string,
+  href: (change: { month: Temporal.PlainYearMonth }) => string,
 ): YearChoice[] {
   return [-1, 0, 1].map((yearOffset) => {
-    const year = Number(month.slice(0, 4)) + yearOffset;
+    const year = month.year + yearOffset;
     return {
       label: String(year),
       open: yearOffset === 0,
       months: Array.from({ length: 12 }, (_, monthIndex) => {
-        const monthOption = addMonths(`${year}-01`, monthIndex);
+        const monthOption = Temporal.PlainYearMonth.from({ year, month: monthIndex + 1 });
         return {
-          label: formatDate(monthOption, "monthName"),
+          label: formatMonth(monthOption, "monthName"),
           href: href({ month: monthOption }),
-          current: monthOption === month,
+          current: monthOption.equals(month),
         };
       }),
     };
@@ -27,12 +26,16 @@ export function yearsAround(
 
 /** The years around `year`, for the picker a `PeriodNavigation` label opens on a page that shows a year. */
 export function yearsNear(
-  year: string,
+  year: number,
   /** The page with its year changed, as one of the picker's links needs it. */
-  href: (change: { year: string }) => string,
+  href: (change: { year: number }) => string,
 ): PeriodChoice[] {
   return [-4, -3, -2, -1, 0, 1].map((yearOffset) => {
-    const yearOption = String(Number(year) + yearOffset);
-    return { label: yearOption, href: href({ year: yearOption }), current: yearOption === year };
+    const yearOption = year + yearOffset;
+    return {
+      label: String(yearOption),
+      href: href({ year: yearOption }),
+      current: yearOffset === 0,
+    };
   });
 }

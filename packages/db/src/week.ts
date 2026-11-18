@@ -1,5 +1,5 @@
-import { addDays, mondayOf } from "@tid/calendar/isoDate";
-import { isoDateInOslo } from "@tid/calendar/osloClock";
+import { mondayOf } from "@tid/calendar/calendarDay";
+import { dayInOslo } from "@tid/calendar/osloClock";
 
 // Weekday numbers follow ISO 8601, the convention the fixture's weekdays use:
 // 1 is Monday and 7 is Sunday.
@@ -27,5 +27,5 @@ export const weekdays: Weekday[] = [...workWeek, Weekday.Saturday, Weekday.Sunda
 
 // Weeks are relative to the one `now` falls in: 0 is this week, -1 is last week.
 export function dayOf(now: Date, week: number, weekday: Weekday) {
-  return addDays(mondayOf(isoDateInOslo(now)), week * 7 + weekday - 1);
+  return mondayOf(dayInOslo(now)).add({ days: week * 7 + weekday - 1 });
 }

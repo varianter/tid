@@ -98,7 +98,7 @@ test("a consultant's details list the billable projects they're assigned to now"
       projectId: project.id,
       userId: member.id,
       orgId,
-      endsOn: project.code === "OLD1" ? "2000-01-01" : null,
+      endsOn: project.code === "OLD1" ? Temporal.PlainDate.from("2000-01-01") : null,
     })),
   );
   const page = await (await requestAs(member, consultantPath(member.id))).text();

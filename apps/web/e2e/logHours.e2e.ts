@@ -13,7 +13,9 @@ const storedMinutes = async (taskId: number, day: string) => {
   const [row] = await database
     .select()
     .from(timeEntries)
-    .where(and(eq(timeEntries.taskId, taskId), eq(timeEntries.spentOn, day)));
+    .where(
+      and(eq(timeEntries.taskId, taskId), eq(timeEntries.spentOn, Temporal.PlainDate.from(day))),
+    );
   return row?.minutes;
 };
 

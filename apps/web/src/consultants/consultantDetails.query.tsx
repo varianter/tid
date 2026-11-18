@@ -1,5 +1,4 @@
-import { formatDate } from "@tid/calendar/dateDisplay";
-import { addMonths, firstDayOfMonth, lastDayOfMonth } from "@tid/calendar/isoDate";
+import { formatDate, formatMonth } from "@tid/calendar/dateDisplay";
 import { todayInOslo } from "@tid/calendar/osloClock";
 import { clients, organizations, projects, tasks, timeEntries, users } from "@tid/db/schema";
 import { formatTotalHours } from "@tid/elements/hours";
@@ -14,12 +13,13 @@ import {
   Stat,
   StatList,
 } from "@tid/ui";
-import { and, between, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import type { Context } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { capacityMinutes } from "../domain/capacity/capacity";
 import type { UserEnv } from "../domain/users/user";
 import { database } from "../framework/database";
+import { inMonth } from "../framework/monthCondition";
 import { yearsAround } from "../framework/periodNavigation";
 import { type QueryProps, queryPage } from "../framework/queryPage";
 import { type Billing, billingLabels } from "../projects/billing";
@@ -55,9 +55,9 @@ export const consultantDetails = queryPage({
     const currentBillableProjects =
       (await loadCurrentBillableProjects([user.id], todayInOslo())).get(user.id) ?? [];
 
-    const inMonth = and(
+    const entriesInMonth = and(
       eq(timeEntries.userId, user.id),
-      between(timeEntries.spentOn, firstDayOfMonth(month), lastDayOfMonth(month)),
+      inMonth(timeEntries.spentOn, month),
     );
     const [monthTotals] = await database
       .select({
@@ -69,7 +69,7 @@ export const consultantDetails = queryPage({
       .from(timeEntries)
       .innerJoin(tasks, eq(tasks.id, timeEntries.taskId))
       .innerJoin(projects, eq(projects.id, tasks.projectId))
-      .where(inMonth);
+      .where(entriesInMonth);
 
     const entries = await database
       .select({
@@ -84,7 +84,7 @@ export const consultantDetails = queryPage({
       .innerJoin(tasks, eq(tasks.id, timeEntries.taskId))
       .innerJoin(projects, eq(projects.id, tasks.projectId))
       .innerJoin(clients, eq(clients.id, projects.clientId))
-      .where(inMonth)
+      .where(entriesInMonth)
       .orderBy(desc(timeEntries.spentOn), projects.name, tasks.name);
 
     return {
@@ -114,8 +114,8 @@ function ConsultantDetailsPage({
   user: {
     name: string;
     email: string;
-    firstDay: string | null;
-    lastDay: string | null;
+    firstDay: Temporal.PlainDate | null;
+    lastDay: Temporal.PlainDate | null;
     organizationSlug: string;
   };
   viewerIsManager: boolean;
@@ -142,13 +142,13 @@ function ConsultantDetailsPage({
       }
       period={
         <PeriodNavigation
-          previousHref={href({ month: addMonths(month, -1) })}
-          nextHref={href({ month: addMonths(month, 1) })}
+          previousHref={href({ month: month.subtract({ months: 1 }) })}
+          nextHref={href({ month: month.add({ months: 1 }) })}
           previousLabel="Previous month"
           nextLabel="Next month"
           years={yearsAround(month, href)}
         >
-          {formatDate(month, "month")}
+          {formatMonth(month)}
         </PeriodNavigation>
       }
     >

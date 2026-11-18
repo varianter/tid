@@ -1,5 +1,4 @@
 import { beforeAll, expect, test } from "bun:test";
-import { addDays } from "@tid/calendar/isoDate";
 import { todayInOslo } from "@tid/calendar/osloClock";
 import { rebuildDatabase } from "@tid/db/client";
 import {
@@ -58,14 +57,17 @@ beforeAll(async () => {
     { projectId, userId: consultant.id, orgId },
     { projectId, userId: consultantWithoutRates.id, orgId },
   ]);
-  await database
-    .insert(assignmentRates)
-    .values({ projectId, userId: consultant.id, validFrom: "2026-01-01", rate: 100000 });
+  await database.insert(assignmentRates).values({
+    projectId,
+    userId: consultant.id,
+    validFrom: Temporal.PlainDate.from("2026-01-01"),
+    rate: 100000,
+  });
 });
 
 /** Adds a rate that hasn't started, and logs hours on its first day, which it prices. */
 async function logHoursAtFutureRate(user: UserRow) {
-  const day = addDays(todayInOslo(), 30);
+  const day = todayInOslo().add({ days: 30 });
   await addRateAndReprice(
     { projectId, userId: user.id },
     { validFrom: day, rate: 150000, currency: "NOK" },
@@ -73,8 +75,8 @@ async function logHoursAtFutureRate(user: UserRow) {
   const logged = await requestAsUser(
     user,
     (app) => app.route("/timesheet", timesheet),
-    `/timesheet/month/${day.slice(0, 7)}/cells`,
-    postForm({ taskId: String(taskId), date: day, hours: "7,5" }),
+    `/timesheet/month/${day.toPlainYearMonth().toString()}/cells`,
+    postForm({ taskId: String(taskId), date: day.toString(), hours: "7,5" }),
   );
   expect(logged.status).toBe(303);
   expect(await priceOfEntry(user)).toEqual({ rate: 150000, currency: "NOK" });
@@ -89,8 +91,8 @@ const priceOfEntry = async (user: UserRow) =>
       .where(eq(timeEntries.userId, user.id)),
   );
 
-const deleteRatePath = (user: UserRow, validFrom: string) =>
-  `/projects/${projectId}/consultants/${user.id}/rates/${validFrom}/delete`;
+const deleteRatePath = (user: UserRow, validFrom: Temporal.PlainDate) =>
+  `/projects/${projectId}/consultants/${user.id}/rates/${validFrom.toString()}/delete`;
 
 const requestAsManager = (path: string, init?: RequestInit) =>
   requestAsUser(

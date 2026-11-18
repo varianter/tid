@@ -12,7 +12,7 @@ export const deleteRateForm = z.object({});
 
 type DeleteRateFormPageProps = {
   consultant: Consultant;
-  validFrom: string;
+  validFrom: Temporal.PlainDate;
   /** What takes over the rate's period: the rate before it, or none. */
   price: Price;
   entries: RepricedEntry[];

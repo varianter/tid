@@ -148,7 +148,7 @@ export const taskCatalog = {
 } satisfies Record<string, TaskDefinition>;
 
 export type TaskKey = keyof typeof taskCatalog;
-export type DayPlan = Partial<Record<TaskKey, number>>;
+type DayPlan = Partial<Record<TaskKey, number>>;
 
 // Replaces the planned day for the weeks from..to (inclusive), on the given ISO weekdays.
 // An empty plan is a day the person forgot to log.

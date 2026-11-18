@@ -6,7 +6,7 @@ import { findUserByEmail } from "../login/userIdentity.data";
 export type UserRow = typeof users.$inferSelect;
 
 /** The user as login loads them for a request, so roles changed earlier in a test show. */
-export async function loadLoggedInUser({ email }: UserRow): Promise<User> {
+async function loadLoggedInUser({ email }: UserRow): Promise<User> {
   const user = await findUserByEmail(email);
   if (!user) throw new Error(`No user with the email ${email}`);
   return user;

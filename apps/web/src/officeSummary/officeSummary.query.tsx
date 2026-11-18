@@ -1,5 +1,5 @@
-import { formatDate } from "@tid/calendar/dateDisplay";
-import { firstDayOfMonth, lastDayOfMonth } from "@tid/calendar/isoDate";
+import { firstDayOf, lastDayOf } from "@tid/calendar/calendarMonth";
+import { formatMonth } from "@tid/calendar/dateDisplay";
 import { thisMonthInOslo } from "@tid/calendar/osloClock";
 import { organizations, projects, timeEntriesExport, users } from "@tid/db/schema";
 import {
@@ -30,7 +30,14 @@ import {
   totalOfOffices,
 } from "./officeSummary";
 import { officeSummaryUrl } from "./officeSummary.url";
-import { isYear, monthsOf, type Period, shiftPeriod, togglePeriod } from "./officeSummaryPeriod";
+import {
+  isYear,
+  monthsOf,
+  monthsOfYear,
+  type Period,
+  shiftPeriod,
+  togglePeriod,
+} from "./officeSummaryPeriod";
 
 type Office = typeof organizations.$inferSelect;
 
@@ -40,7 +47,7 @@ async function loadLoggedTime(period: Period): Promise<LoggedTime[]> {
   const last = months.at(-1);
   if (!first || !last) return [];
   const view = timeEntriesExport;
-  const month = sql<string>`to_char(${view.spentDate}, 'YYYY-MM')`;
+  const month = sql`to_char(${view.spentDate}, 'YYYY-MM')`.mapWith(Temporal.PlainYearMonth.from);
   return database
     .select({
       office: view.accountName,
@@ -60,7 +67,7 @@ async function loadLoggedTime(period: Period): Promise<LoggedTime[]> {
     .from(view)
     .innerJoin(projects, eq(projects.code, view.projectCode))
     .innerJoin(users, eq(users.email, view.userEmail))
-    .where(between(view.spentDate, firstDayOfMonth(first), lastDayOfMonth(last)))
+    .where(between(view.spentDate, firstDayOf(first), lastDayOf(last)))
     .groupBy(view.accountName, users.id, users.lastDay, month, projects.currency);
 }
 
@@ -90,7 +97,7 @@ export const officeSummary = queryPage({
   view: OfficeSummaryPage,
 });
 
-const formatPeriod = (period: Period) => (isYear(period) ? period : formatDate(period, "month"));
+const formatPeriod = (period: Period) => (isYear(period) ? String(period) : formatMonth(period));
 
 function OfficeSummaryPage({
   billableByMonth,
@@ -185,9 +192,9 @@ function OfficeSummaryPage({
             max={100}
             track
             // Every month of the year, so months to come show as empty columns.
-            points={monthsOf(period, `${period}-12`).map((month) => ({
-              label: month,
-              value: billableByMonth.get(month) ?? 0,
+            points={monthsOfYear(period).map((month) => ({
+              label: month.toString(),
+              value: billableByMonth.get(month.toString()) ?? 0,
             }))}
           />
         </ColorMode>

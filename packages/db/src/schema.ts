@@ -9,6 +9,7 @@
 // that change often, or that need a message the user can act on. When the two
 // overlap, keep the invariant in the database and the message in the app.
 
+import { firstDayOf } from "@tid/calendar/calendarMonth";
 import type { Country } from "@tid/calendar/publicHolidays";
 import { sql } from "drizzle-orm";
 import {
@@ -16,7 +17,7 @@ import {
   boolean,
   char,
   check,
-  date,
+  customType,
   foreignKey,
   index,
   integer,
@@ -33,6 +34,24 @@ import {
 
 const id = () => bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity();
 const reference = () => bigint({ mode: "number" }).notNull();
+
+// Bun's driver reads a date as a Date at midnight UTC, whatever the server's time zone, so the day
+// is read back in UTC. A day shifts by one if that ever changes; schema.test.ts checks it doesn't.
+const dayAtUtcMidnight = (date: Date) => Temporal.PlainDate.from(date.toISOString().slice(0, 10));
+
+// Days are sent as text: a Date would carry a time, which Postgres reads in its own time zone.
+const plainDate = customType<{ data: Temporal.PlainDate; driverData: Date }>({
+  dataType: () => "date",
+  toDriver: (day) => sql`${day.toString()}::date`,
+  fromDriver: dayAtUtcMidnight,
+});
+
+// A month is stored as its first day, so it compares with the days in it.
+const plainYearMonth = customType<{ data: Temporal.PlainYearMonth; driverData: Date }>({
+  dataType: () => "date",
+  toDriver: (month) => sql`${firstDayOf(month).toString()}::date`,
+  fromDriver: (date) => dayAtUtcMidnight(date).toPlainYearMonth(),
+});
 
 export const organizations = pgTable(
   "organizations",
@@ -59,8 +78,8 @@ export const users = pgTable(
     email: text().notNull(),
     orgId: reference().references(() => organizations.id),
     // Only set for people registered before their first day.
-    firstDay: date(),
-    lastDay: date(),
+    firstDay: plainDate(),
+    lastDay: plainDate(),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -143,8 +162,8 @@ export const projects = pgTable(
     currency: char({ length: 3 }),
     // Only used by reporting, to leave out time such as vacation from billable base hours.
     countsTowardBillableBase: boolean().notNull().default(true),
-    startsOn: date(),
-    endsOn: date(),
+    startsOn: plainDate(),
+    endsOn: plainDate(),
     // The person who makes sure the client gets invoiced. The contract owner, an organization, is
     // who invoices.
     invoicingLeadId: bigint({ mode: "number" }).references(() => users.id),
@@ -203,8 +222,8 @@ export const projectAssignments = pgTable(
     projectId: reference(),
     userId: reference(),
     orgId: reference(),
-    startsOn: date(),
-    endsOn: date(),
+    startsOn: plainDate(),
+    endsOn: plainDate(),
   },
   (table) => [
     primaryKey({ columns: [table.projectId, table.userId] }),
@@ -229,7 +248,7 @@ export const assignmentRates = pgTable(
   {
     projectId: reference(),
     userId: reference(),
-    validFrom: date().notNull(),
+    validFrom: plainDate().notNull(),
     // Minor units of the project's currency.
     rate: integer().notNull(),
   },
@@ -257,7 +276,7 @@ export const timeEntries = pgTable(
     id: id(),
     userId: reference().references(() => users.id),
     taskId: reference().references(() => tasks.id),
-    spentOn: date().notNull(),
+    spentOn: plainDate().notNull(),
     minutes: integer().notNull(),
     notes: text(),
     // Minor units of the currency.
@@ -281,7 +300,7 @@ export const monthLocks = pgTable(
   {
     id: id(),
     orgId: reference().references(() => organizations.id),
-    month: date().notNull(),
+    month: plainYearMonth().notNull(),
     lockedBy: reference(),
     lockedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     unlockedBy: bigint({ mode: "number" }),
@@ -311,7 +330,7 @@ export const monthLocks = pgTable(
 // joins.
 export const timeEntriesExport = pgView("time_entries_export", {
   accountName: text().notNull(),
-  spentDate: date().notNull(),
+  spentDate: plainDate().notNull(),
   spentYear: integer().notNull(),
   spentMonth: integer().notNull(),
   userEmail: text().notNull(),

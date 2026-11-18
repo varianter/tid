@@ -1,4 +1,3 @@
-import { addMonths } from "@tid/calendar/isoDate";
 import { formatTotalHours } from "@tid/elements/hours";
 import { Detail, Page, PeriodNavigation } from "@tid/ui";
 import type { Context } from "hono";
@@ -52,8 +51,8 @@ function ProjectReportPage({
       back={{ href: `/projects/${project.id}`, label: "Back to project" }}
       period={
         <PeriodNavigation
-          previousHref={href({ month: addMonths(query.month, -1) })}
-          nextHref={href({ month: addMonths(query.month, 1) })}
+          previousHref={href({ month: query.month.subtract({ months: 1 }) })}
+          nextHref={href({ month: query.month.add({ months: 1 }) })}
           previousLabel="Previous month"
           nextLabel="Next month"
           years={yearsAround(query.month, href)}
