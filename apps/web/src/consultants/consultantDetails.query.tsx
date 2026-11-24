@@ -23,7 +23,7 @@ import { inMonth } from "../framework/monthCondition";
 import { yearsAround } from "../framework/periodNavigation";
 import { type QueryProps, queryPage } from "../framework/queryPage";
 import { type Billing, billingLabels } from "../projects/billing";
-import { projectReportUrl } from "../projects/projects.url";
+import { projectHoursUrl } from "../projects/projects.url";
 import { formatShare } from "../share/share";
 import { MonthEntries, type MonthEntry } from "../timeEntries/monthEntries";
 import { consultantsPath, consultantUrl } from "./consultants.url";
@@ -162,9 +162,7 @@ function ConsultantDetailsPage({
             />
             <CurrentProjects
               projects={currentBillableProjects}
-              projectHref={(projectId) =>
-                projectReportUrl.path({ projectId, month, organization: user.organizationSlug })
-              }
+              projectHref={(projectId) => projectHoursUrl.path({ projectId, month })}
             />
           </div>
         }

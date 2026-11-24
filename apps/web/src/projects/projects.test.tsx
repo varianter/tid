@@ -340,22 +340,46 @@ test("a project without logged time changes billing through that billing's form"
   expect(await currency()).toBe("EUR");
 });
 
-test("a project's report shows a month", async () => {
-  const started = await requestAs(manager, "/projects/new/hourly", {
-    name: "Rapport",
-    code: "ACME-6",
-    billing: "hourly",
-    currency: "NOK",
-    contractOwnerId: String(oslo),
-    clientId: String(clientId),
-    firstTask: "Consulting",
-  });
-  const projectId = Number(started.headers.get("location")?.split("/").at(-1));
-  const report = `/projects/${projectId}/report?organization=oslo&month=2026-10`;
+test("a project's hours show everyone's month, whatever their organization", async () => {
+  const projectId = await startNonBillable("ACME-6");
+  const [task] = await database.select().from(tasks).where(eq(tasks.projectId, projectId));
+  if (!task) throw new Error("Expected a task");
+  await database.insert(timeEntries).values(
+    [member, bergenMember].map((user) => ({
+      userId: user.id,
+      taskId: task.id,
+      spentOn: Temporal.PlainDate.from("2026-10-05"),
+      minutes: 90,
+    })),
+  );
+  const hours = `/projects/${projectId}/hours?month=2026-10`;
 
-  expect((await requestAs(member, `/projects/${projectId}/report?month=2026-10`)).status).toBe(302);
-  const screen = await requestAs(member, report);
+  const stale = await requestAs(
+    member,
+    `/projects/${projectId}/hours?organization=oslo&month=2026-10`,
+  );
+  expect(stale.headers.get("location")).toBe(hours);
+  const screen = await requestAs(member, hours);
   expect(screen.status).toBe(200);
+  const page = await screen.text();
+  expect(page).toContain(member.name);
+  expect(page).toContain(bergenMember.name);
+});
+
+test("a project's overview lists its months with time, each leading to that month's hours", async () => {
+  const projectId = await startNonBillable("ACME-30");
+  const [task] = await database.select().from(tasks).where(eq(tasks.projectId, projectId));
+  if (!task) throw new Error("Expected a task");
+  const overview = async () => (await requestAs(member, `/projects/${projectId}`)).text();
+  expect(await overview()).toContain("No time is logged yet.");
+
+  await database.insert(timeEntries).values({
+    userId: member.id,
+    taskId: task.id,
+    spentOn: Temporal.PlainDate.from("2026-10-05"),
+    minutes: 90,
+  });
+  expect(await overview()).toContain(`href="/projects/${projectId}/hours?month=2026-10"`);
 });
 
 test("editing a project sets and clears its invoicing lead, who may have left since", async () => {
