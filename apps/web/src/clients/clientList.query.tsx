@@ -37,7 +37,6 @@ function ClientListPage({
     <Page title="Clients" actions={[canAddClients && newClient]}>
       {clients.length === 0 ? (
         <EmptyState
-          emoji="🏢"
           title="No clients yet"
           action={canAddClients && <Actions actions={[newClient]} />}
         />

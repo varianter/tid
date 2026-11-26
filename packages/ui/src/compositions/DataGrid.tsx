@@ -72,34 +72,37 @@ function Cells({ children }: PropsWithChildren) {
   );
 }
 
-const rowClass = "grid-all-columns grid-subgrid items-center b-b bc-subtle bg-wash:hover p-xs fs-s";
+const rowClass = "grid-all-columns grid-subgrid items-center b-b bc-subtle bg-wash:hover";
 
 /**
  * With `href` the whole row is a link; with `for` it's the label of that form control. A row with
- * actions of its own links from its title instead, since a link can't hold buttons.
+ * actions of its own links from its title instead, since a link can't hold buttons. A `nested`
+ * row breaks down the row above it, so it's indented and quieter.
  */
 function DataGridRow({
   href,
   for: labelFor,
+  nested,
   children,
-}: PropsWithChildren<{ href?: string; for?: string }>) {
+}: PropsWithChildren<{ href?: string; for?: string; nested?: boolean }>) {
   const cells = <Cells>{children}</Cells>;
+  const className = classes(rowClass, nested ? "py-2xs pr-xs pl-l fs-xs ink-subtle" : "p-xs fs-s");
   if (href) {
     return (
-      <a composite-component="DataGrid.Row" href={href} class={rowClass}>
+      <a composite-component="DataGrid.Row" href={href} class={className}>
         {cells}
       </a>
     );
   }
   if (labelFor) {
     return (
-      <label composite-component="DataGrid.Row" for={labelFor} class={rowClass}>
+      <label composite-component="DataGrid.Row" for={labelFor} class={className}>
         {cells}
       </label>
     );
   }
   return (
-    <div composite-component="DataGrid.Row" class={rowClass}>
+    <div composite-component="DataGrid.Row" class={className}>
       {cells}
     </div>
   );

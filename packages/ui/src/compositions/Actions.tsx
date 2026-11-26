@@ -1,7 +1,8 @@
 import { attributes } from "@tid/via/attributes";
 import { classes } from "../primitives/attributes";
 import { Button } from "../primitives/Button";
-import { Icon, type IconName } from "../primitives/Icon";
+import { Icon } from "../primitives/Icon";
+import type { IconName } from "../primitives/iconNames";
 
 /** A link to the form page that does something, like adding or editing. */
 export type Action = {
@@ -34,6 +35,7 @@ export function Actions({
           as="a"
           href={href}
           data-variant="filled"
+          data-size="small"
           aria-label={ariaLabel}
           {...(layer && {
             [attributes.layer]: true,

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { organizationField } from "../domain/organizations/organizationFilter";
-import { monthParam } from "../framework/pageMonth";
+import { monthParam } from "../framework/calendarParams";
 import { pageUrl } from "../framework/pageUrl";
 import { fixedPriceField } from "../projects/fixedPriceFilter";
 
@@ -26,5 +26,8 @@ export const invoiceDataUrl = pageUrl(
 export const ownConsultantHoursPath = "/month-close/consultants";
 
 /** Where a form locks or unlocks an organization's month. */
-export const monthLockPath = (organizationSlug: string, month: string, change: "lock" | "unlock") =>
-  `/month-close/${organizationSlug}/${month}/${change}`;
+export const monthLockPath = (
+  organizationSlug: string,
+  month: Temporal.PlainYearMonth,
+  change: "lock" | "unlock",
+) => `/month-close/${organizationSlug}/${month}/${change}`;

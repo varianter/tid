@@ -58,8 +58,8 @@ export const consultantList = async (c: Context<UserEnv>) => {
       consultants={rows.map((row) => ({
         ...row,
         officeName: officeNames.get(row.orgId) ?? "",
-        hasStarted: row.firstDay === null || row.firstDay <= today,
-        hasLeft: row.lastDay !== null && row.lastDay < today,
+        hasStarted: row.firstDay === null || Temporal.PlainDate.compare(row.firstDay, today) <= 0,
+        hasLeft: row.lastDay !== null && Temporal.PlainDate.compare(row.lastDay, today) < 0,
         projectNames: (projectsByUser.get(row.id) ?? []).map((project) => project.name),
       }))}
       {...organizationFilter}
@@ -71,8 +71,8 @@ type ConsultantRow = {
   id: number;
   name: string;
   email: string;
-  firstDay: string | null;
-  lastDay: string | null;
+  firstDay: Temporal.PlainDate | null;
+  lastDay: Temporal.PlainDate | null;
   isManager: boolean;
   officeName: string;
   hasStarted: boolean;
@@ -89,7 +89,7 @@ function ConsultantListPage({
     <Page title="Consultants">
       <Filtered by={<OrganizationSelect selected={selected} options={options} />}>
         {consultants.length === 0 ? (
-          <EmptyState emoji="👥" title="No consultants yet" />
+          <EmptyState title="No consultants yet" />
         ) : (
           <div class="stack-v gap-m">
             <OfficeHeadcounts

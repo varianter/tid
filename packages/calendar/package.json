@@ -4,8 +4,9 @@
   "type": "module",
   "exports": {
     ".": "./src/calendar.ts",
+    "./calendarDay": "./src/calendarDay.ts",
+    "./calendarMonth": "./src/calendarMonth.ts",
     "./dateDisplay": "./src/dateDisplay.ts",
-    "./isoDate": "./src/isoDate.ts",
     "./osloClock": "./src/osloClock.ts",
     "./publicHolidays": "./src/holidays/publicHolidays.ts"
   }

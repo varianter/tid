@@ -1,13 +1,13 @@
 import { formatDate } from "@tid/calendar/dateDisplay";
-import { isIsoDate } from "@tid/calendar/isoDate";
 import { formatHours } from "@tid/elements/hours";
-import { ColorMode, Icon, Input, Popover } from "@tid/ui";
+import { Button, ColorMode, Icon, Input, Popover } from "@tid/ui";
 import { z } from "zod";
+import { dayParam } from "../framework/calendarParams";
 import type { Task } from "./loggableTasks";
 
 export const cellFields = z.object({
   taskId: z.coerce.number().int().positive(),
-  date: z.string().refine(isIsoDate),
+  date: dayParam(),
 });
 
 export const hoursHint = "Enter hours, like 7,5";
@@ -46,20 +46,20 @@ export function TimesheetCell({
   locked = false,
 }: {
   task: Task;
-  day: string;
+  day: Temporal.PlainDate;
   minutes: number;
   action: string;
   error?: CellError;
   locked?: boolean;
 }) {
   const errorId = `cell-error-${task.id}-${day}`;
-  const input = (
+  const hoursInput = (
     <Input
       name="hours"
       type="text"
       value={error ? error.typed : formatHours(minutes)}
       class="ta-right w-min-0 w-full h-full"
-      data-size="large"
+      data-size="medium"
       inputmode="decimal"
       autocomplete="false"
       aria-label={`${task.projectName}, ${task.name}, ${formatDate(day)}`}
@@ -69,23 +69,40 @@ export function TimesheetCell({
       disabled={locked}
     />
   );
+  const hoursControl = locked ? (
+    hoursInput
+  ) : (
+    <div class="pile w-full h-full">
+      {hoursInput}
+      <Button
+        type="button"
+        // Out of the tab order, since keyboards have F.
+        tabindex={-1}
+        aria-label="Fill the rest of the day"
+        data-variant="filled"
+        data-size="small"
+        class="justify-self-start ml-3xs"
+        data-fill-day
+      >
+        Fill
+      </Button>
+    </div>
+  );
   return (
     <form
       method="post"
       action={action}
       class="d-block"
-      // The one fixed width in the sheet: day columns take theirs from it in every layout.
-      style="height: 100%; inline-size: 14ch;"
       data-cell={`${task.id}:${day}`}
       data-project={task.projectId}
       data-day={day}
       data-minutes={minutes}
     >
       <input type="hidden" name="taskId" value={task.id} />
-      <input type="hidden" name="date" value={day} />
+      <input type="hidden" name="date" value={day.toString()} />
       {error ? (
         <ColorMode palette="coral" class="pos-relative stack-h flex-nowrap items-center gap-3xs">
-          {input}
+          {hoursControl}
           <button
             type="button"
             popovertarget={errorId}
@@ -101,7 +118,7 @@ export function TimesheetCell({
           </Popover>
         </ColorMode>
       ) : (
-        input
+        hoursControl
       )}
     </form>
   );

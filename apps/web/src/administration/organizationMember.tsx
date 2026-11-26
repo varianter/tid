@@ -6,8 +6,8 @@ export type OrganizationMember = {
   id: number;
   name: string;
   email: string;
-  firstDay: string | null;
-  lastDay: string | null;
+  firstDay: Temporal.PlainDate | null;
+  lastDay: Temporal.PlainDate | null;
 };
 
 /** A member's row title: their name, or what's given instead, over their email and first and last days. */

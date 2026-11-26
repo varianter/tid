@@ -11,11 +11,12 @@ import {
   userRoles,
   users,
 } from "@tid/db/schema";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import type { Hono } from "hono";
 import type { UserEnv } from "../domain/users/user";
 import { database } from "../framework/database";
 import { projectConsultants } from "../projectConsultants/projectConsultants.routes";
+import { flashLeftBy } from "../testing/flash";
 import { postForm, requestAsUser, type UserRow } from "../testing/loggedInUser";
 import { onlyRow, organizationIdBySlug } from "../testing/rows";
 import { projects } from "./projects.routes";
@@ -204,15 +205,21 @@ test("a consultant with logged time is rolled off by ending the assignment, whic
   await assign();
   const [task] = await database.insert(tasks).values({ projectId, name: "Build" }).returning();
   if (!task) throw new Error("Expected a task");
-  await database
-    .insert(timeEntries)
-    .values({ userId: member.id, taskId: task.id, spentOn: "2026-01-05", minutes: 60 });
-  await database
-    .insert(assignmentRates)
-    .values({ projectId, userId: member.id, validFrom: "2026-01-01", rate: 100000 });
+  await database.insert(timeEntries).values({
+    userId: member.id,
+    taskId: task.id,
+    spentOn: Temporal.PlainDate.from("2026-01-05"),
+    minutes: 60,
+  });
+  await database.insert(assignmentRates).values({
+    projectId,
+    userId: member.id,
+    validFrom: Temporal.PlainDate.from("2026-01-01"),
+    rate: 100000,
+  });
 
   expect((await requestAs(manager, endPath, { endsOn: "2026-02-01" })).status).toBe(303);
-  expect(await assignmentEnd()).toEqual(["2026-02-01"]);
+  expect(await assignmentEnd()).toEqual([Temporal.PlainDate.from("2026-02-01")]);
 
   await assign();
   expect(await assignmentEnd()).toEqual([null]);
@@ -238,10 +245,42 @@ test("an hourly project flags consultants on it who have no current rate", async
   const page = async () => (await requestAs(manager, `/projects/${projectId}`)).text();
   expect(await page()).toContain("No rate");
 
-  await database
-    .insert(assignmentRates)
-    .values({ projectId, userId: member.id, validFrom: "2026-01-01", rate: 100000 });
+  await database.insert(assignmentRates).values({
+    projectId,
+    userId: member.id,
+    validFrom: Temporal.PlainDate.from("2026-01-01"),
+    rate: 100000,
+  });
   expect(await page()).not.toContain("No rate");
+});
+
+test("adding a rate goes back to the project's rates, saying who it's for and from when", async () => {
+  const started = await requestAs(manager, "/projects/new/hourly", {
+    name: "Rate flash",
+    code: "ACME-23",
+    billing: "hourly",
+    currency: "NOK",
+    contractOwnerId: String(oslo),
+    clientId: String(clientId),
+    firstTask: "Consulting",
+  });
+  const projectId = Number(started.headers.get("location")?.split("/").at(-1));
+  await requestAs(manager, `/projects/${projectId}/consultants/new`, {
+    userId: String(member.id),
+  });
+  const added = await requestAs(
+    manager,
+    `/projects/${projectId}/consultants/${member.id}/rates/new`,
+    {
+      rate: "1400",
+      validFrom: "2026-01-01",
+    },
+  );
+  expect(added.headers.get("location")).toBe(`/projects/${projectId}/consultants/rates`);
+  expect(await flashLeftBy(added)).toEqual({
+    title: "Rate added",
+    message: `Added a rate for ${member.name} from 1 January 2026.`,
+  });
 });
 
 const startNonBillable = async (code: string) => {
@@ -255,6 +294,16 @@ const startNonBillable = async (code: string) => {
   });
   return Number(started.headers.get("location")?.split("/").at(-1));
 };
+
+test("adding a task goes back to its project, saying what was added", async () => {
+  const projectPath = `/projects/${await startNonBillable("ACME-22")}`;
+  const added = await requestAs(manager, `${projectPath}/tasks/new`, { name: "Design" });
+  expect(added.headers.get("location")).toBe(projectPath);
+  expect(await flashLeftBy(added)).toEqual({
+    title: "Task added",
+    message: "Added Design to Internal ACME-22.",
+  });
+});
 
 const assignedIds = async (projectId: number) =>
   (
@@ -285,7 +334,12 @@ test("consultants who have left can't be assigned", async () => {
   const projectId = await startNonBillable("ACME-11");
   const [leaver] = await database
     .insert(users)
-    .values({ name: "Liv", email: "liv@variant.no", orgId: oslo, lastDay: "2026-01-31" })
+    .values({
+      name: "Liv",
+      email: "liv@variant.no",
+      orgId: oslo,
+      lastDay: Temporal.PlainDate.from("2026-01-31"),
+    })
     .returning();
   if (!leaver) throw new Error("Expected a user");
   const assign = await requestAs(manager, `/projects/${projectId}/consultants/new`, {
@@ -340,8 +394,47 @@ test("a project's report shows a month", async () => {
   const report = `/projects/${projectId}/report?organization=oslo&month=2026-10`;
 
   expect((await requestAs(member, `/projects/${projectId}/report?month=2026-10`)).status).toBe(302);
-  const screen = await requestAs(member, report);
+  const unnamedTab = await requestAs(member, report);
+  expect(unnamedTab.headers.get("location")).toBe(`${report}&tab=consultants`);
+  const screen = await requestAs(member, `${report}&tab=consultants`);
   expect(screen.status).toBe(200);
+});
+
+test("a project's report totals its organization's entries per person and task, grouped either way", async () => {
+  const projectId = await startNonBillable("ACME-16");
+  const consulting = onlyRow(
+    await database.select().from(tasks).where(eq(tasks.projectId, projectId)),
+  );
+  const design = onlyRow(
+    await database.insert(tasks).values({ projectId, name: "Design" }).returning(),
+  );
+  const entry = (user: UserRow, taskId: number, day: string, minutes: number) => ({
+    userId: user.id,
+    taskId,
+    spentOn: Temporal.PlainDate.from(day),
+    minutes,
+  });
+  await database
+    .insert(timeEntries)
+    .values([
+      entry(member, consulting.id, "2026-10-01", 120),
+      entry(member, design.id, "2026-10-02", 60),
+      entry(manager, consulting.id, "2026-10-01", 30),
+      entry(bergenMember, consulting.id, "2026-10-01", 600),
+    ]);
+  // Markup aside, so a row reads as its cells: "Ola 3 h".
+  const shown = async (tab: string) => {
+    const path = `/projects/${projectId}/report?organization=oslo&month=2026-10&tab=${tab}`;
+    const html = await (await requestAs(manager, path)).text();
+    return html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+  };
+
+  // Each group's heading and total, followed by its rows.
+  const byConsultant = await shown("consultants");
+  expect(byConsultant).toContain("Kari 0,5 h Consulting 0,5 h Ola 3 h Consulting 2 h Design 1 h");
+  expect(byConsultant).not.toContain("Per 10 h");
+  expect(await shown("tasks")).toContain("Consulting 2,5 h Kari 0,5 h Ola 2 h Design 1 h Ola 1 h");
+  expect(await shown("details")).toContain("Ola Design 1 h");
 });
 
 test("editing a project sets and clears its invoicing lead, who may have left since", async () => {
@@ -364,8 +457,18 @@ test("editing a project sets and clears its invoicing lead, who may have left si
   const [leftBefore, leftAfter] = (await database
     .insert(users)
     .values([
-      { name: "Åse", email: "ase@variant.no", orgId: oslo, lastDay: "2026-01-31" },
-      { name: "Tor", email: "tor@variant.no", orgId: oslo, lastDay: "2026-01-31" },
+      {
+        name: "Åse",
+        email: "ase@variant.no",
+        orgId: oslo,
+        lastDay: Temporal.PlainDate.from("2026-01-31"),
+      },
+      {
+        name: "Tor",
+        email: "tor@variant.no",
+        orgId: oslo,
+        lastDay: Temporal.PlainDate.from("2026-01-31"),
+      },
     ])
     .returning()) as [UserRow, UserRow];
 
@@ -383,4 +486,78 @@ test("editing a project sets and clears its invoicing lead, who may have left si
 
   expect((await edit(undefined)).status).toBe(303);
   expect(await invoicingLeadId()).toBeNull();
+});
+
+test("a project without logged time is deleted with its tasks, consultants and rates", async () => {
+  const projectId = await startNonBillable("ACME-14");
+  await requestAs(manager, `/projects/${projectId}/consultants/new`, {
+    userId: String(member.id),
+  });
+  await database.insert(assignmentRates).values({
+    projectId,
+    userId: member.id,
+    validFrom: Temporal.PlainDate.from("2026-01-01"),
+    rate: 100000,
+  });
+  const deletePath = `/projects/${projectId}/delete`;
+  expect(await (await requestAs(manager, `/projects/${projectId}`)).text()).toContain(deletePath);
+
+  expect((await requestAs(member, deletePath, {})).status).toBe(403);
+  const deleted = await requestAs(manager, deletePath, {});
+  expect(deleted.status).toBe(303);
+  expect(await database.$count(projectsTable, eq(projectsTable.id, projectId))).toBe(0);
+  expect(await database.$count(tasks, eq(tasks.projectId, projectId))).toBe(0);
+});
+
+test("a project with logged time can't be deleted, even if the hours are zero", async () => {
+  const projectId = await startNonBillable("ACME-15");
+  const task = onlyRow(await database.select().from(tasks).where(eq(tasks.projectId, projectId)));
+  await database.insert(timeEntries).values({
+    userId: member.id,
+    taskId: task.id,
+    spentOn: Temporal.PlainDate.from("2026-01-05"),
+    minutes: 0,
+  });
+  const deletePath = `/projects/${projectId}/delete`;
+
+  expect(await (await requestAs(manager, `/projects/${projectId}`)).text()).not.toContain(
+    deletePath,
+  );
+  expect((await requestAs(manager, deletePath, {})).status).toBe(403);
+  expect(await database.$count(projectsTable, eq(projectsTable.id, projectId))).toBe(1);
+});
+
+test("a project's managers rename its tasks, but not to a name another of its tasks has", async () => {
+  const started = await requestAs(manager, "/projects/new/non_billable", {
+    name: "Rebrand",
+    code: "ACME-20",
+    billing: "non_billable",
+    contractOwnerId: "",
+    clientId: String(clientId),
+    firstTask: "Utvikling",
+  });
+  const projectId = Number(started.headers.get("location")?.split("/").at(-1));
+  await requestAs(manager, `/projects/${projectId}/tasks/new`, { name: "Design" });
+  const taskNamed = async (name: string) =>
+    onlyRow(
+      await database
+        .select()
+        .from(tasks)
+        .where(and(eq(tasks.projectId, projectId), eq(tasks.name, name))),
+    );
+  const task = await taskNamed("Utvikling");
+  const rename = (
+    user: UserRow,
+    name: string,
+    path = `/projects/${projectId}/tasks/${task.id}/edit`,
+  ) => requestAs(user, path, { name });
+
+  expect((await rename(member, "Development")).status).toBe(403);
+  expect((await rename(manager, "Design")).status).toBe(422);
+  expect((await rename(manager, "Development")).status).toBe(303);
+  expect((await taskNamed("Development")).id).toBe(task.id);
+
+  const otherProjectId = await startNonBillable("ACME-21");
+  const elsewhere = `/projects/${otherProjectId}/tasks/${task.id}/edit`;
+  expect((await rename(manager, "Moved", elsewhere)).status).toBe(404);
 });

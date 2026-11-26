@@ -4,6 +4,7 @@ import { AddRateFormPage, addRateForm } from "./addRate.form";
 import { idParams } from "./projectConsultant";
 import { loadConsultant } from "./projectConsultant.data";
 import { projectRatesPath, ratesPath } from "./projectConsultants.url";
+import { rateAddedFlash } from "./rateChanged";
 import { addRateAndReprice, entriesToReprice } from "./repricing.data";
 
 export const addRate = formAction({
@@ -19,11 +20,17 @@ export const addRate = formAction({
   onSubmit: async (_c, form, { consultant }) => {
     const newRate = { ...form, currency: consultant.currency };
     if ((await entriesToReprice(consultant, form.validFrom, newRate)).length > 0) {
-      const query = new URLSearchParams({ validFrom: form.validFrom, rate: String(form.rate) });
+      const query = new URLSearchParams({
+        validFrom: form.validFrom.toString(),
+        rate: String(form.rate),
+      });
       return { redirect: `${ratesPath(consultant)}/reprice?${query}` };
     }
     await addRateAndReprice(consultant, newRate);
-    return { redirect: projectRatesPath(consultant.projectId) };
+    return {
+      redirect: projectRatesPath(consultant.projectId),
+      flash: rateAddedFlash(consultant.name, form.validFrom),
+    };
   },
   view: AddRateFormPage,
 });

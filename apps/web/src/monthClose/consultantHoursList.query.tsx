@@ -1,6 +1,6 @@
-import { formatDate } from "@tid/calendar/dateDisplay";
-import { addMonths, lastDayOfMonth } from "@tid/calendar/isoDate";
-import { isoDateInOslo, todayInOslo } from "@tid/calendar/osloClock";
+import { lastDayOf } from "@tid/calendar/calendarMonth";
+import { formatDate, formatMonth } from "@tid/calendar/dateDisplay";
+import { dayInOslo, todayInOslo } from "@tid/calendar/osloClock";
 import { formatTotalHours } from "@tid/elements/hours";
 import {
   ColorMode,
@@ -107,42 +107,41 @@ function ConsultantHoursListPage({
   const billableMinutes = rows.reduce((sum, row) => sum + row.billableMinutes, 0);
   const missingCount = rows.filter((row) => row.missingMinutes > 0).length;
   // Months are usually locked on their last day, once that day's hours are in.
-  const isDueForLock = lastDayOfMonth(month) <= todayInOslo();
+  const isDueForLock = Temporal.PlainDate.compare(lastDayOf(month), todayInOslo()) <= 0;
   const lockStatus = activeLock
     ? "locked"
     : isDueForLock && missingCount === 0
       ? "ready to lock"
       : "open";
   return (
-    <Page title="Month close" description="Whether every consultant has logged their hours">
+    <Page
+      title="Month close"
+      description="Whether every consultant has logged their hours"
+      period={
+        <PeriodNavigation
+          previousHref={href({ month: month.subtract({ months: 1 }) })}
+          nextHref={href({ month: month.add({ months: 1 }) })}
+          previousLabel="Previous month"
+          nextLabel="Next month"
+          years={yearsAround(month, href)}
+        >
+          {formatMonth(month)}
+        </PeriodNavigation>
+      }
+    >
       <MonthCloseTabs active="consultants" month={month} organization={organizationSlug} />
-      <Filtered
-        by={
-          <>
-            <OrganizationSelect {...organizationFilter} />
-            <PeriodNavigation
-              previousHref={href({ month: addMonths(month, -1) })}
-              nextHref={href({ month: addMonths(month, 1) })}
-              previousLabel="Previous month"
-              nextLabel="Next month"
-              years={yearsAround(month, href)}
-            >
-              {formatDate(month, "month")}
-            </PeriodNavigation>
-          </>
-        }
-      >
+      <Filtered by={<OrganizationSelect {...organizationFilter} />}>
         <SidebarLayout
           sidebar={
             rows.length === 0 ? (
-              <EmptyState emoji="👥" title="No consultants yet" />
+              <EmptyState title="No consultants yet" />
             ) : (
               <StatList orientation="vertical">
                 <Stat
                   label="Logged"
                   value={formatTotalHours(loggedMinutes)}
                   share={formatShare(loggedMinutes, expectedMinutes)}
-                  note={`of ${formatTotalHours(expectedMinutes)} expected`}
+                  outOf={`${formatTotalHours(expectedMinutes)} expected`}
                 >
                   <ProgressBar
                     max={expectedMinutes}
@@ -174,11 +173,11 @@ function ConsultantHoursListPage({
             >
               <span class="stack-v gap-4xs">
                 <span class="fs-m">
-                  {formatDate(month, "month")} is <strong>{lockStatus}</strong>
+                  {formatMonth(month)} is <strong>{lockStatus}</strong>
                 </span>
                 <span class="fs-s ink-subtle">
                   {activeLock
-                    ? `Locked by ${activeLock.lockedByName}, ${formatDate(isoDateInOslo(activeLock.lockedAt))}`
+                    ? `Locked by ${activeLock.lockedByName}, ${formatDate(dayInOslo(activeLock.lockedAt))}`
                     : missingCount === 0
                       ? isDueForLock
                         ? "All consultants have logged their hours!"
@@ -243,7 +242,7 @@ function ConsultantGroup({
   icon: IconName;
   title: string;
   rows: ConsultantHours[];
-  month: string;
+  month: Temporal.PlainYearMonth;
   canOpenConsultants: boolean;
 }) {
   if (rows.length === 0) return null;

@@ -162,7 +162,6 @@ export function ProjectFormPage({
   const otherBillings = billings.filter((other) => other !== billing);
   return (
     <FormPage
-      layer="drawer"
       {...(project
         ? { title: `Edit ${project.name}` }
         : {

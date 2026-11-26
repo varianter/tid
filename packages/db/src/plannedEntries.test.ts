@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { isoDateInOslo } from "@tid/calendar/osloClock";
+import { dayInOslo } from "@tid/calendar/osloClock";
 import { type Person, people, syntheticPeople } from "./fixtureData";
 import { plannedDay, plannedEntries } from "./plannedEntries";
 import { dayOf, Weekday } from "./week";
@@ -45,7 +45,7 @@ test("an empty exception is a day with no entries, not the usual day", () => {
   });
   expect(plannedDay(forgot, -1, Weekday.Monday)?.hours).toEqual({});
   const entries = plannedEntries(forgot, now);
-  expect(entries.some((entry) => entry.spentOn === dayOf(now, -1, Weekday.Monday))).toBe(false);
+  expect(entries.some((entry) => entry.spentOn.equals(dayOf(now, -1, Weekday.Monday)))).toBe(false);
 });
 
 test("plannedEntries turns hours into minutes and carries the day's note", () => {
@@ -54,8 +54,8 @@ test("plannedEntries turns hours into minutes and carries the day's note", () =>
       { from: -3, weekdays: [Weekday.Saturday], hours: { vacation: 2 }, notes: "Short day" },
     ],
   });
-  const saturday = plannedEntries(shortDay, now).find(
-    (entry) => entry.spentOn === dayOf(now, -3, Weekday.Saturday),
+  const saturday = plannedEntries(shortDay, now).find((entry) =>
+    entry.spentOn.equals(dayOf(now, -3, Weekday.Saturday)),
   );
   expect(saturday?.minutes).toBe(120);
   expect(saturday?.notes).toBe("Short day");
@@ -65,29 +65,35 @@ test("plannedEntries starts at the week the person joined", () => {
   const joiner = person({ joinedWeek: -1 });
   const entries = plannedEntries(joiner, now);
   const joinedMonday = dayOf(now, -1, Weekday.Monday);
-  expect(entries.every((entry) => entry.spentOn >= joinedMonday)).toBe(true);
-  expect(entries.some((entry) => entry.spentOn === joinedMonday)).toBe(true);
+  expect(
+    entries.every((entry) => Temporal.PlainDate.compare(entry.spentOn, joinedMonday) >= 0),
+  ).toBe(true);
+  expect(entries.some((entry) => entry.spentOn.equals(joinedMonday))).toBe(true);
 });
 
 test("plannedEntries stops at the week the person left", () => {
   const leaver = person({ leftWeek: -2 });
   const entries = plannedEntries(leaver, now);
   const lastWeekSunday = dayOf(now, -2, Weekday.Sunday);
-  expect(entries.every((entry) => entry.spentOn <= lastWeekSunday)).toBe(true);
-  expect(entries.some((entry) => entry.spentOn === dayOf(now, -2, Weekday.Friday))).toBe(true);
+  expect(
+    entries.every((entry) => Temporal.PlainDate.compare(entry.spentOn, lastWeekSunday) <= 0),
+  ).toBe(true);
+  expect(entries.some((entry) => entry.spentOn.equals(dayOf(now, -2, Weekday.Friday)))).toBe(true);
 });
 
 test("plannedEntries never logs today or the future", () => {
   const entries = plannedEntries(person(), now);
-  expect(entries.at(-1)?.spentOn).toBe(dayOf(now, 0, Weekday.Tuesday));
-  expect(entries.every((entry) => entry.spentOn < isoDateInOslo(now))).toBe(true);
+  expect(entries.at(-1)?.spentOn).toEqual(dayOf(now, 0, Weekday.Tuesday));
+  expect(
+    entries.every((entry) => Temporal.PlainDate.compare(entry.spentOn, dayInOslo(now)) < 0),
+  ).toBe(true);
 });
 
 test("plannedEntries fills the whole requested history", () => {
   const startWeek = -260;
   const entries = plannedEntries(person(), now, startWeek);
-  expect(entries[0]?.spentOn).toBe(dayOf(now, startWeek, Weekday.Monday));
-  expect(entries.at(-1)?.spentOn).toBe(dayOf(now, 0, Weekday.Tuesday));
+  expect(entries[0]?.spentOn).toEqual(dayOf(now, startWeek, Weekday.Monday));
+  expect(entries.at(-1)?.spentOn).toEqual(dayOf(now, 0, Weekday.Tuesday));
 });
 
 test("plannedEntries rejects billable work the person isn't assigned to", () => {

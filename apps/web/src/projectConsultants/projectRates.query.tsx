@@ -53,8 +53,12 @@ export const projectRates = async (c: Context) => {
 
 type ProjectRatesPageProps = {
   project: { id: number; name: string; currency: string };
-  consultants: { userId: number; name: string; rates: { validFrom: string; rate: number }[] }[];
-  today: string;
+  consultants: {
+    userId: number;
+    name: string;
+    rates: { validFrom: Temporal.PlainDate; rate: number }[];
+  }[];
+  today: Temporal.PlainDate;
 };
 
 function ProjectRatesPage({ project, consultants, today }: ProjectRatesPageProps) {
@@ -97,7 +101,7 @@ function ProjectRatesPage({ project, consultants, today }: ProjectRatesPageProps
                     </span>
                     {formatDate(period.validFrom, "numeric")}
                     {period.validUntil ? formatDate(period.validUntil, "numeric") : "No end date"}
-                    {period.validFrom > today ? (
+                    {Temporal.PlainDate.compare(period.validFrom, today) > 0 ? (
                       <Button
                         as="a"
                         href={`${ratesPath(ids)}/${period.validFrom}/delete`}

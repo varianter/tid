@@ -13,5 +13,5 @@ export function easterSunday(year: number) {
   const daysPastMarch22 = epact + weekdayOffset - 7 * lateCorrection;
   const month = Math.floor((daysPastMarch22 + 114) / 31);
   const day = ((daysPastMarch22 + 114) % 31) + 1;
-  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  return Temporal.PlainDate.from({ year, month, day });
 }

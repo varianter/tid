@@ -1,7 +1,7 @@
-import { firstDayOfMonth, lastDayOfMonth } from "@tid/calendar/isoDate";
 import { projects, timeEntriesExport } from "@tid/db/schema";
-import { and, between, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { database } from "../framework/database";
+import { inMonth } from "../framework/monthCondition";
 import type { InvoiceDataEntry } from "./invoiceDataCsv";
 
 /**
@@ -10,7 +10,7 @@ import type { InvoiceDataEntry } from "./invoiceDataCsv";
  */
 export async function loadInvoiceDataCsv(
   projectId: number,
-  month: string,
+  month: Temporal.PlainYearMonth,
 ): Promise<{ projectCode: string; entries: InvoiceDataEntry[] } | undefined> {
   const [project] = await database
     .select({ code: projects.code })
@@ -31,12 +31,7 @@ export async function loadInvoiceDataCsv(
       amount: sql`coalesce(${view.amount}, 0)`.mapWith(Number),
     })
     .from(view)
-    .where(
-      and(
-        eq(view.projectCode, project.code),
-        between(view.spentDate, firstDayOfMonth(month), lastDayOfMonth(month)),
-      ),
-    )
+    .where(and(eq(view.projectCode, project.code), inMonth(view.spentDate, month)))
     .orderBy(desc(view.spentDate), view.userName, view.taskName);
   return { projectCode: project.code, entries };
 }

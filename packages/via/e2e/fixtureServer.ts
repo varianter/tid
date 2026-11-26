@@ -7,6 +7,15 @@ const [script] = build.outputs;
 if (!build.success || !script) throw new AggregateError(build.logs, "Bundling via failed");
 const scriptCode = await script.text();
 
+// Works like the app's flash: a submission stores a message, and the next page rendered shows
+// and clears it.
+let flash = "";
+function takeFlash() {
+  const message = flash;
+  flash = "";
+  return message;
+}
+
 /** A page; `form` marks it as a form, which a submission that ends on it stays layered for. */
 function page(title: string, content: string, { status = 200, form = false } = {}) {
   const html = `<!doctype html>
@@ -17,6 +26,7 @@ function page(title: string, content: string, { status = 200, form = false } = {
   </head>
   <body>
     <main ${form ? attributes.formPage : ""}>${content}</main>
+    <p id="flash" ${attributes.outOfBand}>${takeFlash()}</p>
     <template id="${layerTemplateId}">
       <div popover role="dialog" tabindex="-1"><div ${attributes.layerContent}></div></div>
     </template>
@@ -71,7 +81,9 @@ export const server = Bun.serve({
       GET: (request) => formPage(request),
       POST: async (request) => {
         const note = (await request.formData()).get("note");
-        return note ? Response.redirect("/?saved", 303) : formPage(request, true);
+        if (!note) return formPage(request, true);
+        flash = "Saved the note";
+        return Response.redirect("/?saved", 303);
       },
     },
     "/next": { POST: () => Response.redirect("/step", 303) },
@@ -102,7 +114,10 @@ export const server = Bun.serve({
         page("Leave", `<h1>Leave</h1><form method="post"><button>Go</button></form>`, {
           form: true,
         }),
-      POST: () => Response.redirect("/created", 303),
+      POST: () => {
+        flash = "Created it";
+        return Response.redirect("/created", 303);
+      },
     },
     "/created": () => page("Created", "<h1>Created</h1>"),
   },

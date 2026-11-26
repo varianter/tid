@@ -1,4 +1,5 @@
 import {
+  clients,
   projectAssignments,
   projectOrganizations,
   projects,
@@ -15,8 +16,16 @@ export type Task = {
   name: string;
   projectId: number;
   projectName: string;
+  clientName: string;
   billing: Billing;
 };
+
+/**
+ * Names the task's project with its client. Non-billable work is internal, where the client is
+ * always Variant and says nothing.
+ */
+export const projectLabel = (task: Pick<Task, "clientName" | "projectName" | "billing">) =>
+  task.billing === "non_billable" ? task.projectName : `${task.clientName} · ${task.projectName}`;
 
 const openToOrganizationOf = (userId: number) =>
   exists(
@@ -34,7 +43,7 @@ const openToOrganizationOf = (userId: number) =>
   );
 
 /** Assigned to the project, and when `endedBefore` is given, not rolled off before it. */
-const assignedTo = (userId: number, endedBefore?: string) =>
+const assignedTo = (userId: number, endedBefore?: Temporal.PlainDate) =>
   exists(
     database
       .select()
@@ -50,7 +59,7 @@ const assignedTo = (userId: number, endedBefore?: string) =>
       ),
   );
 
-const loggedOn = (userId: number, from?: string, till?: string) =>
+const loggedOn = (userId: number, from?: Temporal.PlainDate, till?: Temporal.PlainDate) =>
   exists(
     database
       .select()
@@ -73,14 +82,14 @@ export const loggableBy = (userId: number) =>
   or(openToOrganizationOf(userId), assignedTo(userId), loggedOn(userId));
 
 /** Tasks the timesheet offers between from and till: loggable ones, less projects the user rolled off before then. */
-export const offeredTo = (userId: number, from: string, till: string) =>
+export const offeredTo = (userId: number, from: Temporal.PlainDate, till: Temporal.PlainDate) =>
   or(openToOrganizationOf(userId), assignedTo(userId, from), loggedOn(userId, from, till));
 
 /**
  * Tasks the timesheet shows from the start: billable projects the user is assigned to, unless the
  * assignment or the project ended before from. Start dates are ignored.
  */
-export const onBillableAssignment = (userId: number, from: string) =>
+export const onBillableAssignment = (userId: number, from: Temporal.PlainDate) =>
   and(
     assignedTo(userId, from),
     ne(projects.billing, "non_billable"),
@@ -94,7 +103,9 @@ export const userTasks = () =>
       name: tasks.name,
       projectId: projects.id,
       projectName: projects.name,
+      clientName: clients.name,
       billing: projects.billing,
     })
     .from(tasks)
-    .innerJoin(projects, eq(projects.id, tasks.projectId));
+    .innerJoin(projects, eq(projects.id, tasks.projectId))
+    .innerJoin(clients, eq(clients.id, projects.clientId));

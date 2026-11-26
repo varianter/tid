@@ -3,10 +3,12 @@ import { managersOnly, projectManagersOnly } from "../domain/managers/manager.mi
 import type { UserEnv } from "../domain/users/user";
 import { addTask } from "./addTask.command";
 import { chooseBilling } from "./chooseBilling.query";
+import { deleteProject } from "./deleteProject.command";
 import { editProject } from "./editProject.command";
 import { projectDetails } from "./projectDetails.query";
 import { projectList } from "./projectList.query";
 import { projectReport } from "./projectReport.query";
+import { renameTask } from "./renameTask.command";
 import { startProject } from "./startProject.command";
 
 export const projects = new Hono<UserEnv>()
@@ -16,4 +18,6 @@ export const projects = new Hono<UserEnv>()
   .get("/:id", projectDetails)
   .get("/:projectId/report", projectReport)
   .on(["GET", "POST"], "/:id/edit", projectManagersOnly, editProject)
-  .on(["GET", "POST"], "/:id/tasks/new", projectManagersOnly, addTask);
+  .on(["GET", "POST"], "/:id/delete", projectManagersOnly, deleteProject)
+  .on(["GET", "POST"], "/:id/tasks/new", projectManagersOnly, addTask)
+  .on(["GET", "POST"], "/:id/tasks/:taskId/edit", projectManagersOnly, renameTask);

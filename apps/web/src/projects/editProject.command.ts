@@ -1,5 +1,5 @@
-import { clients, projectOrganizations, projects, tasks, timeEntries } from "@tid/db/schema";
-import { and, eq, exists, ne } from "drizzle-orm";
+import { clients, projectOrganizations, projects } from "@tid/db/schema";
+import { and, eq, ne } from "drizzle-orm";
 import {
   findOrganizationCurrency,
   listOrganizations,
@@ -7,7 +7,9 @@ import {
 import type { User } from "../domain/users/user";
 import { listCurrentPeople } from "../domain/users/user.data";
 import { database } from "../framework/database";
+import { changesSaved } from "../framework/flash";
 import { formAction } from "../framework/formAction";
+import { hasLoggedTime } from "./loggedTime.data";
 import {
   editProjectForm,
   ProjectFormPage,
@@ -37,13 +39,7 @@ export const editProject = formAction({
         currency: projects.currency,
         countsTowardBillableBase: projects.countsTowardBillableBase,
         invoicingLeadId: projects.invoicingLeadId,
-        hasLoggedTime: exists(
-          database
-            .select()
-            .from(timeEntries)
-            .innerJoin(tasks, eq(tasks.id, timeEntries.taskId))
-            .where(eq(tasks.projectId, projects.id)),
-        ).mapWith(Boolean),
+        hasLoggedTime: hasLoggedTime(projects.id),
         contractOwnerId: projectOrganizations.orgId,
       })
       .from(projects)
@@ -154,7 +150,7 @@ export const editProject = formAction({
         ? { fieldErrors: { code: ["Another project uses this code"] } }
         : { fieldErrors: { name: ["The client already has a project with this name"] } };
     }
-    return { redirect: `/projects/${project.id}` };
+    return { redirect: `/projects/${project.id}`, flash: changesSaved };
   },
   view: ProjectFormPage,
 });

@@ -1,5 +1,4 @@
-import { formatDate } from "@tid/calendar/dateDisplay";
-import { addMonths, firstDayOfMonth, lastDayOfMonth } from "@tid/calendar/isoDate";
+import { formatMonth } from "@tid/calendar/dateDisplay";
 import { projects, timeEntriesExport, users } from "@tid/db/schema";
 import { formatTotalHours } from "@tid/elements/hours";
 import {
@@ -13,7 +12,7 @@ import {
   StatList,
   Tabs,
 } from "@tid/ui";
-import { and, between, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import type { Child } from "hono/jsx";
 import { consultantPath } from "../consultants/consultants.url";
 import { type Amounts, addAmounts, formatAmounts } from "../domain/amount/amount";
@@ -27,6 +26,7 @@ import {
 import { employedDuring } from "../domain/users/employment";
 import { database } from "../framework/database";
 import { Filtered } from "../framework/filter";
+import { inMonth } from "../framework/monthCondition";
 import { yearsAround } from "../framework/periodNavigation";
 import { type QueryProps, queryPage } from "../framework/queryPage";
 import { FixedPriceCheckbox, fixedPriceCondition } from "../projects/fixedPriceFilter";
@@ -48,7 +48,7 @@ export const monthlyReport = queryPage({
         view.accountName,
         selected.organizations.map((organization) => organization.legalName),
       ),
-      between(view.spentDate, firstDayOfMonth(month), lastDayOfMonth(month)),
+      inMonth(view.spentDate, month),
       billableCondition(billable, view.billable),
       // Fixed price only narrows billable hours, so a report without filters has every hour.
       billable ? fixedPriceCondition(fixedPrice, projects.billing) : undefined,
@@ -60,18 +60,13 @@ export const monthlyReport = queryPage({
       // Grouped by currency as well, then merged by mergeCurrencies.
       currency: projects.currency,
       amount: sql`coalesce(sum(${view.amount}), 0)`.mapWith(Number),
-      // Fixed fee time has no amount by design, so only hourly time can be missing a rate.
-      unratedHours: sql`coalesce(sum(${view.billableHours}) filter (
-      where ${view.amount} is null
-        and ${view.projectCode} in (select ${projects.code} from ${projects} where ${projects.billing} = 'hourly')
-    ), 0)`.mapWith(Number),
     };
     // Shown as the amount when nothing was billed, since there's no currency to show it in.
     const currency = selected.currency;
 
     const report = await (async (): Promise<ReportRows> => {
       switch (tab) {
-        case "projects":
+        case "overview":
           return {
             tab,
             rows: mergeCurrencies(
@@ -126,31 +121,17 @@ export const monthlyReport = queryPage({
             })),
           };
         }
-        case "tasks":
-          return {
-            tab,
-            rows: mergeCurrencies(
-              await database
-                .select({ name: view.taskName, ...totals })
-                .from(view)
-                .innerJoin(projects, eq(projects.code, view.projectCode))
-                .where(inReport)
-                .groupBy(view.taskName, projects.currency)
-                .orderBy(view.taskName),
-            ),
-          };
       }
     })();
 
     // Every tab groups the same entries, so its rows add up to the whole report.
     const rows: Totals[] = report.rows;
-    const sumOf = (field: "hours" | "billableHours" | "unratedHours") =>
+    const sumOf = (field: "hours" | "billableHours") =>
       rows.reduce((total, row) => total + row[field], 0);
     const total: Totals = {
       hours: sumOf("hours"),
       billableHours: sumOf("billableHours"),
       amounts: rows.reduce<Amounts>((total, row) => addAmounts(total, row.amounts), {}),
-      unratedHours: sumOf("unratedHours"),
     };
     // Everyone employed in the month, including those who logged nothing.
     const employed = await database
@@ -162,7 +143,7 @@ export const monthlyReport = queryPage({
             users.orgId,
             selected.organizations.map((organization) => organization.id),
           ),
-          employedDuring(firstDayOfMonth(month), lastDayOfMonth(month)),
+          employedDuring(month),
         ),
       );
     const capacityHours =
@@ -176,7 +157,7 @@ export const monthlyReport = queryPage({
   view: ReportPage,
 });
 
-type Totals = { hours: number; billableHours: number; amounts: Amounts; unratedHours: number };
+type Totals = { hours: number; billableHours: number; amounts: Amounts };
 
 // Non-billable projects have no currency, but no amount either.
 type CurrencyTotals = Omit<Totals, "amounts"> & { currency: string | null; amount: number };
@@ -190,17 +171,16 @@ type Merged<Row> = Omit<Row, "currency" | "amount"> & Totals;
 export function mergeCurrencies<Row extends CurrencyTotals>(rows: Row[]): Merged<Row>[] {
   const merged: Merged<Row>[] = [];
   let previousKey: string | undefined;
-  for (const { currency, amount, hours, billableHours, unratedHours, ...dimension } of rows) {
+  for (const { currency, amount, hours, billableHours, ...dimension } of rows) {
     const key = JSON.stringify(dimension);
     const amounts = amount === 0 || currency === null ? {} : { [currency]: amount };
     const last = merged.at(-1);
     if (last && key === previousKey) {
       last.hours += hours;
       last.billableHours += billableHours;
-      last.unratedHours += unratedHours;
       last.amounts = addAmounts(last.amounts, amounts);
     } else {
-      merged.push({ ...dimension, hours, billableHours, unratedHours, amounts } as Merged<Row>);
+      merged.push({ ...dimension, hours, billableHours, amounts } as Merged<Row>);
     }
     previousKey = key;
   }
@@ -210,14 +190,13 @@ export function mergeCurrencies<Row extends CurrencyTotals>(rows: Row[]): Merged
 /** One tab's rows, each grouping the report's entries by that tab's dimension. */
 export type ReportRows =
   | {
-      tab: "projects";
+      tab: "overview";
       rows: (Totals & { id: number; code: string; name: string; client: string })[];
     }
   | {
       tab: "consultants";
       rows: (Totals & { id: number; email: string; name: string; capacityHours: number })[];
-    }
-  | { tab: "tasks"; rows: (Totals & { name: string })[] };
+    };
 
 type ReportTable = {
   columns: DataGridColumn[];
@@ -226,9 +205,8 @@ type ReportTable = {
 };
 
 const tabLabels: Record<Tab, string> = {
-  projects: "Projects",
+  overview: "Overview",
   consultants: "Consultants",
-  tasks: "Tasks",
 };
 
 function ReportPage({
@@ -248,26 +226,35 @@ function ReportPage({
 } & QueryProps<typeof reportUrl>) {
   const { month } = query;
   const projectHref = (projectId: number) =>
-    projectReportUrl.path({ projectId, month, organization: organizationFilter.selected.value });
+    projectReportUrl.path({
+      projectId,
+      month,
+      organization: organizationFilter.selected.value,
+      tab: "consultants",
+    });
   const consultantHref = (userId: number) => consultantPath(userId, month);
   const table = reportTable(report, total, currency, projectHref, consultantHref);
   return (
-    <Page title="Reports" layer="drawer">
+    <Page
+      title="Reports"
+      period={
+        <PeriodNavigation
+          previousHref={href({ month: month.subtract({ months: 1 }) })}
+          nextHref={href({ month: month.add({ months: 1 }) })}
+          previousLabel="Previous month"
+          nextLabel="Next month"
+          years={yearsAround(month, href)}
+        >
+          {formatMonth(month)}
+        </PeriodNavigation>
+      }
+    >
       <Filtered
         by={
           <>
             <OrganizationSelect {...organizationFilter} />
             <BillableCheckbox />
             {query.billable && <FixedPriceCheckbox />}
-            <PeriodNavigation
-              previousHref={href({ month: addMonths(month, -1) })}
-              nextHref={href({ month: addMonths(month, 1) })}
-              previousLabel="Previous month"
-              nextLabel="Next month"
-              years={yearsAround(month, href)}
-            >
-              {formatDate(month, "month")}
-            </PeriodNavigation>
           </>
         }
       >
@@ -282,8 +269,8 @@ function ReportPage({
           </Tabs>
           <div class="b-all bc-subtle br-l p-m mt-s">
             {table.rows.length === 0 ? (
-              <EmptyState emoji="🗓️" title="No hours logged">
-                No time was logged in {formatDate(month, "month")}.
+              <EmptyState title="No hours logged">
+                No time was logged in {formatMonth(month)}.
               </EmptyState>
             ) : (
               <DataGrid columns={table.columns}>
@@ -308,7 +295,7 @@ function reportTable(
   consultantHref: (userId: number) => string,
 ): ReportTable {
   switch (report.tab) {
-    case "projects":
+    case "overview":
       return {
         columns: [
           { label: "Name" },
@@ -369,26 +356,6 @@ function reportTable(
           formatAmounts(total.amounts, currency),
         ],
       };
-    case "tasks":
-      return {
-        columns: [
-          { label: "Name" },
-          { label: "Billable hours", kind: "number" },
-          { label: "Billable amount", kind: "number" },
-        ],
-        rows: report.rows.map((row) => ({
-          cells: [
-            <DataGrid.Title>{row.name}</DataGrid.Title>,
-            formatTotalHours(row.billableHours * 60),
-            formatAmounts(row.amounts, currency),
-          ],
-        })),
-        footer: [
-          "Total",
-          formatTotalHours(total.billableHours * 60),
-          formatAmounts(total.amounts, currency),
-        ],
-      };
   }
 }
 
@@ -396,7 +363,6 @@ function Summary({
   hours,
   billableHours,
   amounts,
-  unratedHours,
   capacityHours,
   currency,
 }: Totals & { capacityHours: number; currency: string }) {
@@ -406,7 +372,7 @@ function Summary({
         label="Logged"
         value={formatTotalHours(hours * 60)}
         share={formatShare(hours, capacityHours)}
-        note={`of ${formatTotalHours(capacityHours * 60)} capacity`}
+        outOf={`${formatTotalHours(capacityHours * 60)}`}
       >
         <ProgressBar max={capacityHours} segments={[{ value: hours, palette: "purple" }]} />
       </Stat>
@@ -425,11 +391,6 @@ function Summary({
         />
       </Stat>
       <Stat label="Billable amount" value={formatAmounts(amounts, currency)} />
-      <Stat
-        label="Without a rate"
-        value={formatTotalHours(unratedHours * 60)}
-        note={unratedHours > 0 ? "Hourly time that bills nothing" : "Everyone has a rate"}
-      />
     </StatList>
   );
 }

@@ -11,7 +11,7 @@ export function showPageInLayer(layer: HTMLElement, page: LoadedPage) {
   // The page says how it's shown, so one step of a form can be a tooltip and the next a drawer.
   // Its box moves in whole, bringing the page's width and padding with it.
   const box = page.main.querySelector(`:scope > [${attributes.layerType}]`);
-  layer.setAttribute("data-type", box?.getAttribute(attributes.layerType) ?? "dialog");
+  layer.setAttribute("data-type", box?.getAttribute(attributes.layerType) ?? "drawer");
   placeLayer(layer, opener);
   resolveUrls(page.main, page.url);
   // Only the content is replaced, so nested layers stay. `main` itself never moves in, so the

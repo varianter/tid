@@ -1,4 +1,3 @@
-import { firstDayOfMonth, lastDayOfMonth } from "@tid/calendar/isoDate";
 import {
   clients,
   organizations,
@@ -9,9 +8,10 @@ import {
   timeEntriesExport,
   users,
 } from "@tid/db/schema";
-import { and, between, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import type { OrganizationOption } from "../domain/organizations/organizationFilter";
 import { database } from "../framework/database";
+import { inMonth } from "../framework/monthCondition";
 import type { MonthEntry } from "../timeEntries/monthEntries";
 import { buildProjectReport, type ProjectReport } from "./projectReport";
 
@@ -21,7 +21,7 @@ import { buildProjectReport, type ProjectReport } from "./projectReport";
  */
 export async function loadProjectReport(
   projectId: number,
-  month: string,
+  month: Temporal.PlainYearMonth,
   consultantsOf: OrganizationOption,
 ): Promise<ProjectReport | undefined> {
   const project = await loadReportedProject(projectId);
@@ -40,7 +40,7 @@ export async function loadProjectReport(
  */
 export async function loadInvoicedProjectReport(
   projectId: number,
-  month: string,
+  month: Temporal.PlainYearMonth,
 ): Promise<ProjectReport | undefined> {
   const project = await loadReportedProject(projectId);
   if (!project?.contractOwnerCountry) return undefined;
@@ -75,7 +75,7 @@ async function loadReportedProject(projectId: number) {
 }
 
 /** Each consultant's hours a day on the project, by those of `accounts`, or by everyone without it. */
-function loadDayEntries(projectCode: string, month: string, accounts?: string[]) {
+function loadDayEntries(projectCode: string, month: Temporal.PlainYearMonth, accounts?: string[]) {
   const view = timeEntriesExport;
   return database
     .select({
@@ -90,17 +90,32 @@ function loadDayEntries(projectCode: string, month: string, accounts?: string[])
       and(
         accounts && inArray(view.accountName, accounts),
         eq(view.projectCode, projectCode),
-        between(view.spentDate, firstDayOfMonth(month), lastDayOfMonth(month)),
+        inMonth(view.spentDate, month),
       ),
     )
     .groupBy(view.userEmail, view.userName, view.spentDate)
     .orderBy(view.userName);
 }
 
+/** The project's entries in `month` by the consultants of `selected`, for a query joining tasks and users. */
+const projectEntriesIn = (
+  projectId: number,
+  month: Temporal.PlainYearMonth,
+  selected: OrganizationOption,
+) =>
+  and(
+    eq(tasks.projectId, projectId),
+    inArray(
+      users.orgId,
+      selected.organizations.map((organization) => organization.id),
+    ),
+    inMonth(timeEntries.spentOn, month),
+  );
+
 /** Each entry on the project in `month` by the consultants of `organization`, newest first. */
 export const loadProjectEntries = (
   projectId: number,
-  month: string,
+  month: Temporal.PlainYearMonth,
   selected: OrganizationOption,
 ): Promise<MonthEntry[]> =>
   database
@@ -114,14 +129,44 @@ export const loadProjectEntries = (
     .from(timeEntries)
     .innerJoin(tasks, eq(tasks.id, timeEntries.taskId))
     .innerJoin(users, eq(users.id, timeEntries.userId))
-    .where(
-      and(
-        eq(tasks.projectId, projectId),
-        inArray(
-          users.orgId,
-          selected.organizations.map((organization) => organization.id),
-        ),
-        between(timeEntries.spentOn, firstDayOfMonth(month), lastDayOfMonth(month)),
-      ),
-    )
+    .where(projectEntriesIn(projectId, month, selected))
     .orderBy(desc(timeEntries.spentOn), users.name, tasks.name);
+
+/** The minutes one consultant logged on one task. */
+export type EntryTotal = {
+  consultantId: number;
+  consultant: string;
+  taskId: number;
+  task: string;
+  minutes: number;
+};
+
+/**
+ * The same entries as `loadProjectEntries`, totalled per consultant and task. Sorted by
+ * consultant then task, or the other way round, so either groups in order.
+ */
+export const loadEntryTotals = (
+  projectId: number,
+  month: Temporal.PlainYearMonth,
+  selected: OrganizationOption,
+  sortedBy: "consultant" | "task",
+): Promise<EntryTotal[]> =>
+  database
+    .select({
+      consultantId: users.id,
+      consultant: users.name,
+      taskId: tasks.id,
+      task: tasks.name,
+      minutes: sql`sum(${timeEntries.minutes})`.mapWith(Number),
+    })
+    .from(timeEntries)
+    .innerJoin(tasks, eq(tasks.id, timeEntries.taskId))
+    .innerJoin(users, eq(users.id, timeEntries.userId))
+    .where(projectEntriesIn(projectId, month, selected))
+    // By id, so two people with the same name stay apart.
+    .groupBy(users.id, users.name, tasks.id, tasks.name)
+    .orderBy(
+      ...(sortedBy === "consultant"
+        ? [users.name, users.id, tasks.name]
+        : [tasks.name, users.name]),
+    );

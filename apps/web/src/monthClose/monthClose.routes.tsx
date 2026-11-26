@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import type { UserEnv } from "../domain/users/user";
+import { monthFromParam } from "../framework/calendarParams";
 import { consultantHoursList, consultantHoursListRedirect } from "./consultantHoursList.query";
 import { invoiceDataList } from "./invoiceDataList.query";
 import { lockChangeManagersOnly } from "./lockChange.middleware";
@@ -13,5 +14,5 @@ export const monthClose = new Hono<UserEnv>()
   .get("/:month", monthCloseOverview)
   .get("/:month/consultants", consultantHoursList)
   .get("/:month/invoice-data", invoiceDataList)
-  .post("/:organization/:month/lock", lockChangeManagersOnly, lockMonth)
-  .post("/:organization/:month/unlock", lockChangeManagersOnly, unlockMonth);
+  .post("/:organization/:month/lock", monthFromParam, lockChangeManagersOnly, lockMonth)
+  .post("/:organization/:month/unlock", monthFromParam, lockChangeManagersOnly, unlockMonth);

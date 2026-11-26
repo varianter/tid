@@ -1,4 +1,4 @@
-import { formatDate } from "@tid/calendar/dateDisplay";
+import { formatMonth } from "@tid/calendar/dateDisplay";
 import { hasMonthStarted } from "@tid/calendar/osloClock";
 import { Button, Icon } from "@tid/ui";
 import { monthLockPath } from "./monthClose.url";
@@ -9,14 +9,14 @@ export function LockMonthForm({
   month,
 }: {
   organizationSlug: string;
-  month: string;
+  month: Temporal.PlainYearMonth;
 }) {
   if (!hasMonthStarted(month)) return null;
   return (
     <form method="post" action={monthLockPath(organizationSlug, month, "lock")} class="ml-auto">
       <Button type="submit">
         <Icon name="lock" />
-        Lock {formatDate(month, "monthName")}
+        Lock {formatMonth(month, "monthName")}
       </Button>
     </form>
   );

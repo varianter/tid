@@ -28,14 +28,11 @@ export function ProgressBar({
       {...(label ? { role: "img", "aria-label": label } : { "aria-hidden": "true" })}
       {...attributes}
     >
-      <div
-        class="stack-h flex-nowrap gap-none of-hidden b-all bc-subtle surface-tinted br-m"
-        style="height: 1em;"
-      >
+      <div class="stack-h flex-nowrap gap-none of-hidden surface-dyed br-m" style="height: 1em;">
         {segments.map((segment) => (
           <span
             class="h-full"
-            style={`width: ${(segment.value / scale) * 100}%; background: var(--palette-${segment.palette}-${shadeSteps[segment.shade ?? "strong"]});`}
+            style={`width: ${(segment.value / scale) * 100}%; background: ${segmentColor(segment)};`}
           />
         ))}
       </div>
@@ -49,6 +46,29 @@ export function ProgressBar({
     </div>
   );
 }
+
+/**
+ * A dot in a segment's color, so a list can use the same colors as the bars elsewhere.
+ * It's decorative, so the text next to it has to say what the color means.
+ */
+export function ProgressBarSwatch({
+  palette,
+  shade,
+  class: className,
+  ...attributes
+}: Props<"span", Omit<Segment, "value">>) {
+  return (
+    <span
+      class={classes("d-inline-block aspect-square br-circle", className)}
+      aria-hidden="true"
+      style={`width: 0.5em; background: ${segmentColor({ palette, shade })};`}
+      {...attributes}
+    />
+  );
+}
+
+const segmentColor = ({ palette, shade = "strong" }: Omit<Segment, "value">) =>
+  `var(--palette-${palette}-${shadeSteps[shade]})`;
 
 /**
  * Callers often split `max` into parts, such as billable and the rest of the hours,

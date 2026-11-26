@@ -1,6 +1,7 @@
 // The server renders hours with the same function, so a total reads the same before and after a reload.
-import { formatHours, parseHours } from "../hours";
+import { formatHours, formatTotalHours, parseHours } from "../hours";
 import { CellKeys } from "./cellKeys";
+import { FillDayButtons } from "./fillDayButtons";
 
 /**
  * Saves timesheet cells as you leave them or the page, without reloading it, and keeps the totals
@@ -13,6 +14,7 @@ class TimesheetConductor extends HTMLElement {
   /** The latest save per cell, so a newer value never lands before an older one. */
   #saves = new Map<string, Promise<void>>();
   #keys = new CellKeys(this);
+  #fillDayButtons = new FillDayButtons(this);
 
   connectedCallback() {
     // `focusout` rather than `change`, so leaving a cell retries a save that failed.
@@ -23,6 +25,7 @@ class TimesheetConductor extends HTMLElement {
     window.addEventListener("pagehide", this.#onPageHide);
     window.addEventListener("beforeunload", this.#onBeforeUnload);
     this.#keys.connect();
+    this.#fillDayButtons.connect();
   }
 
   disconnectedCallback() {
@@ -32,6 +35,7 @@ class TimesheetConductor extends HTMLElement {
     window.removeEventListener("pagehide", this.#onPageHide);
     window.removeEventListener("beforeunload", this.#onBeforeUnload);
     this.#keys.disconnect();
+    this.#fillDayButtons.disconnect();
   }
 
   #onFocusOut = (event: FocusEvent) => {
@@ -123,7 +127,19 @@ class TimesheetConductor extends HTMLElement {
     };
     show(`[data-project-total="${project}"]`, minutesIn(`form[data-project="${project}"]`));
     show(`[data-day-total="${day}"]`, minutesIn(`form[data-day="${day}"]`));
-    show("[data-grand-total]", minutesIn("form[data-minutes]"));
+    const loggedMinutes = minutesIn("form[data-minutes]");
+    show("[data-grand-total]", loggedMinutes);
+    this.#updateLoggedHours(loggedMinutes);
+  }
+
+  #updateLoggedHours(loggedMinutes: number) {
+    const logged = this.querySelector("[data-logged-hours]");
+    if (logged) logged.textContent = formatTotalHours(loggedMinutes);
+    const overtime = this.querySelector<HTMLElement>("[data-overtime]");
+    if (!overtime) return;
+    const overtimeMinutes = loggedMinutes - Number(overtime.dataset.expectedMinutes);
+    overtime.hidden = overtimeMinutes <= 0;
+    overtime.textContent = `+${formatTotalHours(Math.max(0, overtimeMinutes))}`;
   }
 }
 

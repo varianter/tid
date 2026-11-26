@@ -27,7 +27,7 @@ export const enterOrganizationNumber = formAction({
         .update(clients)
         .set({ organizationNumber: null, legalName: null, registeredAddress: null })
         .where(eq(clients.id, client.id));
-      return { redirect: done };
+      return { redirect: done, flash: { title: "Organization number removed" } };
     }
     // Checked before the lookup, so a number that can't be saved costs no call to the register.
     if (await isOrganizationNumberTaken(organizationNumber, client.id))

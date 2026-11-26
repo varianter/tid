@@ -1,6 +1,6 @@
+import { firstDayOf } from "@tid/calendar/calendarMonth";
 import { formatDate } from "@tid/calendar/dateDisplay";
-import { addMonths, firstDayOfMonth, monthOf } from "@tid/calendar/isoDate";
-import { todayInOslo } from "@tid/calendar/osloClock";
+import { thisMonthInOslo, todayInOslo } from "@tid/calendar/osloClock";
 import {
   assignmentRates,
   clients,
@@ -13,9 +13,9 @@ import {
   users,
 } from "@tid/db/schema";
 import { formatTotalHours } from "@tid/elements/hours";
-import { Badge, Button, DataGrid, Detail, Icon, Page, Section, Stat, StatList } from "@tid/ui";
+import { Badge, Button, DataGrid, Detail, Icon, Page, Section } from "@tid/ui";
 import { attributes } from "@tid/via/attributes";
-import { and, desc, eq, lte, type SQL, sql } from "drizzle-orm";
+import { and, desc, eq, gte, lt, lte, type SQL, sql } from "drizzle-orm";
 import type { Context } from "hono";
 import { consultantPath } from "../consultants/consultants.url";
 import { formatAmount } from "../domain/amount/amount";
@@ -32,15 +32,17 @@ import {
   projectRatesPath,
 } from "../projectConsultants/projectConsultants.url";
 import { billingLabels } from "./billing";
+import { hasLoggedTime } from "./loggedTime.data";
 import { type ProjectSummary, projectSummary } from "./projectSummary";
 import { projectReportUrl } from "./projects.url";
 
 type HoursSpent = { total: number; lastMonth: number; thisMonth: number };
 
 // Minutes in each period, summed over the time entries that `where` keeps.
-const hoursSpent = (today: string) => {
-  const thisMonthStart = firstDayOfMonth(monthOf(today));
-  const lastMonthStart = firstDayOfMonth(addMonths(monthOf(today), -1));
+const hoursSpent = (today: Temporal.PlainDate) => {
+  const thisMonth = today.toPlainYearMonth();
+  const thisMonthStart = firstDayOf(thisMonth);
+  const lastMonthStart = firstDayOf(thisMonth.subtract({ months: 1 }));
   const minutesFrom = (condition?: SQL) =>
     sql`coalesce(sum(${timeEntries.minutes}) ${condition ? sql`filter (where ${condition})` : sql``}, 0)`.mapWith(
       Number,
@@ -48,9 +50,9 @@ const hoursSpent = (today: string) => {
   return {
     total: minutesFrom(),
     lastMonth: minutesFrom(
-      sql`${timeEntries.spentOn} >= ${lastMonthStart} and ${timeEntries.spentOn} < ${thisMonthStart}`,
+      and(gte(timeEntries.spentOn, lastMonthStart), lt(timeEntries.spentOn, thisMonthStart)),
     ),
-    thisMonth: minutesFrom(sql`${timeEntries.spentOn} >= ${thisMonthStart}`),
+    thisMonth: minutesFrom(gte(timeEntries.spentOn, thisMonthStart)),
   };
 };
 
@@ -58,7 +60,11 @@ export const projectDetails = async (c: Context<UserEnv>) => {
   const id = Number(c.req.param("id"));
   if (!Number.isSafeInteger(id)) return c.notFound();
   const [project] = await database
-    .select({ ...projectSummary, invoicingLead: users.name })
+    .select({
+      ...projectSummary,
+      invoicingLead: users.name,
+      hasLoggedTime: hasLoggedTime(projects.id),
+    })
     .from(projects)
     .innerJoin(clients, eq(clients.id, projects.clientId))
     .leftJoin(users, eq(users.id, projects.invoicingLeadId))
@@ -66,14 +72,9 @@ export const projectDetails = async (c: Context<UserEnv>) => {
   if (!project) return c.notFound();
 
   const today = todayInOslo();
-  const [projectHours] = await database
-    .select(hoursSpent(today))
-    .from(timeEntries)
-    .innerJoin(tasks, eq(tasks.id, timeEntries.taskId))
-    .where(eq(tasks.projectId, id));
-
   const projectTasks = await database
     .select({
+      id: tasks.id,
       name: tasks.name,
       spentMinutes: sql`coalesce(sum(${timeEntries.minutes}), 0)`.mapWith(Number),
     })
@@ -127,7 +128,6 @@ export const projectDetails = async (c: Context<UserEnv>) => {
   return c.render(
     <ProjectDetailsPage
       project={project}
-      hours={projectHours ?? { total: 0, lastMonth: 0, thisMonth: 0 }}
       tasks={projectTasks}
       assignedPeople={assignedPeople
         .map((person) => ({ ...person, state: assignmentState(person, today) }))
@@ -159,7 +159,7 @@ function rateCell({ rate, state }: Pick<Consultant, "rate" | "state">, currency:
   return <Badge palette="coral">No rate</Badge>;
 }
 
-type TaskTotal = { name: string; spentMinutes: number };
+type TaskTotal = { id: number; name: string; spentMinutes: number };
 
 type Person = { id: number; name: string };
 
@@ -167,9 +167,9 @@ type Consultant = Person &
   HoursSpent & {
     /** In minor units of the project's currency; none when no rate has started yet. */
     rate: number | null;
-    endsOn: string | null;
+    endsOn: Temporal.PlainDate | null;
     /** The day they left the company. */
-    lastDay: string | null;
+    lastDay: Temporal.PlainDate | null;
     state: AssignmentState;
   };
 
@@ -180,8 +180,7 @@ type Participation = {
 };
 
 type ProjectDetailsPageProps = {
-  project: ProjectSummary & { invoicingLead: string | null };
-  hours: HoursSpent;
+  project: ProjectSummary & { invoicingLead: string | null; hasLoggedTime: boolean };
   tasks: TaskTotal[];
   /** On the project first, then those who rolled off, then those who left the company. */
   assignedPeople: Consultant[];
@@ -197,7 +196,6 @@ type ProjectDetailsPageProps = {
 
 function ProjectDetailsPage({
   project,
-  hours,
   tasks,
   assignedPeople,
   participations,
@@ -224,12 +222,22 @@ function ProjectDetailsPage({
           icon: "settings",
           [attributes.layer]: true,
         },
+        canManageProject &&
+          !project.hasLoggedTime && {
+            label: "Delete",
+            href: `/projects/${project.id}/delete`,
+            [attributes.layer]: true,
+          },
       ]}
     >
       <nav aria-label="About the project" class="stack-h gap-xs">
         <Button
           as="a"
-          href={projectReportUrl.path({ projectId: project.id, month: monthOf(todayInOslo()) })}
+          href={projectReportUrl.path({
+            projectId: project.id,
+            month: thisMonthInOslo(),
+            tab: "consultants",
+          })}
           data-variant="outlined"
         >
           <Icon name="bar_chart" />
@@ -268,11 +276,6 @@ function ProjectDetailsPage({
           )}
         </Detail>
       </dl>
-      <StatList>
-        <Stat label="Total hours" value={formatTotalHours(hours.total)} />
-        <Stat label="Last month" value={formatTotalHours(hours.lastMonth)} />
-        <Stat label="This month so far" value={formatTotalHours(hours.thisMonth)} />
-      </StatList>
       <Section
         title="Consultants"
         actions={[
@@ -350,7 +353,18 @@ function ProjectDetailsPage({
           <DataGrid columns={[{ label: "Name" }, { label: "Spent", kind: "number" }]}>
             {tasks.map((task) => (
               <DataGrid.Row>
-                <DataGrid.Title>{task.name}</DataGrid.Title>
+                <DataGrid.Title>
+                  {canManageProject ? (
+                    <a
+                      href={`/projects/${project.id}/tasks/${task.id}/edit`}
+                      {...{ [attributes.layer]: true }}
+                    >
+                      {task.name}
+                    </a>
+                  ) : (
+                    task.name
+                  )}
+                </DataGrid.Title>
                 {formatTotalHours(task.spentMinutes)}
               </DataGrid.Row>
             ))}

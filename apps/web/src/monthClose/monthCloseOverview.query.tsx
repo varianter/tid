@@ -1,5 +1,4 @@
-import { formatDate } from "@tid/calendar/dateDisplay";
-import { addMonths } from "@tid/calendar/isoDate";
+import { formatMonth } from "@tid/calendar/dateDisplay";
 import type { Country } from "@tid/calendar/publicHolidays";
 import { organizations } from "@tid/db/schema";
 import { formatTotalHours } from "@tid/elements/hours";
@@ -40,7 +39,7 @@ type OrganizationToClose = {
 /** Every organization with its month close status and the projects its consultants billed. */
 async function loadOrganizationsToClose(
   c: Context<UserEnv>,
-  { month, fixedPrice }: { month: string; fixedPrice?: boolean },
+  { month, fixedPrice }: { month: Temporal.PlainYearMonth; fixedPrice?: boolean },
 ): Promise<OrganizationToClose[]> {
   const canViewCountry = countryVisibility(c.get("user"));
   const [allOrganizations, projects] = await Promise.all([
@@ -66,7 +65,7 @@ async function loadOrganizationsToClose(
           ? reportUrl.path({
               organization: organization.slug,
               month,
-              tab: "projects",
+              tab: "overview",
               billable: true,
               fixedPrice,
             })
@@ -145,6 +144,17 @@ function MonthCloseOverviewPage({
     <Page
       title="Month close"
       description="Where each organization's month close stands, and what its consultants billed"
+      period={
+        <PeriodNavigation
+          previousHref={href({ month: month.subtract({ months: 1 }) })}
+          nextHref={href({ month: month.add({ months: 1 }) })}
+          previousLabel="Previous month"
+          nextLabel="Next month"
+          years={yearsAround(month, href)}
+        >
+          {formatMonth(month)}
+        </PeriodNavigation>
+      }
     >
       <MonthCloseTabs
         active="overview"
@@ -152,22 +162,7 @@ function MonthCloseOverviewPage({
         organization={ownOrganization}
         fixedPrice={query.fixedPrice}
       />
-      <Filtered
-        by={
-          <>
-            <FixedPriceCheckbox />
-            <PeriodNavigation
-              previousHref={href({ month: addMonths(month, -1) })}
-              nextHref={href({ month: addMonths(month, 1) })}
-              previousLabel="Previous month"
-              nextLabel="Next month"
-              years={yearsAround(month, href)}
-            >
-              {formatDate(month, "month")}
-            </PeriodNavigation>
-          </>
-        }
-      >
+      <Filtered by={<FixedPriceCheckbox />}>
         <DataGrid
           columns={[
             { label: "Organization" },

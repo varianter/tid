@@ -29,7 +29,7 @@ export type ProjectToInvoice = {
  * By contract owner, then client, then project.
  */
 export function loadProjectsToInvoice(
-  month: string,
+  month: Temporal.PlainYearMonth,
   includeFixedPrice: boolean,
 ): Promise<ProjectToInvoice[]> {
   return selectProjectsToInvoice(invoicedHoursIn(month, includeFixedPrice));
@@ -41,7 +41,7 @@ export function loadProjectsToInvoice(
  */
 export async function loadProjectToInvoice(
   projectId: number,
-  month: string,
+  month: Temporal.PlainYearMonth,
 ): Promise<ProjectToInvoice | undefined> {
   const [project] = await selectProjectsToInvoice(
     and(eq(projects.id, projectId), invoicedHoursIn(month, true)),

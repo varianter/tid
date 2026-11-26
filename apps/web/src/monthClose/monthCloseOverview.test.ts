@@ -33,6 +33,6 @@ test("the month close overview splits a project's hours by the consultants' orga
   expect(oslo).toContain('href="/month-close/2026-10/consultants?organization=oslo"');
   // The organization opens as the report of the same billable hours.
   expect(oslo).toContain(
-    'href="/reports?organization=oslo&amp;month=2026-10&amp;tab=projects&amp;billable=yes"',
+    'href="/reports?organization=oslo&amp;month=2026-10&amp;tab=overview&amp;billable=yes"',
   );
 });

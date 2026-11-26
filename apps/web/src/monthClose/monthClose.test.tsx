@@ -1,13 +1,15 @@
 import { beforeAll, expect, test } from "bun:test";
-import { addMonths } from "@tid/calendar/isoDate";
-import { thisMonthInOslo } from "@tid/calendar/osloClock";
+import { thisMonthInOslo, todayInOslo } from "@tid/calendar/osloClock";
 import { rebuildDatabase } from "@tid/db/client";
-import { userRoles, users } from "@tid/db/schema";
+import { organizations, userRoles, users } from "@tid/db/schema";
+import { eq } from "drizzle-orm";
 import type { Hono } from "hono";
+import { capacityMinutes } from "../domain/capacity/capacity";
 import type { UserEnv } from "../domain/users/user";
 import { database } from "../framework/database";
 import { requestAsUser, type UserRow } from "../testing/loggedInUser";
 import { organizationIdBySlug } from "../testing/rows";
+import { loadConsultantHours } from "./consultantHours.data";
 import { monthClose } from "./monthClose.routes";
 import { findActiveLock } from "./monthLock.data";
 
@@ -22,7 +24,7 @@ function requestAs(user: UserRow, path: string, method = "GET") {
   return requestAsUser(user, mount, path, { method });
 }
 
-const lastMonth = addMonths(thisMonthInOslo(), -1);
+const lastMonth = thisMonthInOslo().subtract({ months: 1 });
 
 beforeAll(async () => {
   await rebuildDatabase(database);
@@ -56,9 +58,45 @@ test("only the organization's managers lock and unlock its months", async () => 
 });
 
 test("a month that hasn't started can't be locked", async () => {
-  const nextMonth = addMonths(thisMonthInOslo(), 1);
+  const nextMonth = thisMonthInOslo().add({ months: 1 });
   const response = await requestAs(manager, `/month-close/trondheim/${nextMonth}/lock`, "POST");
   expect(response.status).toBe(400);
+});
+
+async function loadTrondheim() {
+  const [organization] = await database
+    .select()
+    .from(organizations)
+    .where(eq(organizations.id, trondheimId));
+  if (!organization) throw new Error("Trondheim must be seeded");
+  return organization;
+}
+
+test("the current month expects hours only up to today", async () => {
+  const organization = await loadTrondheim();
+  const month = thisMonthInOslo();
+  const dueSoFar = capacityMinutes(month, organization.country, organization.fullDayMinutes, {
+    lastDay: todayInOslo(),
+  });
+
+  const consultants = await loadConsultantHours(organization, month);
+
+  expect(consultants.map((consultant) => consultant.expectedMinutes)).toEqual(
+    consultants.map(() => dueSoFar),
+  );
+});
+
+test("a future month expects the full month's hours", async () => {
+  const organization = await loadTrondheim();
+  const nextMonth = thisMonthInOslo().add({ months: 1 });
+
+  const consultants = await loadConsultantHours(organization, nextMonth);
+
+  expect(consultants).toHaveLength(2);
+  for (const consultant of consultants) {
+    expect(consultant.expectedMinutes).toBeGreaterThan(0);
+    expect(consultant.missingMinutes).toBe(consultant.expectedMinutes);
+  }
 });
 
 test("locking an unknown organization or month is not found", async () => {

@@ -1,4 +1,4 @@
-import { isoDateInOslo } from "@tid/calendar/osloClock";
+import { dayInOslo } from "@tid/calendar/osloClock";
 import {
   companyWideExceptions,
   type Exception,
@@ -35,13 +35,14 @@ export function plannedDay(
 
 // Throws when the fixture breaks a rule the app relies on, so a bad edit fails the seed test.
 export function plannedEntries(person: Person, now: Date, startWeek: number = recentStartWeek) {
-  const today = isoDateInOslo(now);
-  const entries: { task: TaskKey; spentOn: string; minutes: number; notes?: string }[] = [];
+  const today = dayInOslo(now);
+  const entries: { task: TaskKey; spentOn: Temporal.PlainDate; minutes: number; notes?: string }[] =
+    [];
   for (let week = Math.max(startWeek, person.joinedWeek ?? startWeek); week <= 0; week++) {
     if (person.leftWeek !== undefined && week > person.leftWeek) break;
     for (const weekday of weekdays) {
       const spentOn = dayOf(now, week, weekday);
-      if (spentOn >= today) break;
+      if (Temporal.PlainDate.compare(spentOn, today) >= 0) break;
       const day = plannedDay(person, week, weekday);
       for (const [task, hours] of Object.entries(day?.hours ?? {}) as [TaskKey, number][]) {
         const definition: TaskDefinition = taskCatalog[task];

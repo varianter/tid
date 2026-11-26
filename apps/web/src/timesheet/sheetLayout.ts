@@ -1,4 +1,4 @@
-import { css } from "hono/css";
+import { css, keyframes } from "hono/css";
 
 /** Wraps to the width the day and its cells give the column, so every day stays as wide. */
 export const dayLabelLayout = css`
@@ -7,18 +7,69 @@ export const dayLabelLayout = css`
 `;
 
 /**
- * What stays put fades out at its edge, so cells slide under it rather than cut off. The stops ease
- * in and out, since a linear fade shows a visible edge where it starts and ends.
+ * What stays put fades out at its edge, so cells slide under it rather than cut off. The curved
+ * stops stay readable through the middle, then fall away quickly without a hard transparent edge.
  */
 const stickyFade = `linear-gradient(
   to right in oklch,
   var(--fade-color, var(--surface-base)),
-  oklch(from var(--fade-color, var(--surface-base)) l c h / 0.9) 20%,
-  oklch(from var(--fade-color, var(--surface-base)) l c h / 0.65) 40%,
-  oklch(from var(--fade-color, var(--surface-base)) l c h / 0.35) 60%,
-  oklch(from var(--fade-color, var(--surface-base)) l c h / 0.05) 80%,
+  oklch(from var(--fade-color, var(--surface-base)) l c h / calc(pow(1 - pow(0.4, 4), 3))) 40%,
+  oklch(from var(--fade-color, var(--surface-base)) l c h / calc(pow(1 - pow(0.6, 4), 3))) 60%,
+  oklch(from var(--fade-color, var(--surface-base)) l c h / calc(pow(1 - pow(0.75, 4), 3))) 75%,
+  oklch(from var(--fade-color, var(--surface-base)) l c h / calc(pow(1 - pow(0.85, 4), 3))) 85%,
+  oklch(from var(--fade-color, var(--surface-base)) l c h / calc(pow(1 - pow(0.92, 4), 3))) 92%,
+  oklch(from var(--fade-color, var(--surface-base)) l c h / calc(pow(1 - pow(0.97, 4), 3))) 97%,
   oklch(from var(--fade-color, var(--surface-base)) l c h / 0)
 )`;
+
+/** Slides the task names by as much as the sheet has scrolled: from none to their overflow. */
+const followSheet = keyframes`
+  to {
+    translate: calc(100cqi - 100%);
+  }
+`;
+
+/**
+ * Holds the sheet and, on phones, the task names above it. The sheet scrolls sideways, so names
+ * inside it could only stick within the sheet, which never scrolls down. Above it, they stick to
+ * the page, and the sheet's scroll timeline slides them along with its columns.
+ */
+export const sheetFrame = css`
+  timeline-scope: --sheet;
+  /* The names cover the weeks and days, which cover cells. */
+  --layer-header: 1;
+  --layer-task-names: 2;
+  /* Fixed on phones, so the names above the sheet line up with its columns. */
+  --week-column: var(--spacing-l);
+  --day-column: calc(6ch + 2 * var(--spacing-3xs));
+  --task-column: calc(18ch + 2 * var(--spacing-3xs));
+
+  & > [data-task-names] {
+    display: none;
+  }
+
+  @media (width < 40rem) {
+    & > [data-task-names] {
+      display: block;
+      position: sticky;
+      top: 0;
+      z-index: var(--layer-task-names);
+      overflow: clip;
+      container-type: inline-size;
+      background: var(--surface-base);
+    }
+    /* As wide as the sheet's columns, so it slides exactly as far as the sheet scrolls. */
+    & [data-task-name-track] {
+      display: grid;
+      grid-template-columns: repeat(var(--task-columns), var(--task-column));
+      inline-size: max-content;
+      padding-inline: calc(var(--week-column) + var(--day-column)) var(--spacing-m);
+      overflow-wrap: anywhere;
+      animation: ${followSheet} linear both;
+      animation-timeline: --sheet;
+    }
+  }
+`;
 
 /**
  * Phones log a day at a time, so there the sheet turns: each row becomes a column, with days
@@ -27,19 +78,33 @@ const stickyFade = `linear-gradient(
  */
 export const sheetLayout = css`
   overflow-x: scroll;
+  scroll-timeline: --sheet x;
+  /* Scrolling settles on a whole week, centred beside the task names. A page that lets the sheet
+     bleed past its edge sets --sheet-bleed, so the centre is measured to the page's edge instead. */
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline-end: var(--sheet-bleed, 0px);
   @media (prefers-reduced-motion: no-preference) {
     scroll-behavior: smooth;
   }
   /* Focusing a cell scrolls it into view at the scrollport's edge, under the sticky task
      column. Padding the scrollport by that column keeps the first day's cells in sight. The
      task column takes its 1fr share only while everything fits, so when the sheet scrolls at
-     all, the column is at its 20ch minimum. */
-  scroll-padding-inline-start: 20ch;
-  grid-template-columns: minmax(20ch, 1fr) repeat(var(--days), max-content);
-  & [data-week-start] {
-    margin-inline-start: var(--spacing-xs);
+     all, the column is at its minimum. */
+  scroll-padding-inline-start: 24ch;
+  grid-template-columns: minmax(24ch, 1fr) repeat(var(--day-tracks), max-content);
+  & [data-week-gap] {
+    inline-size: var(--spacing-xs);
+  }
+  & [data-week] {
+    grid-column: span var(--week-days);
+    scroll-snap-align: center;
+  }
+  /* The one fixed width in the sheet: day columns take theirs from it in every layout. */
+  & [data-cell] {
+    inline-size: 10ch;
   }
   & [data-task] {
+    position: sticky;
     --fade-color: var(--surface-base);
     background: ${stickyFade};
   }
@@ -49,43 +114,89 @@ export const sheetLayout = css`
     scroll-margin-inline: var(--spacing-xl);
   }
 
+  /* Task names stay put while the days scroll beneath them. */
+  @media (width >= 40rem) {
+    & [data-task] {
+      left: 0;
+      margin-inline-end: var(--spacing-xs);
+      padding-inline-end: var(--spacing-2xs);
+    }
+  }
+
+  /* Fill shows only while its cell has focus, so the hours stay readable everywhere else. */
+  & [data-cell]:not(:focus-within) [data-fill-day] {
+    display: none;
+  }
+  /* Fill stands in for the F shortcut on phones, which have no keys to press. */
+  @media (width >= 40rem), not (pointer: coarse) {
+    & [data-fill-day] {
+      display: none;
+    }
+  }
+
   @media (width < 40rem) {
     grid-auto-flow: column;
-    grid-template-rows: auto repeat(var(--days), auto);
-    grid-template-columns: max-content repeat(var(--task-columns), minmax(auto, 1fr));
-    & > * {
+    grid-template-rows: repeat(var(--day-tracks), auto);
+    /* The weeks become a narrow column of bars left of the days, each as tall as its days. */
+    grid-template-columns: var(--week-column) var(--day-column) repeat(
+        var(--task-columns),
+        var(--task-column)
+      );
+    & [data-week-gap] {
+      inline-size: auto;
+      block-size: var(--spacing-m);
+    }
+    /* Phones settle on a whole task instead, its column just right of the days. */
+    scroll-padding-inline-start: calc(var(--week-column) + var(--day-column));
+    & [data-cell] {
+      inline-size: 18ch;
+      scroll-snap-align: start;
+    }
+    /* Writing vertically turns logical sides, so the gap to the days is set as a physical
+       margin, and inline padding runs along the bar like a desktop week's. */
+    & [data-week] {
+      scroll-snap-align: none;
+      grid-column: auto;
+      grid-row: span var(--week-days);
+      margin: 0;
+      margin-right: var(--spacing-3xs);
+      padding-inline: var(--spacing-xs);
+      writing-mode: vertical-rl;
+      rotate: 180deg;
+      text-align: end;
+    }
+    & > [data-row] {
       display: contents;
     }
-    & [data-week-start] {
-      margin-inline-start: 0;
-      margin-block-start: var(--spacing-xs);
+    /* The task names sit above the sheet instead, with nothing left for the corners to label. */
+    & [data-task] {
+      display: none;
     }
-    /* Padding rather than margin, so no gap shows what scrolls beneath. */
-    & > * > :first-child {
-      left: auto;
-      margin-inline-end: 0;
-      padding-inline-end: var(--spacing-xs);
+    /* Focus would scroll a cell's input up under the task names stuck above. */
+    & [data-cell] input {
+      scroll-margin-block-start: 3lh;
     }
     /* The day totals don't fit beside the tasks; the project totals below still add up the month. */
     & > [data-totals] {
       display: none;
     }
+    & > [data-weeks] > *,
+    & > [data-days] > * {
+      z-index: var(--layer-header);
+    }
     /* Days stay put while wide sheets scroll sideways. */
-    /* The corner covers the task names, which cover the days, which cover cells. */
-    & > :first-child > * {
+    & > [data-days] > * {
+      --fade-color: var(--surface-base);
       position: sticky;
       left: 0;
-      z-index: 1;
       background: ${stickyFade};
     }
-    & > :first-child > .surface-tinted {
+    /* Solid rather than faded, so the gaps between weeks hide what's beneath. */
+    & > :is([data-weeks], [data-days]) > [data-week-gap] {
+      background: var(--surface-base);
+    }
+    & > [data-days] > .surface-tinted {
       --fade-color: var(--surface-tinted);
-    }
-    & > * > :first-child {
-      z-index: 2;
-    }
-    & > :first-child > :first-child {
-      z-index: 3;
     }
     & #today {
       scroll-margin-block-start: 6lh;

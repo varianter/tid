@@ -54,7 +54,10 @@ export const invoiceDataZip = async (c: Context<UserEnv>) => {
 };
 
 /** Undefined for a project that isn't in `month`'s invoice data. */
-async function pdfFile(projectId: number, month: string): Promise<InvoiceDataFile | undefined> {
+async function pdfFile(
+  projectId: number,
+  month: Temporal.PlainYearMonth,
+): Promise<InvoiceDataFile | undefined> {
   if (!(await loadProjectToInvoice(projectId, month))) return undefined;
   const report = await loadInvoicedProjectReport(projectId, month);
   if (!report) return undefined;
@@ -65,7 +68,10 @@ async function pdfFile(projectId: number, month: string): Promise<InvoiceDataFil
 }
 
 /** Undefined for a project that isn't in `month`'s invoice data. */
-async function csvFile(projectId: number, month: string): Promise<InvoiceDataFile | undefined> {
+async function csvFile(
+  projectId: number,
+  month: Temporal.PlainYearMonth,
+): Promise<InvoiceDataFile | undefined> {
   if (!(await loadProjectToInvoice(projectId, month))) return undefined;
   const csv = await loadInvoiceDataCsv(projectId, month);
   if (!csv) return undefined;
@@ -79,7 +85,7 @@ async function csvFile(projectId: number, month: string): Promise<InvoiceDataFil
  * One at a time, and failing the whole zip if a project's files can't be made: a zip missing an
  * invoice's data is easy to send without noticing.
  */
-async function bothFiles(project: ProjectToInvoice, month: string) {
+async function bothFiles(project: ProjectToInvoice, month: Temporal.PlainYearMonth) {
   const which = `${project.name} (${project.code})`;
   let pdf: InvoiceDataFile | undefined;
   let csv: InvoiceDataFile | undefined;

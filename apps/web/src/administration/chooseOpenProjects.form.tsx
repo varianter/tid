@@ -15,7 +15,7 @@ export const chooseOpenProjectsForm = z.object({
   projectId: z.preprocess(checkboxArray, z.array(z.coerce.number().int())),
 });
 
-export type OpenableProject = {
+type OpenableProject = {
   id: number;
   name: string;
   code: string;
@@ -40,7 +40,7 @@ export function ChooseOpenProjectsFormPage({
 }: ChooseOpenProjectsFormPageProps) {
   const clients = Map.groupBy(projects, (project) => project.client);
   return (
-    <FormPage title={`Projects open to everyone in ${organization.name}`} layer="drawer">
+    <FormPage title={`Projects open to everyone in ${organization.name}`}>
       <Filtered by={<OrganizationSelect {...filter} />}>
         <OtherOrganizationNotice
           current={organization}
@@ -49,7 +49,7 @@ export function ChooseOpenProjectsFormPage({
         />
         {projects.length === 0 ? (
           <>
-            <EmptyState emoji="🔓" title="No non-billable projects">
+            <EmptyState title="No non-billable projects">
               Only non-billable projects can be open to everyone.
             </EmptyState>
             <ReturnLink href={administrationPath}>Back</ReturnLink>

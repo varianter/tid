@@ -2,7 +2,8 @@ import { clients, projectOrganizations, projects } from "@tid/db/schema";
 import { eq } from "drizzle-orm";
 import type { User } from "../domain/users/user";
 import { database } from "../framework/database";
-import { formAction, withSaved } from "../framework/formAction";
+import { changesSaved } from "../framework/flash";
+import { formAction } from "../framework/formAction";
 import {
   ensureParticipation,
   participation,
@@ -58,7 +59,10 @@ export const chooseOpenProjects = formAction({
         if (!open) await removeUnneededParticipation(transaction, ids);
       }
     });
-    return { redirect: withSaved(openProjectsPath(organization.slug)) };
+    return {
+      redirect: openProjectsPath(organization.slug),
+      flash: changesSaved,
+    };
   },
   view: ChooseOpenProjectsFormPage,
 });

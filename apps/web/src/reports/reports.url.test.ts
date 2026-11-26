@@ -9,8 +9,8 @@ const roundTrip = (path: string) => {
 
 test("a canonical report URL reads back to itself", () => {
   for (const path of [
-    "/reports?organization=variant-as&month=2026-09&tab=projects",
-    "/reports?organization=se&month=2028-02&tab=tasks&billable=yes",
+    "/reports?organization=variant-as&month=2026-09&tab=overview",
+    "/reports?organization=se&month=2028-02&tab=consultants&billable=yes",
     "/reports?organization=se&month=2028-02&tab=consultants&fixedPrice=yes",
   ]) {
     expect(roundTrip(path)).toBe(path);
@@ -18,7 +18,7 @@ test("a canonical report URL reads back to itself", () => {
 });
 
 test("a sloppy report URL falls back to this month, the first tab and all hours", () => {
-  const fallback = `/reports?organization=se&month=${thisMonthInOslo()}&tab=projects`;
+  const fallback = `/reports?organization=se&month=${thisMonthInOslo()}&tab=overview`;
   expect(roundTrip("/reports?organization=se")).toBe(fallback);
   expect(roundTrip("/reports?organization=se&month=2026-13&tab=invoices&billable=")).toBe(fallback);
   expect(

@@ -6,7 +6,8 @@ function TabList({ class: className, ...attributes }: PropsWithChildren<Props<"n
   return (
     <nav
       composite-component="Tabs"
-      class={classes("b-all br-l gap-xs p-3xs stack-h", className)}
+      data-transition="steady"
+      class={classes("b-all br-l gap-xs p-3xs stack-h w-fit", className)}
       {...attributes}
     />
   );

@@ -18,7 +18,10 @@ export const renameClient = formAction({
     );
     if (nameTaken) return alreadyExists;
     await database.update(clients).set({ name }).where(eq(clients.id, client.id));
-    return { redirect: `/clients/${client.id}` };
+    return {
+      redirect: `/clients/${client.id}`,
+      flash: { title: "Client renamed", message: `Renamed ${client.name} to ${name}.` },
+    };
   },
   view: ClientFormPage,
 });

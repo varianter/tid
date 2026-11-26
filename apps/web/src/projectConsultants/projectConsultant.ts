@@ -6,7 +6,7 @@ export type ProjectConsultantIds = { projectId: number; userId: number };
 /** What an hour costs, in minor units, or null where no rate covers the day. */
 export type Price = { rate: number; currency: string } | null;
 
-export type NewRate = { validFrom: string; rate: number; currency: string };
+export type NewRate = { validFrom: Temporal.PlainDate; rate: number; currency: string };
 
 export function idParams(params: Record<string, string>) {
   const projectId = Number(params.projectId);
@@ -33,10 +33,10 @@ export type AssignmentState = (typeof stateOrder)[number];
 
 // Leaving the company ends every assignment, so it wins over the assignment's own end.
 export function assignmentState(
-  { endsOn, lastDay }: { endsOn: string | null; lastDay: string | null },
-  today: string,
+  { endsOn, lastDay }: { endsOn: Temporal.PlainDate | null; lastDay: Temporal.PlainDate | null },
+  today: Temporal.PlainDate,
 ): AssignmentState {
-  if (lastDay && lastDay < today) return "leftCompany";
-  if (endsOn && endsOn < today) return "offProject";
+  if (lastDay && Temporal.PlainDate.compare(lastDay, today) < 0) return "leftCompany";
+  if (endsOn && Temporal.PlainDate.compare(endsOn, today) < 0) return "offProject";
   return "onProject";
 }

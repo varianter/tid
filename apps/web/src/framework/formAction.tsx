@@ -1,6 +1,7 @@
 import type { Context } from "hono";
 import type { FC } from "hono/jsx";
 import { z } from "zod";
+import { type Flash, setFlash } from "./flash";
 
 type Ctx = Context;
 
@@ -18,14 +19,7 @@ export type FormState<S extends z.ZodType> = {
   fieldErrors: FieldErrors<S>;
   /** What's wrong with the form as a whole, rather than with one field. */
   formError?: string;
-  /** The last submission went through, and redirected back here with `withSaved`. */
-  saved?: boolean;
 };
-
-/** Where `onSubmit` redirects to show its form again with what was saved. */
-export function withSaved(path: string) {
-  return `${path}${path.includes("?") ? "&" : "?"}saved`;
-}
 
 /**
  * One form on one URL: GET renders it, POST validates and submits, then
@@ -38,14 +32,20 @@ export function formAction<S extends z.ZodType, P extends object>(opts: {
   /** Runs first on GET and POST. Returns the view's props, or a Response, like a 404, to stop. A refusal throws an `HTTPException`. */
   loader: (c: Ctx) => Promise<P | Response>;
   /**
-   * Runs on valid input with the loader's props. Returns where to redirect,
-   * `fieldErrors` (a taken name), or a `formError` for the whole form.
+   * Runs on valid input with the loader's props. Returns one of:
+   * - `redirect`: where to go next. Add a `flash` when that's the page the form was opened from,
+   *   since a page the user already saw won't make the change obvious. Leave it out when the
+   *   redirect goes to a new page, like the client just created, which shows the change itself.
+   * - `fieldErrors`: what's wrong with each field, like a name that's taken.
+   * - `formError`: what's wrong with the form as a whole.
    */
   onSubmit: (
     c: Ctx,
     data: z.infer<S>,
     props: P,
-  ) => Promise<{ redirect: string } | { fieldErrors: FieldErrors<S> } | { formError: string }>;
+  ) => Promise<
+    { redirect: string; flash?: Flash } | { fieldErrors: FieldErrors<S> } | { formError: string }
+  >;
   /** Renders the form's page from the loader's props and the form's state. */
   view: FC<P & { form: FormState<S> }>;
 }) {
@@ -55,8 +55,7 @@ export function formAction<S extends z.ZodType, P extends object>(opts: {
   return async (c: Ctx) => {
     const props = await opts.loader(c);
     if (props instanceof Response) return props;
-    if (c.req.method === "GET")
-      return render(c, props, { saved: c.req.query("saved") !== undefined });
+    if (c.req.method === "GET") return render(c, props);
 
     // `all` keeps repeated fields (checkboxes) as arrays for the schema.
     // `values` drops them, so a multi-select isn't re-checked on a 422.
@@ -81,6 +80,7 @@ export function formAction<S extends z.ZodType, P extends object>(opts: {
       c.status(422);
       return render(c, props, { values, formError: result.formError });
     }
+    if (result.flash) setFlash(c, result.flash);
     return c.redirect(result.redirect, 303);
   };
 }

@@ -58,7 +58,10 @@ export const assignConsultants = formAction({
       project.id,
       chosen.map((person) => ({ userId: person.id, orgId: person.orgId })),
     );
-    return { redirect: `/projects/${project.id}` };
+    return {
+      redirect: `/projects/${project.id}`,
+      flash: { title: chosen.length === 1 ? "Consultant assigned" : "Consultants assigned" },
+    };
   },
   view: AssignConsultantsFormPage,
 });

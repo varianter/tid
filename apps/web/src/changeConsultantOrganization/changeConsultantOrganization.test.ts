@@ -15,6 +15,7 @@ import { eq } from "drizzle-orm";
 import type { Hono } from "hono";
 import type { UserEnv } from "../domain/users/user";
 import { database } from "../framework/database";
+import { flashLeftBy } from "../testing/flash";
 import { postForm, requestAsUser, type UserRow } from "../testing/loggedInUser";
 import { onlyRow, organizationIdBySlug } from "../testing/rows";
 import { changeConsultantOrganizationRoutes } from "./changeConsultantOrganization.routes";
@@ -67,10 +68,10 @@ async function internalTask() {
 
 test("a manager moves a consultant who chose the wrong organization at sign-up", async () => {
   const response = await changeTo(bergenId);
-  expect(response.headers.get("location")).toBe(`${formPath()}&saved`);
+  expect(response.headers.get("location")).toBe(formPath());
+  expect(await flashLeftBy(response)).toEqual({ title: "Changes saved" });
   expect(await organizationOf(newcomer)).toBe(bergenId);
-  const page = await (await requestAsUser(manager, mount, `${formPath()}&saved`)).text();
-  expect(page).toContain("Your changes have been saved.");
+  const page = await (await requestAsUser(manager, mount, formPath())).text();
   expect(page).toContain("Now in Bergen.");
 });
 
@@ -94,9 +95,12 @@ test("only to another organization in the same country", async () => {
 
 test("logged time keeps the consultant where they are, and says why", async () => {
   const { task } = await internalTask();
-  await database
-    .insert(timeEntries)
-    .values({ userId: newcomer.id, taskId: task.id, spentOn: "2026-11-02", minutes: 60 });
+  await database.insert(timeEntries).values({
+    userId: newcomer.id,
+    taskId: task.id,
+    spentOn: Temporal.PlainDate.from("2026-11-02"),
+    minutes: 60,
+  });
 
   const page = await (await requestAsUser(manager, mount, formPath())).text();
   expect(page).toContain("logged time");
@@ -119,9 +123,11 @@ test("project assignments keep the consultant where they are, and are named", as
 });
 
 test("having locked a month keeps the consultant where they are", async () => {
-  await database
-    .insert(monthLocks)
-    .values({ orgId: osloId, month: "2026-10-01", lockedBy: newcomer.id });
+  await database.insert(monthLocks).values({
+    orgId: osloId,
+    month: Temporal.PlainYearMonth.from("2026-10"),
+    lockedBy: newcomer.id,
+  });
 
   expect((await changeTo(bergenId)).status).toBe(422);
   expect(await organizationOf(newcomer)).toBe(osloId);

@@ -1,11 +1,11 @@
-import { formatDate } from "@tid/calendar/dateDisplay";
-import { isIsoMonth } from "@tid/calendar/isoDate";
+import { formatMonth } from "@tid/calendar/dateDisplay";
 import { tasks, timeEntries } from "@tid/db/schema";
 import { and, eq, sql } from "drizzle-orm";
 import type { Context } from "hono";
 import { getCookie } from "hono/cookie";
 import { HTTPException } from "hono/http-exception";
 import type { User, UserEnv } from "../domain/users/user";
+import type { MonthParamEnv } from "../framework/calendarParams";
 import { database } from "../framework/database";
 import { isLockedOn, isMonthLockedError } from "../monthClose/monthLock.data";
 import { hideBillableAssignmentsCookie } from "./billableAssignments";
@@ -15,7 +15,7 @@ import { loadTimesheet } from "./timesheet.data";
 import { cellsActionOf } from "./timesheet.url";
 import { cellFields, cellHours, hoursHint, TimesheetCell } from "./timesheetCell";
 
-const entryOn = (userId: number, taskId: number, spentOn: string) =>
+const entryOn = (userId: number, taskId: number, spentOn: Temporal.PlainDate) =>
   and(
     eq(timeEntries.userId, userId),
     eq(timeEntries.taskId, taskId),
@@ -23,13 +23,18 @@ const entryOn = (userId: number, taskId: number, spentOn: string) =>
   );
 
 /** Stores the cell's minutes, deleting the entry when they're zero. */
-async function saveCell(userId: number, taskId: number, spentOn: string, minutes: number) {
+async function saveCell(
+  userId: number,
+  taskId: number,
+  spentOn: Temporal.PlainDate,
+  minutes: number,
+) {
   if (minutes === 0) {
     await database.delete(timeEntries).where(entryOn(userId, taskId, spentOn));
     return;
   }
   // New entries are priced here; only moving an entry to another task reprices it later.
-  const rate = sql`entry_rate(${userId}, ${taskId}, ${spentOn})`;
+  const rate = sql`entry_rate(${userId}, ${taskId}, ${spentOn.toString()})`;
   await database
     .insert(timeEntries)
     .values({
@@ -50,7 +55,7 @@ async function saveCell(userId: number, taskId: number, spentOn: string, minutes
  * The cell a save posted, once the user may log on its task, or the response refusing it.
  * The hours are left to the caller, since each save answers them its own way.
  */
-async function readPostedCell(c: Context<UserEnv>) {
+async function readPostedCell(c: Context<UserEnv & MonthParamEnv>) {
   const user = c.get("user");
   const body = await c.req.parseBody();
   const cell = cellFields.safeParse(body);
@@ -62,7 +67,7 @@ async function readPostedCell(c: Context<UserEnv>) {
 }
 
 /** Saves the hours as minutes, or says why they can't be: what was typed and what's wrong. */
-async function saveHours(user: User, taskId: number, day: string, hours: unknown) {
+async function saveHours(user: User, taskId: number, day: Temporal.PlainDate, hours: unknown) {
   const typed = typeof hours === "string" ? hours : "";
   const minutes = cellHours.safeParse(hours);
   if (!minutes.success) {
@@ -72,15 +77,14 @@ async function saveHours(user: User, taskId: number, day: string, hours: unknown
     await saveCell(user.id, taskId, day, minutes.data);
   } catch (error) {
     if (!isMonthLockedError(error)) throw error;
-    return { error: { typed, message: `${formatDate(day, "month")} is locked` } };
+    return { error: { typed, message: `${formatMonth(day.toPlainYearMonth())} is locked` } };
   }
   return { minutes: minutes.data };
 }
 
 // Saves from a page without the timesheet element: the whole month comes back.
-export const logHours = async (c: Context<UserEnv, "/month/:month">) => {
-  const month = c.req.param("month");
-  if (!isIsoMonth(month)) return c.notFound();
+export const logHours = async (c: Context<UserEnv & MonthParamEnv>) => {
+  const month = c.get("month");
   const cell = await readPostedCell(c);
   const { user, task, day } = cell;
   const saved = await saveHours(user, task.id, day, cell.hours);
@@ -107,9 +111,8 @@ export const logHours = async (c: Context<UserEnv, "/month/:month">) => {
 };
 
 // Saves from the timesheet element: only the cell comes back, as stored, for it to swap in.
-export const logHoursInPlace = async (c: Context<UserEnv, "/month/:month">) => {
-  const month = c.req.param("month");
-  if (!isIsoMonth(month)) return c.notFound();
+export const logHoursInPlace = async (c: Context<UserEnv & MonthParamEnv>) => {
+  const month = c.get("month");
   const cell = await readPostedCell(c);
   const { user, task, day } = cell;
   const { error } = await saveHours(user, task.id, day, cell.hours);

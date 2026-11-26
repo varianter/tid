@@ -12,7 +12,7 @@ export function MonthCloseTabs({
   fixedPrice,
 }: {
   active: "overview" | "consultants" | "invoiceData";
-  month: string;
+  month: Temporal.PlainYearMonth;
   organization: string;
   fixedPrice?: boolean;
 }) {

@@ -1,5 +1,4 @@
-import { formatDate } from "@tid/calendar/dateDisplay";
-import { addMonths } from "@tid/calendar/isoDate";
+import { formatMonth } from "@tid/calendar/dateDisplay";
 import { formatTotalHours } from "@tid/elements/hours";
 import { Button, ColorMode, DataGrid, EmptyState, Page, PeriodNavigation } from "@tid/ui";
 import type { Context } from "hono";
@@ -48,32 +47,31 @@ function InvoiceDataListPage({
   const { month } = query;
   const unlocked = locks.organizations - locks.locked;
   return (
-    <Page title="Month close" description="Hours on billable projects, to support invoicing">
+    <Page
+      title="Month close"
+      description="Hours on billable projects, to support invoicing"
+      period={
+        <PeriodNavigation
+          previousHref={href({ month: month.subtract({ months: 1 }) })}
+          nextHref={href({ month: month.add({ months: 1 }) })}
+          previousLabel="Previous month"
+          nextLabel="Next month"
+          years={yearsAround(month, href)}
+        >
+          {formatMonth(month)}
+        </PeriodNavigation>
+      }
+    >
       <MonthCloseTabs
         active="invoiceData"
         month={month}
         organization={ownOrganization}
         fixedPrice={query.fixedPrice}
       />
-      <Filtered
-        by={
-          <>
-            <FixedPriceCheckbox />
-            <PeriodNavigation
-              previousHref={href({ month: addMonths(month, -1) })}
-              nextHref={href({ month: addMonths(month, 1) })}
-              previousLabel="Previous month"
-              nextLabel="Next month"
-              years={yearsAround(month, href)}
-            >
-              {formatDate(month, "month")}
-            </PeriodNavigation>
-          </>
-        }
-      >
+      <Filtered by={<FixedPriceCheckbox />}>
         {projects.length === 0 ? (
-          <EmptyState emoji="🧾" title="Nothing to invoice">
-            No billable hours were logged in {formatDate(month, "month")}.
+          <EmptyState title="Nothing to invoice">
+            No billable hours were logged in {formatMonth(month)}.
           </EmptyState>
         ) : (
           <>
@@ -83,7 +81,7 @@ function InvoiceDataListPage({
                 class="d-block b-all bc-default br-l py-xs px-m ink-default surface-tinted"
               >
                 {unlocked} of {locks.organizations} organizations haven't locked{" "}
-                {formatDate(month, "month")}, so these numbers may still change.
+                {formatMonth(month)}, so these numbers may still change.
               </ColorMode>
             )}
             <div>
@@ -122,7 +120,7 @@ function ContractOwnerRows({
 }: {
   contractOwner: string;
   projects: ProjectToInvoice[];
-  month: string;
+  month: Temporal.PlainYearMonth;
 }) {
   // Only hourly projects have an amount; fixed-price ones are invoiced by their contract.
   const amounts = sumAmounts(projects);

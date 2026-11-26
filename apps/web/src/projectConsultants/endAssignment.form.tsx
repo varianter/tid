@@ -1,19 +1,19 @@
-import { isIsoDate } from "@tid/calendar/isoDate";
 import { Form, FormField, FormPage } from "@tid/ui";
 import { z } from "zod";
+import { dayParam } from "../framework/calendarParams";
 import type { FormState } from "../framework/formAction";
 import type { ProjectConsultantIds } from "./projectConsultant";
 
 // Removing someone without logged time takes no date.
 export const endAssignmentForm = z.object({
-  endsOn: z.string().refine(isIsoDate, "Choose a date").optional(),
+  endsOn: dayParam("Choose a date").optional(),
 });
 
 type EndAssignmentFormPageProps = {
   ids: ProjectConsultantIds;
   name: string;
   hasLoggedTime: boolean;
-  today: string;
+  today: Temporal.PlainDate;
   form: FormState<typeof endAssignmentForm>;
 };
 
@@ -36,7 +36,7 @@ export function EndAssignmentFormPage({
             name="endsOn"
             label="Last day on the project"
             type="date"
-            value={form.values?.endsOn ?? today}
+            value={form.values?.endsOn ?? today.toString()}
             errors={form.fieldErrors.endsOn}
             required
           />

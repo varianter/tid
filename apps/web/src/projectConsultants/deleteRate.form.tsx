@@ -12,7 +12,7 @@ export const deleteRateForm = z.object({});
 
 type DeleteRateFormPageProps = {
   consultant: Consultant;
-  validFrom: string;
+  validFrom: Temporal.PlainDate;
   /** What takes over the rate's period: the rate before it, or none. */
   price: Price;
   entries: RepricedEntry[];
@@ -30,8 +30,8 @@ export function DeleteRateFormPage({
   return (
     <FormPage
       title={`Delete the rate for ${consultant.name} from ${formatDate(validFrom)}`}
-      // The entries it reprices can run long.
-      layer={entries.length === 0 ? undefined : "drawer"}
+      // A bare confirmation unless there are entries to reprice, which can run long.
+      layer={entries.length === 0 ? "dialog" : undefined}
       width={entries.length === 0 ? undefined : 6}
     >
       <Form

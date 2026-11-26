@@ -16,7 +16,7 @@ export type BilledProject = {
  * them, with only those hours. Internal invoicing aside, this is what each organization earned.
  */
 export function loadBilledProjects(
-  month: string,
+  month: Temporal.PlainYearMonth,
   includeFixedPrice: boolean,
 ): Promise<BilledProject[]> {
   const view = timeEntriesExport;

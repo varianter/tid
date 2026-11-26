@@ -1,7 +1,7 @@
 export type InvoiceDataEntry = {
   projectCode: string;
   projectName: string;
-  spentOn: string;
+  spentOn: Temporal.PlainDate;
   user: string;
   task: string;
   minutes: number;
@@ -24,7 +24,7 @@ export function toInvoiceDataCsv(entries: InvoiceDataEntry[]) {
   const rows = entries.map((entry) => [
     entry.projectCode,
     entry.projectName,
-    entry.spentOn.split("-").reverse().join("."),
+    entry.spentOn.toString().split("-").reverse().join("."),
     entry.user,
     entry.task,
     hoursFormat.format(entry.minutes / 60),

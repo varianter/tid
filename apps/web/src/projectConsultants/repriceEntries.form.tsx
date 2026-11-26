@@ -27,7 +27,6 @@ export function RepriceEntriesFormPage({
     <FormPage
       title={`New rate for ${consultant.name} from ${formatDate(newRate.validFrom)}`}
       // The entries it reprices can run long.
-      layer="drawer"
       width={6}
     >
       <Form

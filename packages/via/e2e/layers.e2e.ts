@@ -26,6 +26,7 @@ const layer = `[${attributes.layerUrl}]`;
 const openLayer = ":popover-open";
 const layerCount = () => view.evaluate(`document.querySelectorAll("${layer}").length`);
 const layerHeading = () => view.evaluate(`document.querySelector("${openLayer} h1")?.textContent`);
+const flashText = () => view.evaluate(`document.querySelector("#flash").textContent`);
 const pageText = async () => String(await view.evaluate("document.body.textContent"));
 // Gone after a page load, so it shows the page stayed.
 const sameDocument = () => view.evaluate("window.sameDocument === true");
@@ -72,6 +73,15 @@ test("a submission that arrives back on the page accepts the layer and shows wha
   expect(await sameDocument()).toBe(true);
 });
 
+test("an accepted layer brings in the out-of-band content of the page it arrived on", async () => {
+  await openForm();
+  await view.type("A note");
+  await view.click(`${layer} button:not([formaction])`);
+  await waitUntil("the layer to close", async () => (await layerCount()) === 0);
+  expect(await flashText()).toBe("Saved the note");
+  expect(await sameDocument()).toBe(true);
+});
+
 test("an accepted layer gives focus back to the link that opened it", async () => {
   await openForm();
   await view.type("A note");
@@ -110,6 +120,19 @@ test("a submission that ends on a page to read loads it as the whole page", asyn
   await waitUntil("the created page as the page", () => view.url.endsWith("/created"));
   expect(await layerCount()).toBe(0);
   expect(await sameDocument()).toBe(false);
+});
+
+test("a submission loaded as the whole page carries the out-of-band content its fetch was given, once", async () => {
+  await openLayerFrom("/leave", "Leave");
+  await view.click(`${layer} button`);
+  await waitUntil("the created page as the page", () => view.url.endsWith("/created"));
+  await waitUntil("the carried flash", async () => (await flashText()) === "Created it");
+  await view.evaluate("(window.sameDocument = true), location.reload()");
+  // Module scripts, via among them, have run by the load event.
+  await waitUntil("the reloaded page", () =>
+    view.evaluate(`!window.sameDocument && document.readyState === "complete"`),
+  );
+  expect(await flashText()).toBe("");
 });
 
 test("pressing save again while a submission loads doesn't post it twice", async () => {

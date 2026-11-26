@@ -60,7 +60,7 @@ test("people who haven't started show their first day, and don't count yet", asy
     name: "Siri",
     email: "siri@variant.no",
     orgId: await organizationIdBySlug("oslo"),
-    firstDay: "2099-01-05",
+    firstDay: Temporal.PlainDate.from("2099-01-05"),
   });
   const page = await (await requestAs(manager, "/consultants?organization=oslo")).text();
   expect(page).toContain("First day 5 January 2099");
@@ -110,7 +110,7 @@ test("a consultant's details list the billable projects they're assigned to now"
       projectId: project.id,
       userId: member.id,
       orgId,
-      endsOn: project.code === "OLD1" ? "2000-01-01" : null,
+      endsOn: project.code === "OLD1" ? Temporal.PlainDate.from("2000-01-01") : null,
     })),
   );
   const page = await (await requestAs(member, consultantPath(member.id))).text();

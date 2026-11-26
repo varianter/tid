@@ -1,4 +1,4 @@
-import { formatDate } from "@tid/calendar/dateDisplay";
+import { formatMonth } from "@tid/calendar/dateDisplay";
 import { formatHours, formatTotalHours } from "@tid/elements/hours";
 import { formatAmount } from "../domain/amount/amount";
 import type { ProjectReport } from "../projects/projectReport";
@@ -28,8 +28,8 @@ export function toInvoiceData({
 }: ProjectReport): InvoiceData {
   // A dash shows the day was looked at, where a blank could look like a missing value.
   const dayHours = (dayHours: number) => formatHours(Math.round(dayHours * 60)) || "-";
-  const hoursOn = (day: string) =>
-    consultants.reduce((total, consultant) => total + (consultant.hoursByDay.get(day) ?? 0), 0);
+  const hoursOn = (day: Temporal.PlainDate) =>
+    consultants.reduce((total, consultant) => total + (consultant.hoursByDay.get(day.day) ?? 0), 0);
   return {
     title: `Invoice data – ${project.client} – ${period}`,
     client: project.client,
@@ -40,12 +40,12 @@ export function toInvoiceData({
         ? formatAmount(amount, project.currency, "exact")
         : undefined,
     days: days.map((day) => ({
-      label: String(Number(day.slice(8))),
+      label: String(day.day),
       dayOff: !calendar.isWorkday(day),
     })),
     consultants: consultants.map((consultant) => ({
       name: consultant.name,
-      days: days.map((day) => dayHours(consultant.hoursByDay.get(day) ?? 0)),
+      days: days.map((day) => dayHours(consultant.hoursByDay.get(day.day) ?? 0)),
       total: formatTotalHours(consultant.hours * 60),
     })),
     totals: {
@@ -61,5 +61,5 @@ export const invoiceDataFileName = (projectCode: string, extension: "pdf" | "csv
   `${projectCode.replace(/[/\\:*?"<>|\p{Cc}]/gu, "-")}.${extension}`;
 
 /** Like "10 October - invoice data.zip". The number sorts a year's zips in a folder. */
-export const invoiceDataZipFileName = (month: string) =>
-  `${month.slice(5)} ${formatDate(month, "monthName")} - invoice data.zip`;
+export const invoiceDataZipFileName = (month: Temporal.PlainYearMonth) =>
+  `${String(month.month).padStart(2, "0")} ${formatMonth(month, "monthName")} - invoice data.zip`;

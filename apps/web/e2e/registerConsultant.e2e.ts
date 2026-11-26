@@ -1,7 +1,6 @@
 import { afterAll, expect, test } from "bun:test";
 import { calendarFor } from "@tid/calendar";
 import { formatDate } from "@tid/calendar/dateDisplay";
-import { addMonths } from "@tid/calendar/isoDate";
 import { thisMonthInOslo } from "@tid/calendar/osloClock";
 import { organizations, users } from "@tid/db/schema";
 import { formatTotalHours } from "@tid/elements/hours";
@@ -28,10 +27,10 @@ const appUrl = (path: string) => new URL(path, server.url).href;
 
 // Next month, so the journey doesn't depend on today's date. Starting mid-month leaves workdays
 // before the first day, which capacity has to skip.
-const nextMonth = addMonths(thisMonthInOslo(), 1);
+const nextMonth = thisMonthInOslo().add({ months: 1 });
 const firstDay = calendarFor("NO")
   .workdaysIn(nextMonth)
-  .find((day) => day >= `${nextMonth}-10`);
+  .find((day) => day.day >= 10);
 const runId = Date.now();
 const email = `e2e-${runId}@variant.no`;
 const name = `E2E Newcomer ${runId}`;

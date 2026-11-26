@@ -14,7 +14,7 @@ export { ReturnLink } from "./compositions/forms/ReturnLink";
 export { ListSummary } from "./compositions/ListSummary";
 export { Page } from "./compositions/Page";
 export {
-  type MonthChoice,
+  type PeriodChoice,
   PeriodNavigation,
   type YearChoice,
 } from "./compositions/PeriodNavigation";
@@ -28,11 +28,12 @@ export { Button, type ButtonProps } from "./primitives/Button";
 export { Checkbox } from "./primitives/Checkbox";
 export { ColorMode, type Palette } from "./primitives/ColorMode";
 export { Fieldset } from "./primitives/Fieldset";
-export { findIconSvg, Icon, type IconName, iconNames, iconsPath } from "./primitives/Icon";
+export { findIconSvg, Icon, iconsPath } from "./primitives/Icon";
 export { Input } from "./primitives/Input";
+export { type IconName, iconNames } from "./primitives/iconNames";
 export { Label } from "./primitives/Label";
 export { Popover, type PopoverType } from "./primitives/Popover";
-export { ProgressBar } from "./primitives/ProgressBar";
+export { ProgressBar, ProgressBarSwatch } from "./primitives/ProgressBar";
 export { Radio } from "./primitives/Radio";
 export { Range } from "./primitives/Range";
 export { Select } from "./primitives/Select";

@@ -15,6 +15,7 @@ import { dev, devLogoutUrl, devTenantId, readDevIdentity, requireDevUser } from 
 import type { PublicEnv } from "./domain/users/user";
 import { bundleBrowserScript } from "./framework/browserScript";
 import { errorReport } from "./framework/errorReport";
+import { takeFlash } from "./framework/flash";
 import { reportDatabaseTiming, reportRenderTiming, timeMiddleware } from "./framework/serverTiming";
 import { invoiceData } from "./invoiceData/invoiceData.routes";
 import { signupRouter } from "./login/login.routes";
@@ -93,6 +94,7 @@ app.use(
         currentPath={c.req.path}
         user={user}
         logoutUrl={login.logoutUrl}
+        flash={takeFlash(c)}
         scriptSrcs={scripts.map((script) => script.path)}
       >
         {children}

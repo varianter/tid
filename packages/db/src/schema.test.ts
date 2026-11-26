@@ -170,8 +170,18 @@ async function insertRatedAssignment() {
     .insert(projectAssignments)
     .values({ projectId: project.id, userId: user.id, orgId: organization.id });
   await database.insert(assignmentRates).values([
-    { projectId: project.id, userId: user.id, validFrom: "2026-01-01", rate: 100000 },
-    { projectId: project.id, userId: user.id, validFrom: "2026-07-01", rate: 120000 },
+    {
+      projectId: project.id,
+      userId: user.id,
+      validFrom: Temporal.PlainDate.from("2026-01-01"),
+      rate: 100000,
+    },
+    {
+      projectId: project.id,
+      userId: user.id,
+      validFrom: Temporal.PlainDate.from("2026-07-01"),
+      rate: 120000,
+    },
   ]);
   return { organization, project, user, task };
 }
@@ -181,6 +191,44 @@ async function entryRate(userId: number, taskId: number, spentOn: string) {
     sql`select rate, currency from entry_rate(${userId}, ${taskId}, ${spentOn})`,
   );
   return [...rows];
+}
+
+// A day read in the wrong time zone shifts first at the edges of a month or year, and in zones far
+// to either side of UTC.
+for (const timeZone of ["Pacific/Kiritimati", "Pacific/Pago_Pago"]) {
+  test(`a day is stored and read back as written, even in ${timeZone}`, async () => {
+    const { organization, project } = await insertProject();
+    const user = await insertUser("kari@example.com", organization.id);
+    const task = onlyRow(
+      await database.insert(tasks).values({ projectId: project.id, name: "Build" }).returning(),
+    );
+    const days = ["2026-01-01", "2026-02-28", "2026-12-31", "2028-02-29"];
+    const zoneBefore = process.env.TZ;
+    process.env.TZ = timeZone;
+    try {
+      await database.insert(timeEntries).values(
+        days.map((day) => ({
+          userId: user.id,
+          taskId: task.id,
+          spentOn: Temporal.PlainDate.from(day),
+          minutes: 60,
+        })),
+      );
+      const stored = await database.execute<{ day: string }>(
+        sql`select spent_on::text as day from time_entries order by spent_on`,
+      );
+      const read = await database
+        .select({ spentOn: timeEntries.spentOn })
+        .from(timeEntries)
+        .orderBy(timeEntries.spentOn);
+
+      expect(stored.map((row) => row.day)).toEqual(days);
+      expect(read.map((row) => row.spentOn.toString())).toEqual(days);
+    } finally {
+      if (zoneBefore === undefined) delete process.env.TZ;
+      else process.env.TZ = zoneBefore;
+    }
+  });
 }
 
 test("a new entry gets the assignment rate valid on its day, in the project's currency", async () => {
@@ -232,7 +280,7 @@ test("moving an entry to another task picks the rate again; changing its minutes
       .values({
         userId: user.id,
         taskId: task.id,
-        spentOn: "2026-07-01",
+        spentOn: Temporal.PlainDate.from("2026-07-01"),
         minutes: 60,
         rate: 99900,
         currency: "NOK",
@@ -260,9 +308,13 @@ test("a rate needs a currency", async () => {
 
   expect(
     await violatedConstraint(
-      database
-        .insert(timeEntries)
-        .values({ userId: user.id, taskId: task.id, spentOn: "2026-07-01", minutes: 60, rate: 1 }),
+      database.insert(timeEntries).values({
+        userId: user.id,
+        taskId: task.id,
+        spentOn: Temporal.PlainDate.from("2026-07-01"),
+        minutes: 60,
+        rate: 1,
+      }),
     ),
   ).toBe("rate_has_currency");
 });
@@ -273,12 +325,17 @@ test("the export prices an entry with its locked rate", async () => {
     {
       userId: user.id,
       taskId: task.id,
-      spentOn: "2026-07-01",
+      spentOn: Temporal.PlainDate.from("2026-07-01"),
       minutes: 90,
       rate: 150000,
       currency: "NOK",
     },
-    { userId: user.id, taskId: task.id, spentOn: "2026-07-02", minutes: 90 },
+    {
+      userId: user.id,
+      taskId: task.id,
+      spentOn: Temporal.PlainDate.from("2026-07-02"),
+      minutes: 90,
+    },
   ]);
 
   const rows = await database
@@ -291,8 +348,12 @@ test("the export prices an entry with its locked rate", async () => {
     .orderBy(timeEntriesExport.spentDate);
 
   expect(rows).toEqual([
-    { spentDate: "2026-07-01", billableRate: "1500.00", amount: "2250.00" },
-    { spentDate: "2026-07-02", billableRate: null, amount: null },
+    {
+      spentDate: Temporal.PlainDate.from("2026-07-01"),
+      billableRate: "1500.00",
+      amount: "2250.00",
+    },
+    { spentDate: Temporal.PlainDate.from("2026-07-02"), billableRate: null, amount: null },
   ]);
 });
 
@@ -303,9 +364,12 @@ test("a project's billing and currency can't change once time is logged on it", 
 
   await setBilling("fixed_fee");
   await setBilling("hourly");
-  await database
-    .insert(timeEntries)
-    .values({ userId: user.id, taskId: task.id, spentOn: "2026-07-01", minutes: 60 });
+  await database.insert(timeEntries).values({
+    userId: user.id,
+    taskId: task.id,
+    spentOn: Temporal.PlainDate.from("2026-07-01"),
+    minutes: 60,
+  });
 
   expect(await violatedConstraint(setBilling("fixed_fee"))).toBe(
     "project_billing_fixed_once_logged",
@@ -326,7 +390,7 @@ test("fixed fee time is billable, but only hourly time is priced", async () => {
   await database.insert(timeEntries).values({
     userId: user.id,
     taskId: task.id,
-    spentOn: "2026-07-01",
+    spentOn: Temporal.PlainDate.from("2026-07-01"),
     minutes: 90,
     rate: 150000,
     currency: "NOK",
@@ -373,8 +437,18 @@ test("the export leaves time on projects that don't count out of billable base h
   const administration = await internalTask("VAR1001", true);
   const vacation = await internalTask("FER1000", false);
   await database.insert(timeEntries).values([
-    { userId: user.id, taskId: administration.id, spentOn: "2026-07-01", minutes: 90 },
-    { userId: user.id, taskId: vacation.id, spentOn: "2026-07-02", minutes: 450 },
+    {
+      userId: user.id,
+      taskId: administration.id,
+      spentOn: Temporal.PlainDate.from("2026-07-01"),
+      minutes: 90,
+    },
+    {
+      userId: user.id,
+      taskId: vacation.id,
+      spentOn: Temporal.PlainDate.from("2026-07-02"),
+      minutes: 450,
+    },
   ]);
 
   const rows = await database
@@ -421,24 +495,41 @@ test("a locked month rejects changes to its entries until it's unlocked", async 
   const [september, october] = await database
     .insert(timeEntries)
     .values([
-      { userId: user.id, taskId: task.id, spentOn: "2026-09-30", minutes: 60 },
-      { userId: user.id, taskId: task.id, spentOn: "2026-10-01", minutes: 60 },
+      {
+        userId: user.id,
+        taskId: task.id,
+        spentOn: Temporal.PlainDate.from("2026-09-30"),
+        minutes: 60,
+      },
+      {
+        userId: user.id,
+        taskId: task.id,
+        spentOn: Temporal.PlainDate.from("2026-10-01"),
+        minutes: 60,
+      },
     ])
     .returning();
   if (!september || !october) throw new Error("Expected two entries");
   const lock = onlyRow(
     await database
       .insert(monthLocks)
-      .values({ orgId: organization.id, month: "2026-10-01", lockedBy: user.id })
+      .values({
+        orgId: organization.id,
+        month: Temporal.PlainYearMonth.from("2026-10"),
+        lockedBy: user.id,
+      })
       .returning(),
   );
   const locked = "Time entries in 2026-10 are locked";
 
   expect(
     await rejection(
-      database
-        .insert(timeEntries)
-        .values({ userId: user.id, taskId: task.id, spentOn: "2026-10-31", minutes: 60 }),
+      database.insert(timeEntries).values({
+        userId: user.id,
+        taskId: task.id,
+        spentOn: Temporal.PlainDate.from("2026-10-31"),
+        minutes: 60,
+      }),
     ),
   ).toBe(locked);
   expect(
@@ -450,7 +541,7 @@ test("a locked month rejects changes to its entries until it's unlocked", async 
     await rejection(
       database
         .update(timeEntries)
-        .set({ spentOn: "2026-09-29" })
+        .set({ spentOn: Temporal.PlainDate.from("2026-09-29") })
         .where(eq(timeEntries.id, october.id)),
     ),
   ).toBe(locked);
@@ -458,7 +549,7 @@ test("a locked month rejects changes to its entries until it's unlocked", async 
     await rejection(
       database
         .update(timeEntries)
-        .set({ spentOn: "2026-10-02" })
+        .set({ spentOn: Temporal.PlainDate.from("2026-10-02") })
         .where(eq(timeEntries.id, september.id)),
     ),
   ).toBe(locked);
@@ -486,12 +577,19 @@ test("a locked month still lets an entry's rate be corrected, but nothing else w
   const entry = onlyRow(
     await database
       .insert(timeEntries)
-      .values({ userId: user.id, taskId: task.id, spentOn: "2026-10-01", minutes: 60 })
+      .values({
+        userId: user.id,
+        taskId: task.id,
+        spentOn: Temporal.PlainDate.from("2026-10-01"),
+        minutes: 60,
+      })
       .returning(),
   );
-  await database
-    .insert(monthLocks)
-    .values({ orgId: organization.id, month: "2026-10-01", lockedBy: user.id });
+  await database.insert(monthLocks).values({
+    orgId: organization.id,
+    month: Temporal.PlainYearMonth.from("2026-10"),
+    lockedBy: user.id,
+  });
 
   await database
     .update(timeEntries)
@@ -509,7 +607,11 @@ test("a locked month still lets an entry's rate be corrected, but nothing else w
 
 test("a month has at most one active lock per organization", async () => {
   const { organization, user } = await insertRatedAssignment();
-  const lock = { orgId: organization.id, month: "2026-10-01", lockedBy: user.id };
+  const lock = {
+    orgId: organization.id,
+    month: Temporal.PlainYearMonth.from("2026-10"),
+    lockedBy: user.id,
+  };
   const first = onlyRow(await database.insert(monthLocks).values(lock).returning());
 
   expect(await violatedConstraint(database.insert(monthLocks).values(lock))).toBe(
@@ -525,12 +627,19 @@ test("a month has at most one active lock per organization", async () => {
 
 test("a locked month raises its own error code, so the app can tell it apart", async () => {
   const { organization, user, task } = await insertRatedAssignment();
-  await database
-    .insert(monthLocks)
-    .values({ orgId: organization.id, month: "2026-10-01", lockedBy: user.id });
+  await database.insert(monthLocks).values({
+    orgId: organization.id,
+    month: Temporal.PlainYearMonth.from("2026-10"),
+    lockedBy: user.id,
+  });
   const error = await database
     .insert(timeEntries)
-    .values({ userId: user.id, taskId: task.id, spentOn: "2026-10-01", minutes: 60 })
+    .values({
+      userId: user.id,
+      taskId: task.id,
+      spentOn: Temporal.PlainDate.from("2026-10-01"),
+      minutes: 60,
+    })
     .then(
       () => undefined,
       (error: Error) => error,
@@ -543,16 +652,22 @@ test("only the organization's own people lock or unlock its months", async () =>
   const other = await insertOrganization("other");
   expect(
     await violatedConstraint(
-      database
-        .insert(monthLocks)
-        .values({ orgId: other.id, month: "2026-10-01", lockedBy: user.id }),
+      database.insert(monthLocks).values({
+        orgId: other.id,
+        month: Temporal.PlainYearMonth.from("2026-10"),
+        lockedBy: user.id,
+      }),
     ),
   ).toBe("month_locks_locked_by_in_organization");
 
   const lock = onlyRow(
     await database
       .insert(monthLocks)
-      .values({ orgId: organization.id, month: "2026-10-01", lockedBy: user.id })
+      .values({
+        orgId: organization.id,
+        month: Temporal.PlainYearMonth.from("2026-10"),
+        lockedBy: user.id,
+      })
       .returning(),
   );
   const [outsider] = await database
@@ -576,15 +691,20 @@ test("a lock covers only its organization's entries", async () => {
     .insert(users)
     .values({ name: "Manager", email: "manager@variant.no", orgId: other.id })
     .returning();
-  await database
-    .insert(monthLocks)
-    .values({ orgId: other.id, month: "2026-10-01", lockedBy: manager?.id ?? 0 });
+  await database.insert(monthLocks).values({
+    orgId: other.id,
+    month: Temporal.PlainYearMonth.from("2026-10"),
+    lockedBy: manager?.id ?? 0,
+  });
 
   expect(
     await rejection(
-      database
-        .insert(timeEntries)
-        .values({ userId: user.id, taskId: task.id, spentOn: "2026-10-01", minutes: 60 }),
+      database.insert(timeEntries).values({
+        userId: user.id,
+        taskId: task.id,
+        spentOn: Temporal.PlainDate.from("2026-10-01"),
+        minutes: 60,
+      }),
     ),
   ).toBeUndefined();
 });

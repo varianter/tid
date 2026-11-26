@@ -56,20 +56,22 @@ export async function seedInvoicingMonth() {
   const internal = await project("OL-3", "Internal", "non_billable");
   const bergenOwned = await project("OL-4", "Bergen owned", "hourly", bergen);
   const swedish = await project("OL-5", "Swedish", "hourly", stockholm);
+  const monday = Temporal.PlainDate.from("2026-10-05");
+  const tuesday = Temporal.PlainDate.from("2026-10-06");
   await database.insert(timeEntries).values([
     {
       userId: member.id,
       taskId: portal.taskId,
-      spentOn: "2026-10-05",
+      spentOn: monday,
       minutes: 450,
       rate: 150000,
       currency: "NOK",
     },
-    { userId: member.id, taskId: fixed.taskId, spentOn: "2026-10-05", minutes: 60 },
-    { userId: member.id, taskId: internal.taskId, spentOn: "2026-10-05", minutes: 60 },
-    { userId: bergenMember.id, taskId: portal.taskId, spentOn: "2026-10-06", minutes: 60 },
-    { userId: bergenMember.id, taskId: bergenOwned.taskId, spentOn: "2026-10-05", minutes: 60 },
-    { userId: member.id, taskId: swedish.taskId, spentOn: "2026-10-05", minutes: 60 },
+    { userId: member.id, taskId: fixed.taskId, spentOn: monday, minutes: 60 },
+    { userId: member.id, taskId: internal.taskId, spentOn: monday, minutes: 60 },
+    { userId: bergenMember.id, taskId: portal.taskId, spentOn: tuesday, minutes: 60 },
+    { userId: bergenMember.id, taskId: bergenOwned.taskId, spentOn: monday, minutes: 60 },
+    { userId: member.id, taskId: swedish.taskId, spentOn: monday, minutes: 60 },
   ]);
   return { member, portalId: portal.id, internalId: internal.id };
 }
