@@ -222,7 +222,12 @@ function ReportPage({
 } & QueryProps<typeof reportUrl>) {
   const { month } = query;
   const projectHref = (projectId: number) =>
-    projectReportUrl.path({ projectId, month, organization: organizationFilter.selected.value });
+    projectReportUrl.path({
+      projectId,
+      month,
+      organization: organizationFilter.selected.value,
+      tab: "consultants",
+    });
   const consultantHref = (userId: number) => consultantPath(userId, month);
   const table = reportTable(report, total, currency, projectHref, consultantHref);
   return (
