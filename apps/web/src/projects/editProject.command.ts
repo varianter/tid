@@ -7,6 +7,7 @@ import {
 import type { User } from "../domain/users/user";
 import { listCurrentPeople } from "../domain/users/user.data";
 import { database } from "../framework/database";
+import { changesSaved } from "../framework/flash";
 import { formAction } from "../framework/formAction";
 import { hasLoggedTime } from "./loggedTime.data";
 import {
@@ -149,7 +150,7 @@ export const editProject = formAction({
         ? { fieldErrors: { code: ["Another project uses this code"] } }
         : { fieldErrors: { name: ["The client already has a project with this name"] } };
     }
-    return { redirect: `/projects/${project.id}` };
+    return { redirect: `/projects/${project.id}`, flash: changesSaved };
   },
   view: ProjectFormPage,
 });

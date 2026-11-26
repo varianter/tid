@@ -4,7 +4,8 @@ import { consultantPickerPath } from "../administration/administration.url";
 import { listOrganizations } from "../domain/organizations/organization.data";
 import type { UserEnv } from "../domain/users/user";
 import { database } from "../framework/database";
-import { formAction, withSaved } from "../framework/formAction";
+import { changesSaved } from "../framework/flash";
+import { formAction } from "../framework/formAction";
 import { idParam } from "../framework/pageUrl";
 import {
   ChangeConsultantOrganizationFormPage,
@@ -57,7 +58,10 @@ export const changeConsultantOrganization = formAction({
       return blockers;
     });
     if (blockers.length > 0) return { formError: blockers.join(" ") };
-    return { redirect: withSaved(changeConsultantOrganizationPath(consultant.id)) };
+    return {
+      redirect: changeConsultantOrganizationPath(consultant.id),
+      flash: changesSaved,
+    };
   },
   view: ChangeConsultantOrganizationFormPage,
 });

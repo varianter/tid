@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import type { Hono } from "hono";
 import type { UserEnv } from "../domain/users/user";
 import { database } from "../framework/database";
+import { flashLeftBy } from "../testing/flash";
 import { postForm, requestAsUser, type UserRow } from "../testing/loggedInUser";
 import { organizationIdBySlug } from "../testing/rows";
 import { administration } from "./administration.routes";
@@ -76,10 +77,8 @@ test("only managers choose open projects", async () => {
 
 test("managers of any organization open a non-billable project, and close it again", async () => {
   const opened = await requestAs(bergenManager, path, { projectId: String(internalId) });
-  expect(opened.headers.get("location")).toBe(`${path}&saved`);
-  expect(await (await requestAs(manager, `${path}&saved`)).text()).toContain(
-    "Your changes have been saved.",
-  );
+  expect(opened.headers.get("location")).toBe(path);
+  expect(await flashLeftBy(opened)).toEqual({ title: "Changes saved" });
   expect(await osloParticipation()).toEqual([{ projectId: internalId, openToMembers: true }]);
   expect(await (await requestAs(manager, path)).text()).toContain("checked");
 

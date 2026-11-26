@@ -57,7 +57,13 @@ export const confirmOrganizationNumber = formAction({
         registeredAddress: lookup.company.registeredAddress,
       })
       .where(eq(clients.id, client.id));
-    return { redirect: done };
+    return {
+      redirect: done,
+      flash: {
+        title: "Organization number saved",
+        message: `${client.name} is ${lookup.company.name} in the company register.`,
+      },
+    };
   },
   view: ConfirmOrganizationNumberFormPage,
 });

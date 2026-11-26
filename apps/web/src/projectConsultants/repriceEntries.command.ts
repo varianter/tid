@@ -5,6 +5,7 @@ import { emptyAsMissing } from "../framework/formValues";
 import { idParams } from "./projectConsultant";
 import { loadConsultant } from "./projectConsultant.data";
 import { projectRatesPath } from "./projectConsultants.url";
+import { rateAddedFlash } from "./rateChanged";
 import { RepriceEntriesFormPage, repriceEntriesForm } from "./repriceEntries.form";
 import { addRateAndReprice, entriesToReprice } from "./repricing.data";
 
@@ -31,7 +32,10 @@ export const repriceEntries = formAction({
   },
   onSubmit: async (_c, _form, { consultant, newRate }) => {
     await addRateAndReprice(consultant, newRate);
-    return { redirect: projectRatesPath(consultant.projectId) };
+    return {
+      redirect: projectRatesPath(consultant.projectId),
+      flash: rateAddedFlash(consultant.name, newRate.validFrom),
+    };
   },
   view: RepriceEntriesFormPage,
 });

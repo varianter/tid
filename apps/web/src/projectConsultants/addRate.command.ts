@@ -4,6 +4,7 @@ import { AddRateFormPage, addRateForm } from "./addRate.form";
 import { idParams } from "./projectConsultant";
 import { loadConsultant } from "./projectConsultant.data";
 import { projectRatesPath, ratesPath } from "./projectConsultants.url";
+import { rateAddedFlash } from "./rateChanged";
 import { addRateAndReprice, entriesToReprice } from "./repricing.data";
 
 export const addRate = formAction({
@@ -26,7 +27,10 @@ export const addRate = formAction({
       return { redirect: `${ratesPath(consultant)}/reprice?${query}` };
     }
     await addRateAndReprice(consultant, newRate);
-    return { redirect: projectRatesPath(consultant.projectId) };
+    return {
+      redirect: projectRatesPath(consultant.projectId),
+      flash: rateAddedFlash(consultant.name, form.validFrom),
+    };
   },
   view: AddRateFormPage,
 });

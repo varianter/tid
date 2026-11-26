@@ -15,6 +15,7 @@ import { eq } from "drizzle-orm";
 import type { Hono } from "hono";
 import type { UserEnv } from "../domain/users/user";
 import { database } from "../framework/database";
+import { flashLeftBy } from "../testing/flash";
 import { postForm, requestAsUser, type UserRow } from "../testing/loggedInUser";
 import { onlyRow, organizationIdBySlug } from "../testing/rows";
 import { changeConsultantOrganizationRoutes } from "./changeConsultantOrganization.routes";
@@ -67,10 +68,10 @@ async function internalTask() {
 
 test("a manager moves a consultant who chose the wrong organization at sign-up", async () => {
   const response = await changeTo(bergenId);
-  expect(response.headers.get("location")).toBe(`${formPath()}&saved`);
+  expect(response.headers.get("location")).toBe(formPath());
+  expect(await flashLeftBy(response)).toEqual({ title: "Changes saved" });
   expect(await organizationOf(newcomer)).toBe(bergenId);
-  const page = await (await requestAsUser(manager, mount, `${formPath()}&saved`)).text();
-  expect(page).toContain("Your changes have been saved.");
+  const page = await (await requestAsUser(manager, mount, formPath())).text();
   expect(page).toContain("Now in Bergen.");
 });
 
