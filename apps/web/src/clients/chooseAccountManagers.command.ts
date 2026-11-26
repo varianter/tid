@@ -2,6 +2,7 @@ import { clientAccountManagers } from "@tid/db/schema";
 import { eq } from "drizzle-orm";
 import { listCurrentPeople } from "../domain/users/user.data";
 import { database } from "../framework/database";
+import { changesSaved } from "../framework/flash";
 import { formAction } from "../framework/formAction";
 import {
   ChooseAccountManagersFormPage,
@@ -35,7 +36,7 @@ export const chooseAccountManagers = formAction({
         .insert(clientAccountManagers)
         .values([...chosen].map((id) => ({ clientId: client.id, userId: id })));
     });
-    return { redirect: `/clients/${client.id}` };
+    return { redirect: `/clients/${client.id}`, flash: changesSaved };
   },
   view: ChooseAccountManagersFormPage,
 });

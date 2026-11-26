@@ -9,6 +9,7 @@ import { DeleteRateFormPage, deleteRateForm } from "./deleteRate.form";
 import { idParams, ratesOf } from "./projectConsultant";
 import { loadConsultant } from "./projectConsultant.data";
 import { projectRatesPath } from "./projectConsultants.url";
+import { rateDeletedFlash } from "./rateChanged";
 import { deleteRateAndReprice, entriesToReprice, priceBefore } from "./repricing.data";
 
 // Only a rate that hasn't started can go. A started one has priced logged time, so it's
@@ -33,7 +34,10 @@ export const deleteRate = formAction({
   },
   onSubmit: async (_c, _form, { consultant, validFrom, price }) => {
     await deleteRateAndReprice(consultant, validFrom, price);
-    return { redirect: projectRatesPath(consultant.projectId) };
+    return {
+      redirect: projectRatesPath(consultant.projectId),
+      flash: rateDeletedFlash(consultant.name, validFrom),
+    };
   },
   view: DeleteRateFormPage,
 });

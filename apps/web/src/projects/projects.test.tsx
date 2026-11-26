@@ -16,6 +16,7 @@ import type { Hono } from "hono";
 import type { UserEnv } from "../domain/users/user";
 import { database } from "../framework/database";
 import { projectConsultants } from "../projectConsultants/projectConsultants.routes";
+import { flashLeftBy } from "../testing/flash";
 import { postForm, requestAsUser, type UserRow } from "../testing/loggedInUser";
 import { onlyRow, organizationIdBySlug } from "../testing/rows";
 import { projects } from "./projects.routes";
@@ -253,6 +254,35 @@ test("an hourly project flags consultants on it who have no current rate", async
   expect(await page()).not.toContain("No rate");
 });
 
+test("adding a rate goes back to the project's rates, saying who it's for and from when", async () => {
+  const started = await requestAs(manager, "/projects/new/hourly", {
+    name: "Rate flash",
+    code: "ACME-23",
+    billing: "hourly",
+    currency: "NOK",
+    contractOwnerId: String(oslo),
+    clientId: String(clientId),
+    firstTask: "Consulting",
+  });
+  const projectId = Number(started.headers.get("location")?.split("/").at(-1));
+  await requestAs(manager, `/projects/${projectId}/consultants/new`, {
+    userId: String(member.id),
+  });
+  const added = await requestAs(
+    manager,
+    `/projects/${projectId}/consultants/${member.id}/rates/new`,
+    {
+      rate: "1400",
+      validFrom: "2026-01-01",
+    },
+  );
+  expect(added.headers.get("location")).toBe(`/projects/${projectId}/consultants/rates`);
+  expect(await flashLeftBy(added)).toEqual({
+    title: "Rate added",
+    message: `Added a rate for ${member.name} from 1 January 2026.`,
+  });
+});
+
 const startNonBillable = async (code: string) => {
   const started = await requestAs(manager, "/projects/new/non_billable", {
     name: `Internal ${code}`,
@@ -264,6 +294,16 @@ const startNonBillable = async (code: string) => {
   });
   return Number(started.headers.get("location")?.split("/").at(-1));
 };
+
+test("adding a task goes back to its project, saying what was added", async () => {
+  const projectPath = `/projects/${await startNonBillable("ACME-22")}`;
+  const added = await requestAs(manager, `${projectPath}/tasks/new`, { name: "Design" });
+  expect(added.headers.get("location")).toBe(projectPath);
+  expect(await flashLeftBy(added)).toEqual({
+    title: "Task added",
+    message: "Added Design to Internal ACME-22.",
+  });
+});
 
 const assignedIds = async (projectId: number) =>
   (

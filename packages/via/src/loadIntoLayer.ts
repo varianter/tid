@@ -4,6 +4,7 @@ import { attributes } from "./attributes";
 import { type LoadedPage, showPageInLayer } from "./layerContent";
 import { layerSelector, openerOf, openNextLayer } from "./layerStack";
 import { outcomeOfLoad } from "./loadOutcome";
+import { loadPageCarrying, outOfBandOf, showOutOfBand } from "./outOfBand";
 
 export async function loadIntoLayer(layer: HTMLElement, url: string, init: RequestInit) {
   const page = await fetchPage(url, init).catch((error) => {
@@ -28,7 +29,9 @@ export async function loadIntoLayer(layer: HTMLElement, url: string, init: Reque
   // A submission refused by something other than the app, like a proxy during a deploy. Loading
   // its URL would show an empty form, so the response is shown instead, as the browser would.
   if (!page.main && init.method === "POST") return replaceDocument(page.html);
-  if (outcome === "reload" || !page.main) return location.assign(page.url);
+  const outOfBand = outOfBandOf(page.html);
+  if (outcome === "reload" || !page.main) return loadPageCarrying(page.url, outOfBand);
+  showOutOfBand(outOfBand);
   const loaded = { ...page, main: page.main };
   switch (outcome) {
     case "stay":

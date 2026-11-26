@@ -15,6 +15,7 @@ export const iconNames = [
   "bar_chart",
   "calendar_today",
   "check",
+  "check_circle",
   "chevron_left",
   "chevron_right",
   "close",

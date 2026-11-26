@@ -18,7 +18,10 @@ export const addTask = formAction({
   onSubmit: async (_c, { name }, { project }) => {
     // A task that already has the name is what the user asked for, so a clash needs no error.
     await database.insert(tasks).values({ projectId: project.id, name }).onConflictDoNothing();
-    return { redirect: `/projects/${project.id}` };
+    return {
+      redirect: `/projects/${project.id}`,
+      flash: { title: "Task added", message: `Added ${name} to ${project.name}.` },
+    };
   },
   view: TaskFormPage,
 });

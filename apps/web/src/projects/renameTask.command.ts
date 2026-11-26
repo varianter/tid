@@ -29,7 +29,10 @@ export const renameTask = formAction({
     );
     if (nameTaken) return alreadyExists;
     await database.update(tasks).set({ name }).where(eq(tasks.id, task.id));
-    return { redirect: `/projects/${project.id}` };
+    return {
+      redirect: `/projects/${project.id}`,
+      flash: { title: "Task renamed", message: `Renamed ${task.name} to ${name}.` },
+    };
   },
   view: TaskFormPage,
 });

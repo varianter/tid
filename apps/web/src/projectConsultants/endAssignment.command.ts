@@ -1,3 +1,4 @@
+import { formatDate } from "@tid/calendar/dateDisplay";
 import { todayInOslo } from "@tid/calendar/osloClock";
 import { assignmentRates, projectAssignments, tasks, timeEntries, users } from "@tid/db/schema";
 import { and, eq } from "drizzle-orm";
@@ -21,16 +22,22 @@ export const endAssignment = formAction({
     if (!consultant) return c.notFound();
     return { ids, ...consultant, hasLoggedTime: await hasLoggedTime(ids), today: todayInOslo() };
   },
-  onSubmit: async (_c, { endsOn }, { ids, hasLoggedTime }) => {
+  onSubmit: async (_c, { endsOn }, { ids, name, hasLoggedTime }) => {
+    const redirect = `/projects/${ids.projectId}`;
     if (!hasLoggedTime) {
       await unassignFromProject(ids);
-    } else if (endsOn) {
-      // Keeps the assignment and its rates, so logged time can still be repriced.
-      await database.update(projectAssignments).set({ endsOn }).where(assignment(ids));
-    } else {
-      return { fieldErrors: { endsOn: ["Choose a date"] } };
+      return { redirect, flash: { title: "Consultant removed", message: `Removed ${name}.` } };
     }
-    return { redirect: `/projects/${ids.projectId}` };
+    if (!endsOn) return { fieldErrors: { endsOn: ["Choose a date"] } };
+    // Keeps the assignment and its rates, so logged time can still be repriced.
+    await database.update(projectAssignments).set({ endsOn }).where(assignment(ids));
+    return {
+      redirect,
+      flash: {
+        title: "Assignment ended",
+        message: `${name}'s assignment ends ${formatDate(endsOn)}.`,
+      },
+    };
   },
   view: EndAssignmentFormPage,
 });

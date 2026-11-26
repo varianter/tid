@@ -20,6 +20,12 @@ export const attributes = {
   layerContent: "via-layer-content",
   /** Set by via on a layer once it shows a page: that page's URL. */
   layerUrl: "via-layer-url",
+  /**
+   * Marks an element outside `main` that should still update when via loads a page. Give it an
+   * id. On each load, via copies the content of the loaded page's element with that id into this
+   * one, as a full page load would. Like `hx-swap-oob` in htmx.
+   */
+  outOfBand: "via-out-of-band",
 } as const;
 
 /** The id of the `template` each layer is cloned from. */

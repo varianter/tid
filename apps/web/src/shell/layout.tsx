@@ -1,5 +1,5 @@
 import { thisMonthInOslo, timeOfDayInOslo } from "@tid/calendar/osloClock";
-import { Button, Icon, type IconName, Popover } from "@tid/ui";
+import { Button, ColorMode, Icon, type IconName, Popover } from "@tid/ui";
 import { attributes, layerTemplateId } from "@tid/via/attributes";
 import { css, Style } from "hono/css";
 import { raw } from "hono/html";
@@ -7,6 +7,7 @@ import type { PropsWithChildren } from "hono/jsx";
 import { administrationPath } from "../administration/administration.url";
 import { consultantPath, consultantsPath } from "../consultants/consultants.url";
 import type { User } from "../domain/users/user";
+import type { Flash } from "../framework/flash";
 import { ownConsultantHoursPath } from "../monthClose/monthClose.url";
 import { officeSummaryUrl } from "../officeSummary/officeSummary.url";
 import { projectsPath } from "../projects/projects.url";
@@ -30,6 +31,8 @@ type LayoutProps = PropsWithChildren<{
   currentPath: string;
   user?: User;
   logoutUrl: string;
+  /** The message from the form submission that redirected here, if any. */
+  flash?: Flash;
   /** The bundled browser scripts, loaded on every page. */
   scriptSrcs: string[];
 }>;
@@ -110,7 +113,7 @@ function isActive(section: string, currentPath: string) {
   return currentPath === section || currentPath.startsWith(`${section}/`);
 }
 
-export function Layout({ currentPath, user, logoutUrl, scriptSrcs, children }: LayoutProps) {
+export function Layout({ currentPath, user, logoutUrl, flash, scriptSrcs, children }: LayoutProps) {
   return (
     <html lang="en" class="surface-tinted">
       <head>
@@ -143,6 +146,15 @@ export function Layout({ currentPath, user, logoutUrl, scriptSrcs, children }: L
                 top: var(--spacing-2xs);
               }
               .menu-toggle { display: none; }
+            }
+            /* The toast's popover spans the full width so the toast can be centred. Clicks on the
+               empty space beside the toast go through to the page underneath. */
+            #flash-message {
+              background: none;
+              pointer-events: none;
+            }
+            #flash-message > * {
+              pointer-events: auto;
             }
             theme-toggle .v-icon {
               transition: opacity var(--interaction-transition-duration-enter) var(--interaction-transition-easing-entrance), rotate var(--interaction-transition-duration-enter) var(--interaction-transition-easing-entrance), scale var(--interaction-transition-duration-enter) var(--interaction-transition-easing-entrance);
@@ -295,6 +307,44 @@ export function Layout({ currentPath, user, logoutUrl, scriptSrcs, children }: L
           </button>
           {children}
         </div>
+
+        {/* Outside `main`, so it stays in place while via swaps pages in and out of layers. A
+            manual popover, so it can show above an open layer without closing it. */}
+        <flash-message
+          id="flash-message"
+          class="v-popover px-s"
+          popover="manual"
+          data-type="drawer"
+          data-side="top"
+        >
+          <div class="surface-base w-full w-max-5 mx-auto mt-s py-xs pl-xs pr-2xs b-all bc-subtle br-l shadow-high stack-h items-start gap-xs">
+            <ColorMode palette="green" class="ink-subtle">
+              <Icon name="check_circle" class="lh-snug" />
+            </ColorMode>
+            {/* Holds only the text, so a screen reader doesn't read the button out with it. */}
+            <div
+              id="flash-message-text"
+              role="status"
+              class="stack-v gap-4xs pr-s flex-1"
+              {...{ [attributes.outOfBand]: true }}
+            >
+              {flash && <p class="fw-medium ink-prominent">{flash.title}</p>}
+              {flash?.message && <p class="fs-s ink-subtle">{flash.message}</p>}
+            </div>
+            {/* This click is outside any open layer, so it closes that layer too. */}
+            <Button
+              type="button"
+              class="aspect-square p-0 -my-2xs -mr-3xs"
+              data-variant="plain"
+              data-size="small"
+              aria-label="Dismiss"
+              popovertarget="flash-message"
+              popovertargetaction="hide"
+            >
+              <Icon name="close" />
+            </Button>
+          </div>
+        </flash-message>
 
         {/* What @tid/via clones for each `a[via-layer]` it opens. */}
         <template id={layerTemplateId}>
