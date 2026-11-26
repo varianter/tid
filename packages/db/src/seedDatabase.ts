@@ -77,13 +77,16 @@ export function seedDatabase(
           name: person.name,
           email: person.email,
           orgId: organizationId(person.organization),
+          // People who start later are registered ahead, this week.
           createdAt: new Date(
             dayOf(
               now,
-              Math.max(startWeek, person.joinedWeek ?? startWeek),
+              Math.min(Math.max(startWeek, person.joinedWeek ?? startWeek), 0),
               Weekday.Monday,
             ).toString(),
           ),
+          firstDay:
+            person.joinedWeek === undefined ? null : dayOf(now, person.joinedWeek, Weekday.Monday),
           lastDay:
             person.leftWeek === undefined ? null : dayOf(now, person.leftWeek, Weekday.Friday),
         })),

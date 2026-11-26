@@ -1,4 +1,3 @@
-import { firstDayOf } from "@tid/calendar/calendarMonth";
 import { formatMonth } from "@tid/calendar/dateDisplay";
 import { projects, timeEntriesExport, users } from "@tid/db/schema";
 import { formatTotalHours } from "@tid/elements/hours";
@@ -13,7 +12,7 @@ import {
   StatList,
   Tabs,
 } from "@tid/ui";
-import { and, eq, gte, inArray, isNull, or, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import type { Child } from "hono/jsx";
 import { consultantPath } from "../consultants/consultants.url";
 import { type Amounts, addAmounts, formatAmounts } from "../domain/amount/amount";
@@ -24,6 +23,7 @@ import {
   OrganizationSelect,
   resolveOrganizationFilter,
 } from "../domain/organizations/organizationFilter";
+import { employedDuring } from "../domain/users/employment";
 import { database } from "../framework/database";
 import { Filtered } from "../framework/filter";
 import { inMonth } from "../framework/monthCondition";
@@ -98,6 +98,7 @@ export const monthlyReport = queryPage({
                 id: users.id,
                 email: view.userEmail,
                 name: view.userName,
+                firstDay: users.firstDay,
                 lastDay: users.lastDay,
                 ...totals,
               })
@@ -110,10 +111,13 @@ export const monthlyReport = queryPage({
           );
           return {
             tab,
-            rows: rows.map(({ lastDay, ...row }) => ({
+            rows: rows.map(({ firstDay, lastDay, ...row }) => ({
               ...row,
               capacityHours:
-                capacityMinutes(month, selected.country, selected.fullDayMinutes, lastDay) / 60,
+                capacityMinutes(month, selected.country, selected.fullDayMinutes, {
+                  firstDay,
+                  lastDay,
+                }) / 60,
             })),
           };
         }
@@ -131,7 +135,7 @@ export const monthlyReport = queryPage({
     };
     // Everyone employed in the month, including those who logged nothing.
     const employed = await database
-      .select({ lastDay: users.lastDay })
+      .select({ firstDay: users.firstDay, lastDay: users.lastDay })
       .from(users)
       .where(
         and(
@@ -139,13 +143,13 @@ export const monthlyReport = queryPage({
             users.orgId,
             selected.organizations.map((organization) => organization.id),
           ),
-          or(isNull(users.lastDay), gte(users.lastDay, firstDayOf(month))),
+          employedDuring(month),
         ),
       );
     const capacityHours =
       employed.reduce(
-        (sum, { lastDay }) =>
-          sum + capacityMinutes(month, selected.country, selected.fullDayMinutes, lastDay),
+        (sum, employment) =>
+          sum + capacityMinutes(month, selected.country, selected.fullDayMinutes, employment),
         0,
       ) / 60;
     return { organizationFilter, report, total, capacityHours, currency };

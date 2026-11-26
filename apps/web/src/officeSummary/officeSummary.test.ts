@@ -18,6 +18,7 @@ const offices = [
 const logged = (time: Partial<LoggedTime>): LoggedTime => ({
   office: "Oslo AS",
   userId: 1,
+  firstDay: null,
   lastDay: null,
   month: Temporal.PlainYearMonth.from("2026-09"),
   currency: "NOK",

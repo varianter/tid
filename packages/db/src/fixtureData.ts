@@ -268,6 +268,13 @@ export const people: Person[] = [
     assignments: [{ project: "FJA1001", rates: [{ rate: 1350 }] }],
   },
   {
+    name: "Ida Lie",
+    email: "ida.lie@example.com",
+    organization: "trondheim",
+    joinedWeek: 3,
+    usualDay: { betweenProjects: 7.5 },
+  },
+  {
     name: "Henrik Vik",
     email: "henrik.vik@example.com",
     organization: "trondheim",

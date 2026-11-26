@@ -75,12 +75,9 @@ async function loadTrondheim() {
 test("the current month expects hours only up to today", async () => {
   const organization = await loadTrondheim();
   const month = thisMonthInOslo();
-  const dueSoFar = capacityMinutes(
-    month,
-    organization.country,
-    organization.fullDayMinutes,
-    todayInOslo(),
-  );
+  const dueSoFar = capacityMinutes(month, organization.country, organization.fullDayMinutes, {
+    lastDay: todayInOslo(),
+  });
 
   const consultants = await loadConsultantHours(organization, month);
 
