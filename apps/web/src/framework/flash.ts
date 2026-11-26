@@ -14,9 +14,19 @@ export type Flash = z.infer<typeof flashSchema>;
 /** For a form that edits what's on the page it came from, where nothing new needs naming. */
 export const changesSaved: Flash = { title: "Changes saved" };
 
-/** Stores the flash for the next page that renders. */
+// Browsers drop a cookie whose name and value exceed 4096 bytes. Hono percent-encodes the value, so
+// a message naming something in a non-Latin script can grow past it.
+const cookieSizeLimit = 4096;
+
+/**
+ * Stores the flash for the next page that renders. A message too long for a cookie is left out,
+ * since the title still says what happened.
+ */
 export function setFlash(c: Context, flash: Flash) {
-  setCookie(c, flashCookie, JSON.stringify(flash), {
+  const fits = (value: string) =>
+    flashCookie.length + encodeURIComponent(value).length <= cookieSizeLimit;
+  const full = JSON.stringify(flash);
+  setCookie(c, flashCookie, fits(full) ? full : JSON.stringify({ title: flash.title }), {
     path: "/",
     httpOnly: true,
     sameSite: "Lax",

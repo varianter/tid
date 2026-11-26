@@ -16,6 +16,16 @@ test("a redirect leaves its message for the next page, word for word", async () 
   expect(await flashLeftBy(await app.request("/", { method: "POST" }))).toEqual(flash);
 });
 
+test("a message too long for a cookie leaves only the title", async () => {
+  const long = { title: "Task added", message: `Added ${"設".repeat(500)}.` };
+  const longApp = new Hono().post("/", (c) => {
+    setFlash(c, long);
+    return c.redirect("/", 303);
+  });
+  const redirect = await longApp.request("/", { method: "POST" });
+  expect(await flashLeftBy(redirect)).toEqual({ title: "Task added" });
+});
+
 test("the page that takes the message clears it, so it shows once", async () => {
   const redirect = await app.request("/", { method: "POST" });
   const cookie = redirect.headers.getSetCookie()[0]?.split(";")[0] ?? "";

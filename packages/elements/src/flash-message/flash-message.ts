@@ -21,14 +21,21 @@ class FlashMessage extends HTMLElement {
     this.addEventListener("beforetoggle", this.#returnFocus);
     const liveRegion = this.#liveRegion;
     if (liveRegion) this.#messageChanged.observe(liveRegion, { childList: true });
+    window.addEventListener("pageshow", this.#hideOnReturn);
     this.#announce();
   }
 
   disconnectedCallback() {
     this.removeEventListener("focusin", this.#rememberFocus);
     this.removeEventListener("beforetoggle", this.#returnFocus);
+    window.removeEventListener("pageshow", this.#hideOnReturn);
     this.#messageChanged.disconnect();
   }
+
+  /** Going back to a page restored from the back/forward cache shouldn't show its message again. */
+  #hideOnReturn = (event: PageTransitionEvent) => {
+    if (event.persisted && this.matches(":popover-open")) this.hidePopover();
+  };
 
   #announce() {
     const liveRegion = this.#liveRegion;
