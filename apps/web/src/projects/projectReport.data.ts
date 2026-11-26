@@ -97,6 +97,21 @@ function loadDayEntries(projectCode: string, month: Temporal.PlainYearMonth, acc
     .orderBy(view.userName);
 }
 
+/** The project's entries in `month` by the consultants of `selected`, for a query joining tasks and users. */
+const projectEntriesIn = (
+  projectId: number,
+  month: Temporal.PlainYearMonth,
+  selected: OrganizationOption,
+) =>
+  and(
+    eq(tasks.projectId, projectId),
+    inArray(
+      users.orgId,
+      selected.organizations.map((organization) => organization.id),
+    ),
+    inMonth(timeEntries.spentOn, month),
+  );
+
 /** Each entry on the project in `month` by the consultants of `organization`, newest first. */
 export const loadProjectEntries = (
   projectId: number,
@@ -114,14 +129,44 @@ export const loadProjectEntries = (
     .from(timeEntries)
     .innerJoin(tasks, eq(tasks.id, timeEntries.taskId))
     .innerJoin(users, eq(users.id, timeEntries.userId))
-    .where(
-      and(
-        eq(tasks.projectId, projectId),
-        inArray(
-          users.orgId,
-          selected.organizations.map((organization) => organization.id),
-        ),
-        inMonth(timeEntries.spentOn, month),
-      ),
-    )
+    .where(projectEntriesIn(projectId, month, selected))
     .orderBy(desc(timeEntries.spentOn), users.name, tasks.name);
+
+/** The minutes one consultant logged on one task. */
+export type EntryTotal = {
+  consultantId: number;
+  consultant: string;
+  taskId: number;
+  task: string;
+  minutes: number;
+};
+
+/**
+ * The same entries as `loadProjectEntries`, totalled per consultant and task. Sorted by
+ * consultant then task, or the other way round, so either groups in order.
+ */
+export const loadEntryTotals = (
+  projectId: number,
+  month: Temporal.PlainYearMonth,
+  selected: OrganizationOption,
+  sortedBy: "consultant" | "task",
+): Promise<EntryTotal[]> =>
+  database
+    .select({
+      consultantId: users.id,
+      consultant: users.name,
+      taskId: tasks.id,
+      task: tasks.name,
+      minutes: sql`sum(${timeEntries.minutes})`.mapWith(Number),
+    })
+    .from(timeEntries)
+    .innerJoin(tasks, eq(tasks.id, timeEntries.taskId))
+    .innerJoin(users, eq(users.id, timeEntries.userId))
+    .where(projectEntriesIn(projectId, month, selected))
+    // By id, so two people with the same name stay apart.
+    .groupBy(users.id, users.name, tasks.id, tasks.name)
+    .orderBy(
+      ...(sortedBy === "consultant"
+        ? [users.name, users.id, tasks.name]
+        : [tasks.name, users.name]),
+    );

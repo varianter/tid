@@ -233,7 +233,11 @@ function ProjectDetailsPage({
       <nav aria-label="About the project" class="stack-h gap-xs">
         <Button
           as="a"
-          href={projectReportUrl.path({ projectId: project.id, month: thisMonthInOslo() })}
+          href={projectReportUrl.path({
+            projectId: project.id,
+            month: thisMonthInOslo(),
+            tab: "consultants",
+          })}
           data-variant="outlined"
         >
           <Icon name="bar_chart" />

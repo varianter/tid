@@ -163,13 +163,20 @@ function ConsultantDetailsPage({
             <CurrentProjects
               projects={currentBillableProjects}
               projectHref={(projectId) =>
-                projectReportUrl.path({ projectId, month, organization: user.organizationSlug })
+                projectReportUrl.path({
+                  projectId,
+                  month,
+                  organization: user.organizationSlug,
+                  tab: "consultants",
+                })
               }
             />
           </div>
         }
       >
-        <MonthEntries month={month} entries={entries} titleLabel="Project" />
+        <Section title="Entries">
+          <MonthEntries month={month} entries={entries} titleLabel="Project" />
+        </Section>
       </SidebarLayout>
     </Page>
   );

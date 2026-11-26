@@ -354,8 +354,47 @@ test("a project's report shows a month", async () => {
   const report = `/projects/${projectId}/report?organization=oslo&month=2026-10`;
 
   expect((await requestAs(member, `/projects/${projectId}/report?month=2026-10`)).status).toBe(302);
-  const screen = await requestAs(member, report);
+  const unnamedTab = await requestAs(member, report);
+  expect(unnamedTab.headers.get("location")).toBe(`${report}&tab=consultants`);
+  const screen = await requestAs(member, `${report}&tab=consultants`);
   expect(screen.status).toBe(200);
+});
+
+test("a project's report totals its organization's entries per person and task, grouped either way", async () => {
+  const projectId = await startNonBillable("ACME-16");
+  const consulting = onlyRow(
+    await database.select().from(tasks).where(eq(tasks.projectId, projectId)),
+  );
+  const design = onlyRow(
+    await database.insert(tasks).values({ projectId, name: "Design" }).returning(),
+  );
+  const entry = (user: UserRow, taskId: number, day: string, minutes: number) => ({
+    userId: user.id,
+    taskId,
+    spentOn: Temporal.PlainDate.from(day),
+    minutes,
+  });
+  await database
+    .insert(timeEntries)
+    .values([
+      entry(member, consulting.id, "2026-10-01", 120),
+      entry(member, design.id, "2026-10-02", 60),
+      entry(manager, consulting.id, "2026-10-01", 30),
+      entry(bergenMember, consulting.id, "2026-10-01", 600),
+    ]);
+  // Markup aside, so a row reads as its cells: "Ola 3 h".
+  const shown = async (tab: string) => {
+    const path = `/projects/${projectId}/report?organization=oslo&month=2026-10&tab=${tab}`;
+    const html = await (await requestAs(manager, path)).text();
+    return html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+  };
+
+  // Each group's heading and total, followed by its rows.
+  const byConsultant = await shown("consultants");
+  expect(byConsultant).toContain("Kari 0,5 h Consulting 0,5 h Ola 3 h Consulting 2 h Design 1 h");
+  expect(byConsultant).not.toContain("Per 10 h");
+  expect(await shown("tasks")).toContain("Consulting 2,5 h Kari 0,5 h Ola 2 h Design 1 h Ola 1 h");
+  expect(await shown("details")).toContain("Ola Design 1 h");
 });
 
 test("editing a project sets and clears its invoicing lead, who may have left since", async () => {
